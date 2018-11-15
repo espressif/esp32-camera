@@ -1,0 +1,17 @@
+menu "Camera configuration"
+      
+config OV2640_SUPPORT
+	bool "OV2640 Support"
+	default y
+	help
+		Enable this option if you want to use the OV2640.
+		Disable this option to safe memory.
+
+config OV7725_SUPPORT
+	bool "OV7725 Support"
+	default n
+	help
+		Enable this option if you want to use the OV7725.
+		Disable this option to safe memory.
+	
+endmenu
