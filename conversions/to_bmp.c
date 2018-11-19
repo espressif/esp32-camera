@@ -14,12 +14,12 @@
 #include <stddef.h>
 #include <string.h>
 #include "img_converters.h"
-#include "rom/tjpgd.h"
 #include "esp_spiram.h"
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
 #include "yuv.h"
 #include "sdkconfig.h"
+#include "esp_jpg_decode.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -30,14 +30,6 @@ static const char* TAG = "to_bmp";
 #endif
 
 static const int BMP_HEADER_LEN = 54;
-
-typedef enum {
-    JPEG_DIV_NONE,
-    JPEG_DIV_2,
-    JPEG_DIV_4,
-    JPEG_DIV_8,
-    JPEG_DIV_MAX
-} jpeg_div_t;
 
 typedef struct {
     uint32_t filesize;
@@ -57,45 +49,49 @@ typedef struct {
 } bmp_header_t;
 
 typedef struct {
-    jpeg_div_t scale;
-    const void * src;
-    size_t len;
-    size_t index;
-    uint16_t width;
-    uint16_t height;
-    uint8_t * dst;
-    size_t dstlen;
-} jpg_frame_decoder_t;
-
-const char * jpgd_errors[] = {
-    "Succeeded",
-    "Interrupted by output function",
-    "Device error or wrong termination of input stream",
-    "Insufficient memory pool for the image",
-    "Insufficient stream input buffer",
-    "Parameter error",
-    "Data format error",
-    "Right format but not supported",
-    "Not supported JPEG standard"
-};
+        uint16_t width;
+        uint16_t height;
+        const uint8_t *input;
+        uint8_t *output;
+} rgb_jpg_decoder;
 
 static void *_malloc(size_t size)
 {
     return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 }
 
-static uint32_t jpg_write_bmp(JDEC *decoder, void *bitmap, JRECT *rect)
+//output buffer and image width
+static bool _rgb_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data)
 {
-    jpg_frame_decoder_t * jpeg = (jpg_frame_decoder_t *)decoder->device;
+    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
+    if(!data){
+        if(x == 0 && y == 0){
+            //write start
+            jpeg->width = w;
+            jpeg->height = h;
+            //if output is null, this is BMP
+            if(!jpeg->output){
+                jpeg->output = (uint8_t *)_malloc((w*h*3)+BMP_HEADER_LEN);
+                if(!jpeg->output){
+                    return false;
+                }
+            }
+        } else {
+            //write end
+        }
+        return true;
+    }
+
     size_t jw = jpeg->width*3;
-    size_t t = rect->top * jw;
-    size_t b = (rect->bottom * jw) + 1;
-    size_t l = rect->left * 3;
-    size_t w = (rect->right + 1 - rect->left) * 3;
-    uint8_t *data = (uint8_t *)bitmap;
-    uint8_t *out = jpeg->dst;
+    size_t t = y * jw;
+    size_t b = t + (h * jw);
+    size_t l = x * 3;
+    uint8_t *out = jpeg->output+BMP_HEADER_LEN;
     uint8_t *o = out;
     size_t iy, ix;
+
+    w = w * 3;
+
     for(iy=t; iy<b; iy+=jw) {
         o = out+iy+l;
         for(ix=0; ix<w; ix+= 3) {
@@ -105,48 +101,69 @@ static uint32_t jpg_write_bmp(JDEC *decoder, void *bitmap, JRECT *rect)
         }
         data+=w;
     }
-    return 1;
+    return true;
 }
 
-static uint32_t jpg_read_frame(JDEC *decoder, uint8_t *buf, uint32_t len)
+//input buffer
+static uint32_t _jpg_read(void * arg, size_t index, uint8_t *buf, size_t len)
 {
-    jpg_frame_decoder_t * jpeg = (jpg_frame_decoder_t *)decoder->device;
+    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
     if(buf) {
-        memcpy(buf, (const uint8_t *)jpeg->src + jpeg->index, len);
+        memcpy(buf, jpeg->input + index, len);
     }
-    jpeg->index += len;
     return len;
 }
 
-static uint8_t jpg_work_buffer[3100];
-
-bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, jpeg_div_t scale)
+static bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale)
 {
-    JDEC decoder;
-    jpg_frame_decoder_t jpeg;
-    jpeg.src = src;
-    jpeg.len = src_len;
-    jpeg.index = 0;
+    rgb_jpg_decoder jpeg;
     jpeg.width = 0;
     jpeg.height = 0;
-    jpeg.dst = out;
-    jpeg.dstlen = 0;
-    jpeg.scale = scale;
+    jpeg.input = src;
+    jpeg.output = out;
 
-    JRESULT jres = jd_prepare(&decoder, jpg_read_frame, jpg_work_buffer, 3100, &jpeg);
-    if(jres != JDR_OK) {
-        ESP_LOGE(TAG, "jd_prepare failed! %s", jpgd_errors[jres]);
+    if(esp_jpg_decode(src_len, scale, _jpg_read, _rgb_write, (void*)&jpeg) != ESP_OK){
         return false;
     }
-    jpeg.width = decoder.width / (1 << (uint8_t)(jpeg.scale));
-    jpeg.height = decoder.height / (1 << (uint8_t)(jpeg.scale));
-    jpeg.dstlen = jpeg.width*jpeg.height*3;
+    return true;
+}
 
-    jres = jd_decomp(&decoder, jpg_write_bmp, (uint8_t)jpeg.scale);
-    if(jres != JDR_OK) {
-        ESP_LOGE(TAG, "jd_decomp failed! %s", jpgd_errors[jres]);
+bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_len)
+{
+
+    rgb_jpg_decoder jpeg;
+    jpeg.width = 0;
+    jpeg.height = 0;
+    jpeg.input = src;
+    jpeg.output = NULL;
+
+    if(esp_jpg_decode(src_len, JPG_SCALE_NONE, _jpg_read, _rgb_write, (void*)&jpeg) != ESP_OK){
         return false;
     }
+
+    size_t output_size = jpeg.width*jpeg.height*3;
+
+    jpeg.output[0] = 'B';
+    jpeg.output[1] = 'M';
+    bmp_header_t * bitmap  = (bmp_header_t*)&jpeg.output[2];
+    bitmap->reserved = 0;
+    bitmap->filesize = output_size+BMP_HEADER_LEN;
+    bitmap->fileoffset_to_pixelarray = BMP_HEADER_LEN;
+    bitmap->dibheadersize = 40;
+    bitmap->width = jpeg.width;
+    bitmap->height = -jpeg.height;//set negative for top to bottom
+    bitmap->planes = 1;
+    bitmap->bitsperpixel = 24;
+    bitmap->compression = 0;
+    bitmap->imagesize = output_size;
+    bitmap->ypixelpermeter = 0x0B13 ; //2835 , 72 DPI
+    bitmap->xpixelpermeter = 0x0B13 ; //2835 , 72 DPI
+    bitmap->numcolorspallette = 0;
+    bitmap->mostimpcolor = 0;
+
+    *out = jpeg.output;
+    *out_len = output_size+BMP_HEADER_LEN;
+
     return true;
 }
 
@@ -154,7 +171,7 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 {
     int pix_count = 0;
     if(format == PIXFORMAT_JPEG) {
-        return jpg2rgb888(src_buf, src_len, rgb_buf, JPEG_DIV_NONE);
+        return jpg2rgb888(src_buf, src_len, rgb_buf, JPG_SCALE_NONE);
     } else if(format == PIXFORMAT_RGB888) {
         memcpy(rgb_buf, src_buf, src_len);
     } else if(format == PIXFORMAT_RGB565) {
@@ -200,73 +217,6 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
             *rgb_buf++ = r;
         }
     }
-    return true;
-}
-
-bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_len)
-{
-    JDEC decoder;
-    uint8_t * out_buf = NULL;
-    jpg_frame_decoder_t jpeg;
-
-    jpeg.src = src;
-    jpeg.len = src_len;
-    jpeg.index = 0;
-    jpeg.width = 0;
-    jpeg.height = 0;
-    jpeg.dst = NULL;
-    jpeg.dstlen = 0;
-    jpeg.scale = JPEG_DIV_NONE;
-
-    *out = jpeg.dst;
-    *out_len = jpeg.dstlen;
-
-    JRESULT jres = jd_prepare(&decoder, jpg_read_frame, jpg_work_buffer, 3100, &jpeg);
-    if(jres != JDR_OK) {
-        ESP_LOGE(TAG, "jd_prepare failed! %s", jpgd_errors[jres]);
-        return false;
-    }
-    jpeg.width = decoder.width / (1 << (uint8_t)(jpeg.scale));
-    jpeg.height = decoder.height / (1 << (uint8_t)(jpeg.scale));
-    size_t output_size = jpeg.width*jpeg.height*3;
-
-    //setup output buffer
-    jpeg.dstlen = output_size+BMP_HEADER_LEN;
-    out_buf = (uint8_t *)_malloc(jpeg.dstlen);
-    if(!out_buf) {
-        ESP_LOGE(TAG, "_malloc failed! %u", jpeg.dstlen);
-        return false;
-    }
-    jpeg.dst = out_buf+BMP_HEADER_LEN;
-
-    out_buf[0] = 'B';
-    out_buf[1] = 'M';
-    bmp_header_t * bitmap  = (bmp_header_t*)&out_buf[2];
-    bitmap->reserved = 0;
-    bitmap->filesize = jpeg.dstlen;
-    bitmap->fileoffset_to_pixelarray = BMP_HEADER_LEN;
-    bitmap->dibheadersize = 40;
-    bitmap->width = jpeg.width;
-    bitmap->height = -jpeg.height;//set negative for top to bottom
-    bitmap->planes = 1;
-    bitmap->bitsperpixel = 24;
-    bitmap->compression = 0;
-    bitmap->imagesize = output_size;
-    bitmap->ypixelpermeter = 0x0B13 ; //2835 , 72 DPI
-    bitmap->xpixelpermeter = 0x0B13 ; //2835 , 72 DPI
-    bitmap->numcolorspallette = 0;
-    bitmap->mostimpcolor = 0;
-
-    jres = jd_decomp(&decoder, jpg_write_bmp, (uint8_t)jpeg.scale);
-
-    if(jres != JDR_OK) {
-        ESP_LOGE(TAG, "jd_decomp failed! %s", jpgd_errors[jres]);
-        free(out_buf);
-        return false;
-    }
-
-    *out = out_buf;
-    *out_len = jpeg.dstlen;
     return true;
 }
 

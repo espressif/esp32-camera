@@ -614,6 +614,24 @@ static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
     if (buf_idx == SIZE_MAX) {
         if(!s_state->fb->ref) {
             s_state->fb->len = s_state->dma_filtered_count * buf_len;
+            if(s_state->fb->format == PIXFORMAT_JPEG){
+                //find end of file 0xFF 0xD9
+                uint8_t * dptr = &s_state->fb->buf[s_state->fb->len - 1];
+                while(dptr > s_state->fb->buf){
+                    if(dptr[0] == 0xFF && dptr[1] == 0xD9 && dptr[2] == 0x00 && dptr[3] == 0x00){
+                        dptr += 2;
+                        s_state->fb->len = dptr - s_state->fb->buf;
+                        if((s_state->fb->len & 0x1FF) == 0){
+                            s_state->fb->len += 1;
+                        }
+                        if((s_state->fb->len % 100) == 0){
+                            s_state->fb->len += 1;
+                        }
+                        break;
+                    }
+                    dptr--;
+                }
+            }
         }
         if(s_state->fb->len) {
             if(s_state->config.fb_count == 1) {
@@ -646,17 +664,6 @@ static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
         s_state->fb->width = resolution[s_state->sensor.framesize][0];
         s_state->fb->height = resolution[s_state->sensor.framesize][1];
         s_state->fb->format = s_state->sensor.pixformat;
-    }
-
-    if(s_state->config.pixel_format == PIXFORMAT_JPEG) {
-        if(!s_state->dma_filtered_count) { //first buffer
-            uint32_t sig = *((uint32_t *)s_state->fb->buf) & 0xFFFFFF;
-            if(sig != 0xffd8ff) {
-                //ets_printf("*");
-                //maybe skip frame?
-                return;
-            }
-        }
     }
     s_state->dma_filtered_count++;
 }
