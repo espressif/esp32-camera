@@ -20,7 +20,7 @@
 #include "esp32-hal-log.h"
 #else
 #include "esp_log.h"
-static const char* TAG = "ov7725";
+//static const char* TAG = "ov7725";
 #endif
 
 

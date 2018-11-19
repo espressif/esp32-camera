@@ -20,7 +20,7 @@
 #include "esp32-hal-log.h"
 #else
 #include "esp_log.h"
-static const char* TAG = "ov2640";
+//static const char* TAG = "ov2640";
 #endif
 
 static volatile ov2640_bank_t reg_bank = BANK_MAX;
