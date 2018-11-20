@@ -51,6 +51,7 @@ typedef struct {
 typedef struct {
         uint16_t width;
         uint16_t height;
+        uint16_t data_offset;
         const uint8_t *input;
         uint8_t *output;
 } rgb_jpg_decoder;
@@ -71,7 +72,7 @@ static bool _rgb_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t 
             jpeg->height = h;
             //if output is null, this is BMP
             if(!jpeg->output){
-                jpeg->output = (uint8_t *)_malloc((w*h*3)+BMP_HEADER_LEN);
+                jpeg->output = (uint8_t *)_malloc((w*h*3)+jpeg->data_offset);
                 if(!jpeg->output){
                     return false;
                 }
@@ -86,7 +87,7 @@ static bool _rgb_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t 
     size_t t = y * jw;
     size_t b = t + (h * jw);
     size_t l = x * 3;
-    uint8_t *out = jpeg->output+BMP_HEADER_LEN;
+    uint8_t *out = jpeg->output+jpeg->data_offset;
     uint8_t *o = out;
     size_t iy, ix;
 
@@ -121,6 +122,7 @@ static bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, jpg_sc
     jpeg.height = 0;
     jpeg.input = src;
     jpeg.output = out;
+    jpeg.data_offset = 0;
 
     if(esp_jpg_decode(src_len, scale, _jpg_read, _rgb_write, (void*)&jpeg) != ESP_OK){
         return false;
@@ -136,6 +138,7 @@ bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_le
     jpeg.height = 0;
     jpeg.input = src;
     jpeg.output = NULL;
+    jpeg.data_offset = BMP_HEADER_LEN;
 
     if(esp_jpg_decode(src_len, JPG_SCALE_NONE, _jpg_read, _rgb_write, (void*)&jpeg) != ESP_OK){
         return false;
