@@ -474,6 +474,8 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_raw_gma = set_raw_gma_dsp;
     sensor->set_lenc = set_lenc_dsp;
     sensor->set_pre = set_pre_dsp;
+    
+    ESP_LOGD(TAG, "OV2640 Attached");
 
     return 0;
 }
