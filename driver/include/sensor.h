@@ -53,14 +53,42 @@ typedef struct {
     uint8_t VER;
 } sensor_id_t;
 
+typedef struct {
+    framesize_t framesize;//0 - 10
+    uint8_t quality;//0 - 63
+    int8_t brightness;//-2 - 2
+    int8_t contrast;//-2 - 2
+    int8_t saturation;//-2 - 2
+    uint8_t special_effect;//0 - 6
+    uint8_t wb_mode;//0 - 4
+    uint8_t awb;
+    uint8_t awb_gain;
+    uint8_t aec;
+    uint8_t aec2;
+    int8_t ae_level;//-2 - 2
+    uint16_t aec_value;//0 - 1200
+    uint8_t agc;
+    uint8_t agc_gain;//0 - 30
+    uint8_t gainceiling;//0 - 6
+    uint8_t bpc;
+    uint8_t wpc;
+    uint8_t raw_gma;
+    uint8_t lenc;
+    uint8_t hmirror;
+    uint8_t vflip;
+    uint8_t dcw;
+    uint8_t colorbar;
+} camera_status_t;
+
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
     sensor_id_t id;             // Sensor ID.
     uint8_t  slv_addr;          // Sensor I2C slave address.
     pixformat_t pixformat;
-    framesize_t framesize;
+    camera_status_t status;
 
     // Sensor function pointers
+    int  (*init_status)         (sensor_t *sensor);
     int  (*reset)               (sensor_t *sensor);
     int  (*set_pixformat)       (sensor_t *sensor, pixformat_t pixformat);
     int  (*set_framesize)       (sensor_t *sensor, framesize_t framesize);
@@ -91,7 +119,6 @@ typedef struct _sensor {
 
     int  (*set_raw_gma)         (sensor_t *sensor, int enable);
     int  (*set_lenc)            (sensor_t *sensor, int enable);
-    int  (*set_pre)             (sensor_t *sensor, int enable);
 } sensor_t;
 
 // Resolution table (in camera.c)
