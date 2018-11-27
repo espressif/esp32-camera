@@ -71,6 +71,7 @@ typedef struct camera_fb_s {
     pixformat_t format;
     size_t size;
     uint8_t ref;
+    uint8_t bad;
     struct camera_fb_s * next;
 } camera_fb_int_t;
 
@@ -116,7 +117,6 @@ typedef struct {
 } camera_state_t;
 
 camera_state_t* s_state = NULL;
-static bool first_vsync = true;
 
 static void i2s_init();
 static void i2s_run();
@@ -417,6 +417,28 @@ static void i2s_init()
                    &i2s_isr, NULL, &s_state->i2s_intr_handle);
 }
 
+static void IRAM_ATTR i2s_start_bus()
+{
+    s_state->dma_desc_cur = 0;
+    s_state->dma_received_count = 0;
+    //s_state->dma_filtered_count = 0;
+    esp_intr_disable(s_state->i2s_intr_handle);
+    i2s_conf_reset();
+
+    I2S0.rx_eof_num = s_state->dma_sample_count;
+    I2S0.in_link.addr = (uint32_t) &s_state->dma_desc[0];
+    I2S0.in_link.start = 1;
+    I2S0.int_clr.val = I2S0.int_raw.val;
+    I2S0.int_ena.val = 0;
+    I2S0.int_ena.in_done = 1;
+
+    esp_intr_enable(s_state->i2s_intr_handle);
+    I2S0.conf.rx_start = 1;
+    if (s_state->config.pixel_format == PIXFORMAT_JPEG) {
+        vsync_intr_enable();
+    }
+}
+
 static void i2s_run()
 {
     for (int i = 0; i < s_state->dma_desc_count; ++i) {
@@ -445,26 +467,7 @@ static void i2s_run()
     }
     ESP_LOGV(TAG, "Got VSYNC");
 
-    s_state->dma_desc_cur = 0;
-    s_state->dma_received_count = 0;
-    //s_state->dma_filtered_count = 0;
-    esp_intr_disable(s_state->i2s_intr_handle);
-    i2s_conf_reset();
-
-    I2S0.rx_eof_num = s_state->dma_sample_count;
-    I2S0.in_link.addr = (uint32_t) &s_state->dma_desc[0];
-    I2S0.in_link.start = 1;
-    I2S0.int_clr.val = I2S0.int_raw.val;
-    I2S0.int_ena.val = 0;
-    I2S0.int_ena.in_done = 1;
-
-    esp_intr_enable(s_state->i2s_intr_handle);
-    I2S0.conf.rx_start = 1;
-    if (s_state->config.pixel_format == PIXFORMAT_JPEG) {
-        first_vsync = true;
-        vsync_intr_enable();
-    }
-
+    i2s_start_bus();
 }
 
 static void IRAM_ATTR i2s_stop_bus()
@@ -477,7 +480,7 @@ static void IRAM_ATTR i2s_stop_bus()
 
 static void IRAM_ATTR i2s_stop(bool* need_yield)
 {
-    if(s_state->config.fb_count == 1) {
+    if(s_state->config.fb_count == 1 && !s_state->fb->bad) {
         i2s_stop_bus();
     } else {
         s_state->dma_received_count = 0;
@@ -496,11 +499,18 @@ static void IRAM_ATTR signal_dma_buf_received(bool* need_yield)
     size_t dma_desc_filled = s_state->dma_desc_cur;
     s_state->dma_desc_cur = (dma_desc_filled + 1) % s_state->dma_desc_count;
     s_state->dma_received_count++;
+    if(!s_state->fb->ref && s_state->fb->bad){
+        *need_yield = false;
+        return;
+    }
     BaseType_t higher_priority_task_woken;
     BaseType_t ret = xQueueSendFromISR(s_state->data_ready, &dma_desc_filled, &higher_priority_task_woken);
     if (ret != pdTRUE) {
-        ESP_EARLY_LOGV(TAG, "queue send failed (%d), dma_received_count=%d", ret, s_state->dma_received_count);
-        ets_printf("qf: %d\n", s_state->dma_received_count);
+        if(!s_state->fb->ref) {
+            s_state->fb->bad = 1;
+        }
+        //ESP_EARLY_LOGW(TAG, "qsf:%d", s_state->dma_received_count);
+        //ets_printf("qsf:%d\n", s_state->dma_received_count);
     }
     *need_yield = (ret == pdTRUE && higher_priority_task_woken == pdTRUE);
 }
@@ -511,8 +521,7 @@ static void IRAM_ATTR i2s_isr(void* arg)
     bool need_yield = false;
     signal_dma_buf_received(&need_yield);
     if (s_state->config.pixel_format != PIXFORMAT_JPEG
-            && s_state->dma_received_count == s_state->height * s_state->dma_per_line) {
-        //ets_printf("end_enough\n");
+     && s_state->dma_received_count == s_state->height * s_state->dma_per_line) {
         i2s_stop(&need_yield);
     }
     if (need_yield) {
@@ -533,7 +542,6 @@ static void IRAM_ATTR vsync_isr(void* arg)
             if(s_state->dma_filtered_count > 1 || s_state->config.fb_count > 1) {
                 i2s_stop(&need_yield);
             }
-            first_vsync = false;
         }
         if(s_state->config.fb_count > 1 || s_state->dma_filtered_count < 2) {
             I2S0.conf.rx_start = 0;
@@ -557,6 +565,11 @@ static void IRAM_ATTR camera_fb_done()
 {
     camera_fb_int_t * fb = NULL, * fb2 = NULL;
     BaseType_t taskAwoken = 0;
+
+    if(s_state->config.fb_count == 1) {
+        xSemaphoreGive(s_state->frame_ready);
+        return;
+    }
 
     fb = s_state->fb;
     if(!fb->ref && fb->len) {
@@ -608,49 +621,62 @@ static void IRAM_ATTR camera_fb_done()
     }
 }
 
-static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
+static void IRAM_ATTR dma_finish_frame()
 {
     size_t buf_len = s_state->width * s_state->fb_bytes_per_pixel / s_state->dma_per_line;
-    if (buf_idx == SIZE_MAX) {
-        if(!s_state->fb->ref) {
-            s_state->fb->len = s_state->dma_filtered_count * buf_len;
-            if(s_state->fb->format == PIXFORMAT_JPEG){
-                //find end of file 0xFF 0xD9
-                uint8_t * dptr = &s_state->fb->buf[s_state->fb->len - 1];
-                while(dptr > s_state->fb->buf){
-                    if(dptr[0] == 0xFF && dptr[1] == 0xD9 && dptr[2] == 0x00 && dptr[3] == 0x00){
-                        dptr += 2;
-                        s_state->fb->len = dptr - s_state->fb->buf;
-                        if((s_state->fb->len & 0x1FF) == 0){
-                            s_state->fb->len += 1;
-                        }
-                        if((s_state->fb->len % 100) == 0){
-                            s_state->fb->len += 1;
-                        }
-                        break;
-                    }
-                    dptr--;
-                }
-            }
-        }
-        if(s_state->fb->len) {
+
+    if(!s_state->fb->ref) {
+        // is the frame bad?
+        if(s_state->fb->bad){
+            s_state->fb->bad = 0;
+            s_state->fb->len = 0;
+            *((uint32_t *)s_state->fb->buf) = 0;
             if(s_state->config.fb_count == 1) {
-                xSemaphoreGive(s_state->frame_ready);
-            } else {
+                i2s_start_bus();
+            }
+        } else {
+            s_state->fb->len = s_state->dma_filtered_count * buf_len;
+            if(s_state->fb->len) {
+                //find the end marker for JPEG. Data after that can be discarded
+                if(s_state->fb->format == PIXFORMAT_JPEG){
+                    uint8_t * dptr = &s_state->fb->buf[s_state->fb->len - 1];
+                    while(dptr > s_state->fb->buf){
+                        if(dptr[0] == 0xFF && dptr[1] == 0xD9 && dptr[2] == 0x00 && dptr[3] == 0x00){
+                            dptr += 2;
+                            s_state->fb->len = dptr - s_state->fb->buf;
+                            if((s_state->fb->len & 0x1FF) == 0){
+                                s_state->fb->len += 1;
+                            }
+                            if((s_state->fb->len % 100) == 0){
+                                s_state->fb->len += 1;
+                            }
+                            break;
+                        }
+                        dptr--;
+                    }
+                }
+                //send out the frame
                 camera_fb_done();
+            } else if(s_state->config.fb_count == 1){
+                //frame was empty?
+                i2s_start_bus();
             }
         }
-        s_state->dma_filtered_count = 0;
+    } else if(s_state->fb->len) {
+        camera_fb_done();
+    }
+    s_state->dma_filtered_count = 0;
+}
+
+static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
+{
+    //no need to process the data if frame is in use or is bad
+    if(s_state->fb->ref || s_state->fb->bad) {
         return;
     }
 
-    if(s_state->fb->ref) {
-        return;
-    }
-
-    const dma_elem_t* buf = s_state->dma_buf[buf_idx];
-    lldesc_t* desc = &s_state->dma_desc[buf_idx];
-
+    //check if there is enough space in the frame buffer for the new data
+    size_t buf_len = s_state->width * s_state->fb_bytes_per_pixel / s_state->dma_per_line;
     size_t fb_pos = s_state->dma_filtered_count * buf_len;
     if(fb_pos > s_state->fb_size - buf_len) {
         //size_t processed = s_state->dma_received_count * buf_len;
@@ -658,11 +684,23 @@ static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
         return;
     }
 
-    uint8_t* pfb = s_state->fb->buf + fb_pos;
-    (*s_state->dma_filter)(buf, desc, pfb);
+    //convert I2S DMA buffer to pixel data
+    (*s_state->dma_filter)(s_state->dma_buf[buf_idx], &s_state->dma_desc[buf_idx], s_state->fb->buf + fb_pos);
+
+    //first frame buffer
     if(!s_state->dma_filtered_count) {
-        s_state->fb->width = resolution[s_state->sensor.framesize][0];
-        s_state->fb->height = resolution[s_state->sensor.framesize][1];
+        //check for correct JPEG header
+        if(s_state->sensor.pixformat == PIXFORMAT_JPEG) {
+            uint32_t sig = *((uint32_t *)s_state->fb->buf) & 0xFFFFFF;
+            if(sig != 0xffd8ff) {
+                //ets_printf("bad header\n");
+                s_state->fb->bad = 1;
+                return;
+            }
+        }
+        //set the frame properties
+        s_state->fb->width = resolution[s_state->sensor.status.framesize][0];
+        s_state->fb->height = resolution[s_state->sensor.status.framesize][1];
         s_state->fb->format = s_state->sensor.pixformat;
     }
     s_state->dma_filtered_count++;
@@ -674,7 +712,12 @@ static void IRAM_ATTR dma_filter_task(void *pvParameters)
     while (true) {
         size_t buf_idx;
         if(xQueueReceive(s_state->data_ready, &buf_idx, portMAX_DELAY) == pdTRUE) {
-            dma_filter_buffer(buf_idx);
+            if (buf_idx == SIZE_MAX) {
+                //this is the end of the frame
+                dma_finish_frame();
+            } else {
+                dma_filter_buffer(buf_idx);
+            }
         }
     }
 }
@@ -690,13 +733,6 @@ static void IRAM_ATTR dma_filter_jpeg(const dma_elem_t* src, lldesc_t* dma_desc,
         dst[3] = src[3].sample1;
         src += 4;
         dst += 4;
-    }
-    // the final sample of a line in SM_0A0B_0B0C sampling mode needs special handling
-    if ((dma_desc->length & 0x7) != 0) {
-        dst[0] = src[0].sample1;
-        dst[1] = src[1].sample1;
-        dst[2] = src[2].sample1;
-        dst[3] = src[2].sample2;
     }
 }
 
@@ -807,11 +843,13 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_reset, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
+#if CONFIG_OV2640_SUPPORT
     } else {
         //reset OV2640
         SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
         SCCB_Write(0x30, 0x12, 0x80);//reset
         vTaskDelay(10 / portTICK_PERIOD_MS);
+#endif
     }
 
     ESP_LOGD(TAG, "Searching for camera address");
@@ -986,7 +1024,7 @@ esp_err_t camera_init(const camera_config_t* config)
         goto fail;
     }
 
-    s_state->sensor.framesize = frame_size;
+    s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;
     ESP_LOGD(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
     if (s_state->sensor.set_framesize(&s_state->sensor, frame_size) != 0) {
@@ -1004,10 +1042,11 @@ esp_err_t camera_init(const camera_config_t* config)
     }
 
     skip_frame();
-    //for some reason the first set of the quality does not work.
+    //todo: for some reason the first set of the quality does not work.
     if (pix_format == PIXFORMAT_JPEG) {
         (*s_state->sensor.set_quality)(&s_state->sensor, config->jpeg_quality);
     }
+    s_state->sensor.init_status(&s_state->sensor);
     return ESP_OK;
 
 fail:
