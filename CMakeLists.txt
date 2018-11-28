@@ -10,6 +10,7 @@ set(COMPONENT_SRCS
   conversions/to_jpg.cpp
   conversions/to_bmp.c
   conversions/jpge.cpp
+  conversions/esp_jpg_decode.c
   )
 
 set(COMPONENT_ADD_INCLUDEDIRS
