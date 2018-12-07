@@ -152,6 +152,15 @@ static size_t i2s_bytes_per_sample(i2s_sampling_mode_t mode)
     }
 }
 
+static int IRAM_ATTR _gpio_get_level(gpio_num_t gpio_num)
+{
+    if (gpio_num < 32) {
+        return (GPIO.in >> gpio_num) & 0x1;
+    } else {
+        return (GPIO.in1.data >> (gpio_num - 32)) & 0x1;
+    }
+}
+
 static void IRAM_ATTR vsync_intr_disable()
 {
     gpio_set_intr_type(s_state->config.pin_vsync, GPIO_INTR_DISABLE);
@@ -167,13 +176,13 @@ static void skip_frame()
     if (s_state == NULL) {
         return;
     }
-    while (gpio_get_level(s_state->config.pin_vsync) == 0) {
+    while (_gpio_get_level(s_state->config.pin_vsync) == 0) {
         ;
     }
-    while (gpio_get_level(s_state->config.pin_vsync) != 0) {
+    while (_gpio_get_level(s_state->config.pin_vsync) != 0) {
         ;
     }
-    while (gpio_get_level(s_state->config.pin_vsync) == 0) {
+    while (_gpio_get_level(s_state->config.pin_vsync) == 0) {
         ;
     }
 }
@@ -462,7 +471,7 @@ static void i2s_run()
 
     // wait for vsync
     ESP_LOGV(TAG, "Waiting for negative edge on VSYNC");
-    while (gpio_get_level(s_state->config.pin_vsync) != 0) {
+    while (_gpio_get_level(s_state->config.pin_vsync) != 0) {
         ;
     }
     ESP_LOGV(TAG, "Got VSYNC");
@@ -535,7 +544,7 @@ static void IRAM_ATTR vsync_isr(void* arg)
     GPIO.status_w1tc = GPIO.status;
     bool need_yield = false;
     //if vsync is low and we have received some data, frame is done
-    if (gpio_get_level(s_state->config.pin_vsync) == 0) {
+    if (_gpio_get_level(s_state->config.pin_vsync) == 0) {
         if(s_state->dma_received_count > 0) {
             signal_dma_buf_received(&need_yield);
             //ets_printf("end_vsync\n");
