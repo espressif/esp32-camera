@@ -16,6 +16,7 @@
  *
     static camera_config_t camera_example_config = {
         .pin_reset      = PIN_RESET,
+        .pin_pwdn       = PIN_PWDN,
         .pin_xclk       = PIN_XCLK,
         .pin_sscb_sda   = PIN_SIOD,
         .pin_sscb_scl   = PIN_SIOC,
@@ -77,6 +78,7 @@ extern "C" {
  */
 typedef struct {
     int pin_reset;                  /*!< GPIO pin for camera reset line */
+	int pin_pwdn;                   /*!< GPIO pin for camera power down line */
     int pin_xclk;                   /*!< GPIO pin for camera XCLK line */
     int pin_sscb_sda;               /*!< GPIO pin for camera SDA line */
     int pin_sscb_scl;               /*!< GPIO pin for camera SCL line */
