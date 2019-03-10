@@ -40,18 +40,25 @@
 #if CONFIG_OV7725_SUPPORT
 #include "ov7725.h"
 #endif
+#if CONFIG_OV3660_SUPPORT
+#include "ov3660.h"
+#endif
 
 typedef enum {
     CAMERA_NONE = 0,
     CAMERA_UNKNOWN = 1,
     CAMERA_OV7725 = 7725,
     CAMERA_OV2640 = 2640,
+    CAMERA_OV3660 = 3660,
 } camera_model_t;
 
 #define REG_PID        0x0A
 #define REG_VER        0x0B
 #define REG_MIDH       0x1C
 #define REG_MIDL       0x1D
+
+#define REG16_CHIDH     0x300A
+#define REG16_CHIDL     0x300B
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -119,7 +126,7 @@ typedef struct {
 camera_state_t* s_state = NULL;
 
 static void i2s_init();
-static void i2s_run();
+static int i2s_run();
 static void IRAM_ATTR vsync_isr(void* arg);
 static void IRAM_ATTR i2s_isr(void* arg);
 static esp_err_t dma_desc_init();
@@ -171,20 +178,32 @@ static void vsync_intr_enable()
     gpio_set_intr_type(s_state->config.pin_vsync, GPIO_INTR_NEGEDGE);
 }
 
-static void skip_frame()
+static int skip_frame()
 {
     if (s_state == NULL) {
-        return;
+        return -1;
     }
+    int64_t st_t = esp_timer_get_time();
     while (_gpio_get_level(s_state->config.pin_vsync) == 0) {
-        ;
+        if((esp_timer_get_time() - st_t) > 1000000LL){
+            goto timeout;
+        }
     }
     while (_gpio_get_level(s_state->config.pin_vsync) != 0) {
-        ;
+        if((esp_timer_get_time() - st_t) > 1000000LL){
+            goto timeout;
+        }
     }
     while (_gpio_get_level(s_state->config.pin_vsync) == 0) {
-        ;
+        if((esp_timer_get_time() - st_t) > 1000000LL){
+            goto timeout;
+        }
     }
+    return 0;
+
+timeout:
+    ESP_LOGE(TAG, "Timeout waiting for VSYNC");
+    return -1;
 }
 
 static void camera_fb_deinit()
@@ -448,7 +467,7 @@ static void IRAM_ATTR i2s_start_bus()
     }
 }
 
-static void i2s_run()
+static int i2s_run()
 {
     for (int i = 0; i < s_state->dma_desc_count; ++i) {
         lldesc_t* d = &s_state->dma_desc[i];
@@ -469,14 +488,19 @@ static void i2s_run()
         vTaskDelay(2);
     }
 
-    // wait for vsync
+    //todo: wait for vsync
     ESP_LOGV(TAG, "Waiting for negative edge on VSYNC");
+
+    int64_t st_t = esp_timer_get_time();
     while (_gpio_get_level(s_state->config.pin_vsync) != 0) {
-        ;
+        if((esp_timer_get_time() - st_t) > 1000000LL){
+            ESP_LOGE(TAG, "Timeout waiting for VSYNC");
+            return -1;
+        }
     }
     ESP_LOGV(TAG, "Got VSYNC");
-
     i2s_start_bus();
+    return 0;
 }
 
 static void IRAM_ATTR i2s_stop_bus()
@@ -890,13 +914,25 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     ESP_LOGD(TAG, "Detected camera at address=0x%02x", s_state->sensor.slv_addr);
     sensor_id_t* id = &s_state->sensor.id;
 
-    id->PID = SCCB_Read(s_state->sensor.slv_addr, REG_PID);
-    id->VER = SCCB_Read(s_state->sensor.slv_addr, REG_VER);
-    id->MIDL = SCCB_Read(s_state->sensor.slv_addr, REG_MIDL);
-    id->MIDH = SCCB_Read(s_state->sensor.slv_addr, REG_MIDH);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-    ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-             id->PID, id->VER, id->MIDH, id->MIDL);
+#if CONFIG_OV3660_SUPPORT
+    if(s_state->sensor.slv_addr == 0x3c){
+        id->PID = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDH);
+        id->VER = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDL);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x", id->PID, id->VER);
+    } else {
+#endif
+        id->PID = SCCB_Read(s_state->sensor.slv_addr, REG_PID);
+        id->VER = SCCB_Read(s_state->sensor.slv_addr, REG_VER);
+        id->MIDL = SCCB_Read(s_state->sensor.slv_addr, REG_MIDL);
+        id->MIDH = SCCB_Read(s_state->sensor.slv_addr, REG_MIDH);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+                 id->PID, id->VER, id->MIDH, id->MIDL);
+#if CONFIG_OV3660_SUPPORT
+    }
+#endif
+
 
     switch (id->PID) {
 #if CONFIG_OV2640_SUPPORT
@@ -909,6 +945,12 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     case OV7725_PID:
         *out_camera_model = CAMERA_OV7725;
         ov7725_init(&s_state->sensor);
+        break;
+#endif
+#if CONFIG_OV3660_SUPPORT
+    case OV3660_PID:
+        *out_camera_model = CAMERA_OV3660;
+        ov3660_init(&s_state->sensor);
         break;
 #endif
     default:
@@ -942,14 +984,25 @@ esp_err_t camera_init(const camera_config_t* config)
 
     if (pix_format == PIXFORMAT_GRAYSCALE) {
         s_state->fb_size = s_state->width * s_state->height;
-        if (is_hs_mode()) {
-            s_state->sampling_mode = SM_0A00_0B00;
-            s_state->dma_filter = &dma_filter_grayscale_highspeed;
+        if (s_state->sensor.id.PID == OV3660_PID) {
+            if (is_hs_mode()) {
+                s_state->sampling_mode = SM_0A00_0B00;
+                s_state->dma_filter = &dma_filter_yuyv_highspeed;
+            } else {
+                s_state->sampling_mode = SM_0A0B_0C0D;
+                s_state->dma_filter = &dma_filter_yuyv;
+            }
+            s_state->in_bytes_per_pixel = 1;       // camera sends Y8
         } else {
-            s_state->sampling_mode = SM_0A0B_0C0D;
-            s_state->dma_filter = &dma_filter_grayscale;
+            if (is_hs_mode()) {
+                s_state->sampling_mode = SM_0A00_0B00;
+                s_state->dma_filter = &dma_filter_grayscale_highspeed;
+            } else {
+                s_state->sampling_mode = SM_0A0B_0C0D;
+                s_state->dma_filter = &dma_filter_grayscale;
+            }
+            s_state->in_bytes_per_pixel = 2;       // camera sends YU/YV
         }
-        s_state->in_bytes_per_pixel = 2;       // camera sends YUYV
         s_state->fb_bytes_per_pixel = 1;       // frame buffer stores Y8
     } else if (pix_format == PIXFORMAT_YUV422 || pix_format == PIXFORMAT_RGB565) {
         s_state->fb_size = s_state->width * s_state->height * 2;
@@ -960,11 +1013,11 @@ esp_err_t camera_init(const camera_config_t* config)
             s_state->sampling_mode = SM_0A0B_0C0D;
             s_state->dma_filter = &dma_filter_yuyv;
         }
-        s_state->in_bytes_per_pixel = 2;       // camera sends YUYV
-        s_state->fb_bytes_per_pixel = 2;       // frame buffer stores Y8
+        s_state->in_bytes_per_pixel = 2;       // camera sends YU/YV
+        s_state->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
     } else if (pix_format == PIXFORMAT_JPEG) {
-        if (s_state->sensor.id.PID != OV2640_PID) {
-            ESP_LOGE(TAG, "JPEG format is only supported for ov2640");
+        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID) {
+            ESP_LOGE(TAG, "JPEG format is only supported for ov2640 and ov3660");
             err = ESP_ERR_NOT_SUPPORTED;
             goto fail;
         }
@@ -1065,7 +1118,10 @@ esp_err_t camera_init(const camera_config_t* config)
         s_state->sensor.set_lenc(&s_state->sensor, true);
     }
 
-    skip_frame();
+    if (skip_frame()) {
+        err = ESP_ERR_CAMERA_FAILED_TO_SET_OUT_FORMAT;
+        goto fail;
+    }
     //todo: for some reason the first set of the quality does not work.
     if (pix_format == PIXFORMAT_JPEG) {
         (*s_state->sensor.set_quality)(&s_state->sensor, config->jpeg_quality);
@@ -1095,6 +1151,8 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         }
     } else if (camera_model == CAMERA_OV2640) {
         ESP_LOGD(TAG, "Detected OV2640 camera");
+    } else if (camera_model == CAMERA_OV3660) {
+        ESP_LOGD(TAG, "Detected OV3660 camera");
     } else {
         ESP_LOGE(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;
@@ -1157,7 +1215,9 @@ camera_fb_t* esp_camera_fb_get()
         if(s_state->config.fb_count > 1) {
             ESP_LOGD(TAG, "i2s_run");
         }
-        i2s_run();
+        if (i2s_run() != 0) {
+            return NULL;
+        }
     }
     if(s_state->config.fb_count == 1) {
         xSemaphoreTake(s_state->frame_ready, portMAX_DELAY);

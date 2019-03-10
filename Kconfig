@@ -14,4 +14,18 @@ config OV7725_SUPPORT
 		Enable this option if you want to use the OV7725.
 		Disable this option to safe memory.
 	
+config OV3660_SUPPORT
+    bool "OV3660 Support"
+    default y
+    help
+        Enable this option if you want to use the OV3360.
+        Disable this option to safe memory.
+    
+config SCCB_HARDWARE_I2C
+    bool "Use hardware I2C1 for SCCB"
+    default y
+    help
+        Enable this option if you want to use hardware I2C to control the camera.
+        Disable this option to use software I2C.
+    
 endmenu
