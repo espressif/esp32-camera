@@ -130,9 +130,6 @@ typedef struct _sensor {
 
     int  (*set_raw_gma)         (sensor_t *sensor, int enable);
     int  (*set_lenc)            (sensor_t *sensor, int enable);
-
-    // Advanced functions
-    int  (*set_reg)             (sensor_t *sensor, int reg, int mask, int value);
 } sensor_t;
 
 // Resolution table (in camera.c)

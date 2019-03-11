@@ -140,10 +140,10 @@ int calc_sysclk(int xclk, bool pll_bypass, int pll_multiplier, int pll_sys_div, 
 
     int VCO = (xclk / 1000) * pll_multiplier * pll_root_div * 2 / pll_pre_div2x;
     int PLLCLK = pll_bypass?(xclk):(VCO * 1000 * 2 / pll_sys_div / pll_seld52x);
-    int PCLK = PLLCLK / 2 / (pclk_manual?pclk_div:1);
+    int PCLK = PLLCLK / 2 / ((pclk_manual && pclk_div)?pclk_div:1);
     int SYSCLK = PLLCLK / 4;
 
-    ESP_LOGD(TAG, "Calculated VCO: %d Hz, PLLCLK: %d Hz, SYSCLK: %d Hz, PCLK: %d Hz", VCO, PLLCLK, SYSCLK, PCLK);
+    ESP_LOGD(TAG, "Calculated VCO: %d Hz, PLLCLK: %d Hz, SYSCLK: %d Hz, PCLK: %d Hz", VCO*1000, PLLCLK, SYSCLK, PCLK);
     return SYSCLK;
 }
 
@@ -161,7 +161,7 @@ static int set_pll(sensor_t *sensor, bool bypass, uint8_t multiplier, uint8_t sy
         ret = write_reg(sensor->slv_addr, SC_PLLS_CTRL1, multiplier & 0x1f);
     }
     if (ret == 0) {
-        ret = write_reg(sensor->slv_addr, SC_PLLS_CTRL2, 0x10 | (sys_div & 0xf0));
+        ret = write_reg(sensor->slv_addr, SC_PLLS_CTRL2, 0x10 | (sys_div & 0x0f));
     }
     if (ret == 0) {
         ret = write_reg(sensor->slv_addr, SC_PLLS_CTRL3, (pre_div & 0x3) << 4 | seld5 | (root_2x?0x40:0x00));
@@ -192,7 +192,7 @@ static int reset(sensor_t *sensor)
     vTaskDelay(100 / portTICK_PERIOD_MS);
     ret = write_regs(sensor->slv_addr, sensor_default_regs);
     if (ret == 0) {
-        ESP_LOGE(TAG, "Camera defaults loaded");
+        ESP_LOGD(TAG, "Camera defaults loaded");
         ret = set_ae_level(sensor, 0);
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -214,6 +214,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         break;
 
     case PIXFORMAT_RGB565:
+    case PIXFORMAT_RGB888:
         regs = sensor_fmt_rgb565;
         break;
 
@@ -226,6 +227,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         break;
 
     default:
+        ESP_LOGE(TAG, "Unsupported pixformat: %u", pixformat);
         return -1;
     }
 
@@ -341,7 +343,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, 2050, 788);
         }
         if (ret == 0) {
-            ret = write_addr_reg(sensor->slv_addr, X_OFFSET_H, 8, 0);
+            ret = write_addr_reg(sensor->slv_addr, X_OFFSET_H, 8, 2);
         }
     }
 
@@ -366,8 +368,13 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = set_pll(sensor, false, 30, 1, 3, false, 0, true, 10);
         }
     } else {
-        //8.33MHz SYSCLK and 8.33MHz PCLK (maybe try bypass?)
-        ret = set_pll(sensor, false, 10, 2, 3, false, 0, true, 2);
+        if (framesize > FRAMESIZE_CIF) {
+            //10MHz SYSCLK and 10MHz PCLK (6.19 FPS)
+            ret = set_pll(sensor, false, 2, 1, 0, false, 0, true, 2);
+        } else {
+            //25MHz SYSCLK and 10MHz PCLK (15.45 FPS)
+            ret = set_pll(sensor, false, 5, 1, 0, false, 0, true, 5);
+        }
     }
 
     if (ret == 0) {
@@ -904,11 +911,6 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
-static int x_set_reg(sensor_t *sensor, int reg, int mask, int value)
-{
-    return set_reg_bits(sensor->slv_addr, reg, 0, mask, value);
-}
-
 int ov3660_init(sensor_t *sensor)
 {
     sensor->reset = reset;
@@ -940,7 +942,5 @@ int ov3660_init(sensor_t *sensor)
     sensor->set_raw_gma = set_raw_gma_dsp;
     sensor->set_lenc = set_lenc_dsp;
     sensor->set_denoise = set_denoise;
-
-    sensor->set_reg = x_set_reg;
     return 0;
 }
