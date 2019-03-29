@@ -5,6 +5,7 @@ set(COMPONENT_SRCS
   driver/twi.c
   driver/xclk.c
   sensors/ov2640.c
+  sensors/ov3660.c
   sensors/ov7725.c
   conversions/yuv.c
   conversions/to_jpg.cpp

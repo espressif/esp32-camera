@@ -1176,7 +1176,7 @@ esp_err_t camera_init(const camera_config_t* config)
     }
 
     //ToDo: core affinity?
-    if (!xTaskCreatePinnedToCore(&dma_filter_task, "dma_filter", 4096, NULL, 10, &s_state->dma_filter_task, 1)) {
+    if (!xTaskCreatePinnedToCore(&dma_filter_task, "dma_filter", 4096, NULL, 10, &s_state->dma_filter_task, 0)) {
         ESP_LOGE(TAG, "Failed to create DMA filter task");
         err = ESP_ERR_NO_MEM;
         goto fail;

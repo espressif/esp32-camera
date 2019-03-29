@@ -6,7 +6,6 @@
  * OV3660 driver.
  *
  */
-#include "Arduino.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,9 +17,11 @@
 #include "freertos/task.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
+#include "Arduino.h"
 #include "esp32-hal-log.h"
 #else
 #include "esp_log.h"
+#define delay(x)
 static const char *TAG = "ov3660";
 #endif
 

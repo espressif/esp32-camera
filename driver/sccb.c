@@ -41,7 +41,7 @@ int SCCB_Init(int pin_sda, int pin_scl)
 {
     ESP_LOGI(TAG, "pin_sda %d pin_scl %d\n", pin_sda, pin_scl);
 #ifdef CONFIG_SCCB_HARDWARE_I2C
-    log_i("SCCB_Init start");
+    //log_i("SCCB_Init start");
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = pin_sda;
