@@ -17,11 +17,9 @@
 #include "freertos/task.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
-#include "Arduino.h"
 #include "esp32-hal-log.h"
 #else
 #include "esp_log.h"
-#define delay(x)
 static const char *TAG = "ov3660";
 #endif
 
@@ -99,7 +97,7 @@ static int write_regs(uint8_t slv_addr, const uint16_t (*regs)[2])
     int i = 0, ret = 0;
     while (!ret && regs[i][0] != REGLIST_TAIL) {
         if (regs[i][0] == REG_DLY) {
-            delay(regs[i][1]);
+            vTaskDelay(regs[i][1] / portTICK_PERIOD_MS);
         } else {
             ret = write_reg(slv_addr, regs[i][0], regs[i][1]);
         }
