@@ -6,7 +6,6 @@
  * OV3660 driver.
  *
  */
-#include "Arduino.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,7 +97,7 @@ static int write_regs(uint8_t slv_addr, const uint16_t (*regs)[2])
     int i = 0, ret = 0;
     while (!ret && regs[i][0] != REGLIST_TAIL) {
         if (regs[i][0] == REG_DLY) {
-            delay(regs[i][1]);
+            vTaskDelay(regs[i][1] / portTICK_PERIOD_MS);
         } else {
             ret = write_reg(slv_addr, regs[i][0], regs[i][1]);
         }

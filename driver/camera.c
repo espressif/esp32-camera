@@ -968,7 +968,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_reset, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
-#if CONFIG_OV2640_SUPPORT
+#if (CONFIG_OV2640_SUPPORT && !CONFIG_OV3660_SUPPORT)
     } else {
         //reset OV2640
         SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
@@ -1176,7 +1176,14 @@ esp_err_t camera_init(const camera_config_t* config)
     }
 
     //ToDo: core affinity?
-    if (!xTaskCreatePinnedToCore(&dma_filter_task, "dma_filter", 4096, NULL, 10, &s_state->dma_filter_task, 1)) {
+#if CONFIG_CAMERA_CORE0
+    if (!xTaskCreatePinnedToCore(&dma_filter_task, "dma_filter", 4096, NULL, 10, &s_state->dma_filter_task, 0))
+#elif CONFIG_CAMERA_CORE1
+    if (!xTaskCreatePinnedToCore(&dma_filter_task, "dma_filter", 4096, NULL, 10, &s_state->dma_filter_task, 1))
+#else
+    if (!xTaskCreate(&dma_filter_task, "dma_filter", 4096, NULL, 10, &s_state->dma_filter_task))
+#endif
+    {
         ESP_LOGE(TAG, "Failed to create DMA filter task");
         err = ESP_ERR_NO_MEM;
         goto fail;
