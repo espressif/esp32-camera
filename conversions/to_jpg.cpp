@@ -205,7 +205,7 @@ bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixf
 {
     //todo: allocate proper buffer for holding JPEG data
     //this should be enough for CIF frame size
-    int jpg_buf_len = 24*1024;
+    int jpg_buf_len = 64*1024;
 
 
     uint8_t * jpg_buf = (uint8_t *)_malloc(jpg_buf_len);

@@ -14,4 +14,33 @@ config OV7725_SUPPORT
 		Enable this option if you want to use the OV7725.
 		Disable this option to safe memory.
 	
+config OV3660_SUPPORT
+    bool "OV3660 Support"
+    default y
+    help
+        Enable this option if you want to use the OV3360.
+        Disable this option to safe memory.
+    
+config SCCB_HARDWARE_I2C
+    bool "Use hardware I2C1 for SCCB"
+    default y
+    help
+        Enable this option if you want to use hardware I2C to control the camera.
+        Disable this option to use software I2C.
+
+choice CAMERA_TASK_PINNED_TO_CORE
+    bool "Camera task pinned to core"
+    default CAMERA_CORE0
+    help
+        Pin the camera handle task to a certain core(0/1). It can also be done automatically choosing NO_AFFINITY.
+
+    config CAMERA_CORE0
+        bool "CORE0"
+    config CAMERA_CORE1
+        bool "CORE1"
+    config CAMERA_NO_AFFINITY
+        bool "NO_AFFINITY"
+
+endchoice
+    
 endmenu
