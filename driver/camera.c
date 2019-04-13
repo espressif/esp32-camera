@@ -992,6 +992,17 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     ESP_LOGD(TAG, "Detected camera at address=0x%02x", s_state->sensor.slv_addr);
     sensor_id_t* id = &s_state->sensor.id;
 
+#if (CONFIG_OV2640_SUPPORT && CONFIG_OV3660_SUPPORT)
+    if (slv_addr == 0x30) {
+        ESP_LOGD(TAG, "Resetting OV2640");
+        //camera might be OV2640. try to reset it
+        SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
+        SCCB_Write(0x30, 0x12, 0x80);//reset
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        slv_addr = SCCB_Probe();
+    }
+#endif
+
 #if CONFIG_OV3660_SUPPORT
     if(s_state->sensor.slv_addr == 0x3c){
         id->PID = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDH);
