@@ -1083,7 +1083,7 @@ esp_err_t camera_init(const camera_config_t* config)
             }
             s_state->in_bytes_per_pixel = 1;       // camera sends Y8
         } else {
-            if (is_hs_mode()) {
+            if (is_hs_mode() && s_state->sensor.id.PID != OV7725_PID) {
                 s_state->sampling_mode = SM_0A00_0B00;
                 s_state->dma_filter = &dma_filter_grayscale_highspeed;
             } else {
@@ -1095,7 +1095,7 @@ esp_err_t camera_init(const camera_config_t* config)
         s_state->fb_bytes_per_pixel = 1;       // frame buffer stores Y8
     } else if (pix_format == PIXFORMAT_YUV422 || pix_format == PIXFORMAT_RGB565) {
         s_state->fb_size = s_state->width * s_state->height * 2;
-        if (is_hs_mode()) {
+        if (is_hs_mode() && s_state->sensor.id.PID != OV7725_PID) {
             s_state->sampling_mode = SM_0A00_0B00;
             s_state->dma_filter = &dma_filter_yuyv_highspeed;
         } else {

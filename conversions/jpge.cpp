@@ -10,16 +10,27 @@
 
 #include "jpge.h"
 
+#include <stdint.h>
+#include <stdarg.h>
+#include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include "esp_heap_caps.h"
 
 #define JPGE_MAX(a,b) (((a)>(b))?(a):(b))
 #define JPGE_MIN(a,b) (((a)<(b))?(a):(b))
 
 namespace jpge {
 
-    static inline void *jpge_malloc(size_t nSize) { return malloc(nSize); }
+    static inline void *jpge_malloc(size_t nSize) {
+        void * b = malloc(nSize);
+        if(b){
+            return b;
+        }
+        return heap_caps_malloc(nSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    }
     static inline void jpge_free(void *p) { free(p); }
 
     // Various JPEG enums and tables.
@@ -596,7 +607,9 @@ namespace jpge {
         m_image_bpl_mcu  = m_image_x_mcu * m_num_components;
         m_mcus_per_row   = m_image_x_mcu / m_mcu_x;
 
-        if ((m_mcu_lines[0] = static_cast<uint8*>(jpge_malloc(m_image_bpl_mcu * m_mcu_y))) == NULL) return false;
+        if ((m_mcu_lines[0] = static_cast<uint8*>(jpge_malloc(m_image_bpl_mcu * m_mcu_y))) == NULL) {
+            return false;
+        }
         for (int i = 1; i < m_mcu_y; i++)
             m_mcu_lines[i] = m_mcu_lines[i-1] + m_image_bpl_mcu;
 
