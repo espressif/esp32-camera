@@ -326,6 +326,7 @@ static int init_status(sensor_t *sensor)
 }
 
 static int set_dummy(sensor_t *sensor, int val){ return -1; }
+static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1; }
 
 int ov7725_init(sensor_t *sensor)
 {
@@ -345,7 +346,7 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_brightness= set_dummy;
     sensor->set_saturation= set_dummy;
     sensor->set_quality = set_dummy;
-    sensor->set_gainceiling = set_dummy;
+    sensor->set_gainceiling = set_gainceiling_dummy;
     sensor->set_gain_ctrl = set_dummy;
     sensor->set_exposure_ctrl = set_dummy;
     sensor->set_hmirror = set_dummy;
