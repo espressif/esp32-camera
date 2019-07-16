@@ -17,6 +17,20 @@ This repository hosts ESP32 compatible driver for OV2640 and OV3660 image sensor
 - Enable PSRAM in `menuconfig`
 - Include `esp_camera.h` in your code
 
+## PlatformIO
+
+Ths library is currently NOT registered with PlatformIO Library Manager,
+but can be installed directly from the Git repository using
+
+-     lib_deps =
+        https://github.com/espressif/esp32-camera
+
+from your platformio.ini file, or
+
+-     platformio lib install https://github.com/espressif/esp32-camera
+
+from the PlatformIO terminal
+
 ## Examples
 
 ### Initialization
