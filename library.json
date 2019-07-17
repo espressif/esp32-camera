@@ -1,17 +1,16 @@
 {
     "name": "esp32-camera",
-    "keywords": "esp32, camera",
-    "description": "esp32-camera",
-    "authors": [
-        {
-            "name": "Expressif"
-        }
-    ],
-
+    "keywords": "esp32, camera, espressif",
+    "description": "ESP32 compatible driver for OV2640 and OV3660 image sensors.",
     "build": {
-        "flags": "-Idriver/include -Idriver/private_include -Iconversions/include -Iconversions/private_include -Isensors/private_include"
+        "flags": [
+            "-Idriver/include",
+            "-Idriver/private_include",
+            "-Iconversions/include",
+            "-Iconversions/private_include",
+            "-Isensors/private_include"
+        ]
     },
-
     "dependencies": {},
     "version": "0.0.1",
     "frameworks": "espidf",
