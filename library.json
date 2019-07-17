@@ -14,7 +14,8 @@
     "dependencies": {},
     "repository": {
         "type": "git",
-        "url": "https://github.com/espressif/esp32-camera"
+        "url": "https://github.com/espressif/esp32-camera",
+        "branch": "master"
     },
     "frameworks": "espidf",
     "platforms": "*"
