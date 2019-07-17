@@ -14,7 +14,7 @@
     "dependencies": {},
     "repository": {
         "type": "git",
-        "url": "https://github.com/Mnark/esp32-camera",
+        "url": "https://github.com/Mnark/esp32-camera.git",
         "branch": "master"
     },
     "frameworks": "espidf",
