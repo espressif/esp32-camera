@@ -13,7 +13,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/Mnark/esp32-camera.git",
+        "url": "git+git://github.com/Mnark/esp32-camera.git",
         "branch": "master"
     },
     "frameworks": "espidf",
