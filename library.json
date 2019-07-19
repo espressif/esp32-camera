@@ -16,6 +16,9 @@
         "url": "https://github.com/Mnark/esp32-camera.git",
         "branch": "master"
     },
+    "export": {
+        "exclude": "library.json"
+    },
     "frameworks": "espidf",
     "platforms": "*"
 }
