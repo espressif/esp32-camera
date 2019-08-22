@@ -179,7 +179,7 @@ sensor_t * esp_camera_sensor_get();
 esp_err_t esp_camera_save_to_nvs(const char *key);
 
 /**
- * @brief Save camera settings to non-volatile-storage (NVS)
+ * @brief Load camera settings from non-volatile-storage (NVS)
  * 
  * @param key   A unique nvs key name for the camera settings 
  */
