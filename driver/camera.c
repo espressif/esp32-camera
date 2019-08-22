@@ -1391,7 +1391,7 @@ esp_err_t esp_camera_load_from_nvs(const char *key)
       if (s != NULL) {
           size_t size = sizeof(camera_status_t);
           ret = nvs_get_blob(handle,CAMERA_SENSOR_NVS_KEY,&st,&size);
-          if (ret = ESP_OK) {
+          if (ret == ESP_OK) {
             s->set_ae_level(s,st.ae_level);
             s->set_aec2(s,st.aec2);
             s->set_aec_value(s,st.aec_value);
