@@ -70,6 +70,7 @@ typedef enum {
 static const char* TAG = "camera";
 #endif
 static const char* CAMERA_SENSOR_NVS_KEY = "sensor";
+static const char* CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
 
 typedef void (*dma_filter_t)(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
 
@@ -1368,6 +1369,10 @@ esp_err_t esp_camera_save_to_nvs(const char *key)
         sensor_t *s = esp_camera_sensor_get();
         if (s != NULL) {
             ret = nvs_set_blob(handle,CAMERA_SENSOR_NVS_KEY,&s->status,sizeof(camera_status_t));
+            if (ret == ESP_OK) {
+                uint8_t pf = s->pixformat;
+                ret = nvs_set_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,pf);
+            }
             return ret;
         } else {
             return ESP_ERR_CAMERA_NOT_DETECTED; 
@@ -1382,16 +1387,17 @@ esp_err_t esp_camera_save_to_nvs(const char *key)
 esp_err_t esp_camera_load_from_nvs(const char *key) 
 {
   nvs_handle_t handle;
-  
+  uint8_t pf;
+
   esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
   
   if (ret == ESP_OK) {
       sensor_t *s = esp_camera_sensor_get();
       camera_status_t st;
       if (s != NULL) {
-          size_t size = sizeof(camera_status_t);
-          ret = nvs_get_blob(handle,CAMERA_SENSOR_NVS_KEY,&st,&size);
-          if (ret == ESP_OK) {
+        size_t size = sizeof(camera_status_t);
+        ret = nvs_get_blob(handle,CAMERA_SENSOR_NVS_KEY,&st,&size);
+        if (ret == ESP_OK) {
             s->set_ae_level(s,st.ae_level);
             s->set_aec2(s,st.aec2);
             s->set_aec_value(s,st.aec_value);
@@ -1418,7 +1424,11 @@ esp_err_t esp_camera_load_from_nvs(const char *key)
             s->set_wb_mode(s,st.wb_mode);
             s->set_whitebal(s,st.awb);
             s->set_wpc(s,st.wpc);
-          }  
+        }  
+        ret = nvs_get_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,&pf);
+        if (ret == ESP_OK) {
+          s->set_pixformat(s,pf);
+        }
       } else {
           return ESP_ERR_CAMERA_NOT_DETECTED;
       }
