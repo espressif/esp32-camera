@@ -570,7 +570,7 @@ static void IRAM_ATTR vsync_isr(void* arg)
         if(s_state->dma_received_count > 0) {
             signal_dma_buf_received(&need_yield);
             //ets_printf("end_vsync\n");
-            if(s_state->dma_filtered_count > 1 || s_state->config.fb_count > 1) {
+            if(s_state->dma_filtered_count > 1 || s_state->fb->bad || s_state->config.fb_count > 1) {
                 i2s_stop(&need_yield);
             }
         }
@@ -1313,6 +1313,8 @@ esp_err_t esp_camera_deinit()
     return ESP_OK;
 }
 
+#define FB_GET_TIMEOUT (4000 / portTICK_PERIOD_MS)
+
 camera_fb_t* esp_camera_fb_get()
 {
     if (s_state == NULL) {
@@ -1326,15 +1328,22 @@ camera_fb_t* esp_camera_fb_get()
             return NULL;
         }
     }
-    if(s_state->config.fb_count == 1) {
-        xSemaphoreTake(s_state->frame_ready, portMAX_DELAY);
-    }
-    if(s_state->config.fb_count == 1) {
+    bool need_yield = false;
+    if (s_state->config.fb_count == 1) {
+        if (xSemaphoreTake(s_state->frame_ready, FB_GET_TIMEOUT) != pdTRUE){
+            i2s_stop(&need_yield);
+            ESP_LOGE(TAG, "Failed to get the frame on time!");
+            return NULL;
+        }
         return (camera_fb_t*)s_state->fb;
     }
     camera_fb_int_t * fb = NULL;
     if(s_state->fb_out) {
-        xQueueReceive(s_state->fb_out, &fb, portMAX_DELAY);
+        if (xQueueReceive(s_state->fb_out, &fb, FB_GET_TIMEOUT) != pdTRUE) {
+            i2s_stop(&need_yield);
+            ESP_LOGE(TAG, "Failed to get the frame on time!");
+            return NULL;
+        }
     }
     return (camera_fb_t*)fb;
 }
