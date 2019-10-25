@@ -43,6 +43,11 @@
 #if CONFIG_OV3660_SUPPORT
 #include "ov3660.h"
 #endif
+#if CONFIG_OV7670_SUPPORT
+#include "ov7670.h"
+#endif
+
+#define ENABLE_TEST_PATTERN CONFIG_ENABLE_TEST_PATTERN
 
 typedef enum {
     CAMERA_NONE = 0,
@@ -50,6 +55,7 @@ typedef enum {
     CAMERA_OV7725 = 7725,
     CAMERA_OV2640 = 2640,
     CAMERA_OV3660 = 3660,
+    CAMERA_OV7670 = 7670,
 } camera_model_t;
 
 #define REG_PID        0x0A
@@ -1042,6 +1048,12 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         ov3660_init(&s_state->sensor);
         break;
 #endif
+#if CONFIG_OV7670_SUPPORT
+    case OV7670_PID:
+        *out_camera_model = CAMERA_OV7670;
+        ov7670_init(&s_state->sensor);
+        break;
+#endif
     default:
         id->PID = 0;
         *out_camera_model = CAMERA_UNKNOWN;
@@ -1094,16 +1106,30 @@ esp_err_t camera_init(const camera_config_t* config)
         }
         s_state->fb_bytes_per_pixel = 1;       // frame buffer stores Y8
     } else if (pix_format == PIXFORMAT_YUV422 || pix_format == PIXFORMAT_RGB565) {
-        s_state->fb_size = s_state->width * s_state->height * 2;
-        if (is_hs_mode() && s_state->sensor.id.PID != OV7725_PID) {
-            s_state->sampling_mode = SM_0A00_0B00;
-            s_state->dma_filter = &dma_filter_yuyv_highspeed;
-        } else {
-            s_state->sampling_mode = SM_0A0B_0C0D;
-            s_state->dma_filter = &dma_filter_yuyv;
+        if(s_state->sensor.id.PID == OV7670_PID) {
+            s_state->fb_size = s_state->width * s_state->height * 3;
+            if (is_hs_mode()) {
+                s_state->sampling_mode = SM_0A0B_0B0C; 
+                s_state->dma_filter = &dma_filter_rgb888_highspeed;
+            } else {
+                s_state->sampling_mode = SM_0A0B_0C0D;
+                s_state->dma_filter = &dma_filter_rgb888;
+            }
+            s_state->in_bytes_per_pixel = 2;       // camera sends RGB565
+            s_state->fb_bytes_per_pixel = 3;       // frame buffer stores RGB888
         }
-        s_state->in_bytes_per_pixel = 2;       // camera sends YU/YV
-        s_state->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
+        else {        
+            s_state->fb_size = s_state->width * s_state->height * 2;
+            if (is_hs_mode() && s_state->sensor.id.PID != OV7725_PID) {
+                s_state->sampling_mode = SM_0A00_0B00;
+                s_state->dma_filter = &dma_filter_yuyv_highspeed;
+            } else {
+                s_state->sampling_mode = SM_0A0B_0C0D;
+                s_state->dma_filter = &dma_filter_yuyv;
+            }
+            s_state->in_bytes_per_pixel = 2;       // camera sends YU/YV
+            s_state->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
+        }
     } else if (pix_format == PIXFORMAT_RGB888) {
         s_state->fb_size = s_state->width * s_state->height * 3;
         if (is_hs_mode()) {
@@ -1218,6 +1244,16 @@ esp_err_t camera_init(const camera_config_t* config)
     }
     s_state->sensor.set_pixformat(&s_state->sensor, pix_format);
 
+#if ENABLE_TEST_PATTERN
+    /* Test pattern may get handy
+     if you are unable to get the live image right.
+     Once test pattern is enable, sensor will output
+     vertical shaded bars instead of live image.
+     */
+    s_state->sensor.set_colorbar(&s_state->sensor, 1);
+    ESP_LOGD(TAG, "Test pattern enabled");
+#endif
+
     if (s_state->sensor.id.PID == OV2640_PID) {
         s_state->sensor.set_gainceiling(&s_state->sensor, GAINCEILING_2X);
         s_state->sensor.set_bpc(&s_state->sensor, false);
@@ -1260,6 +1296,13 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         ESP_LOGD(TAG, "Detected OV2640 camera");
     } else if (camera_model == CAMERA_OV3660) {
         ESP_LOGD(TAG, "Detected OV3660 camera");
+    } else if (camera_model == CAMERA_OV7670) {
+        ESP_LOGD(TAG, "Detected OV7670 camera");
+        if(config->pixel_format == PIXFORMAT_JPEG) {
+            ESP_LOGE(TAG, "Camera does not support JPEG");
+            err = ESP_ERR_CAMERA_NOT_SUPPORTED;
+            goto fail;
+        }
     } else {
         ESP_LOGE(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;

@@ -14,6 +14,7 @@
 #define OV2640_PID     (0x26)
 #define OV7725_PID     (0x77)
 #define OV3660_PID     (0x36)
+#define OV7670_PID     (0x76)
 
 typedef enum {
     PIXFORMAT_RGB565,    // 2BPP/RGB565

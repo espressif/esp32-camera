@@ -7,6 +7,13 @@ config OV2640_SUPPORT
 		Enable this option if you want to use the OV2640.
 		Disable this option to safe memory.
 
+config OV7670_SUPPORT
+	bool "OV7670 Support"
+	default y
+	help
+		Enable this option if you want to use the OV7670.
+		Disable this option to safe memory.
+
 config OV7725_SUPPORT
 	bool "OV7725 Support"
 	default n
@@ -27,6 +34,17 @@ config SCCB_HARDWARE_I2C
     help
         Enable this option if you want to use hardware I2C to control the camera.
         Disable this option to use software I2C.
+
+config ENABLE_TEST_PATTERN
+	bool "Enable test pattern on camera output"
+	default n
+	help
+		Configure the camera module to output test pattern instead of live image.
+		
+		Use this option to troubleshoot image issues like noise,
+		distortion, not legible and missing live image.
+		Instead, module will generate regular vertical bars 
+		in shades from dark to white.
 
 choice CAMERA_TASK_PINNED_TO_CORE
     bool "Camera task pinned to core"
