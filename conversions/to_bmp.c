@@ -14,7 +14,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "img_converters.h"
-#include "esp_spiram.h"
+#include "esp32/spiram.h" 
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
 #include "yuv.h"

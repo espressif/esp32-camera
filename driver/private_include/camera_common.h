@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "rom/lldesc.h"
+#include "esp32/rom/lldesc.h" 
 #include "esp_err.h"
 #include "esp_intr_alloc.h"
 #include "freertos/FreeRTOS.h"

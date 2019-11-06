@@ -13,7 +13,7 @@
 // limitations under the License.
 #include <stddef.h>
 #include <string.h>
-#include "esp_spiram.h"
+#include "esp32/spiram.h" 
 #include "esp_attr.h"
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
