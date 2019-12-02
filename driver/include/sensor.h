@@ -27,6 +27,7 @@ typedef enum {
 } pixformat_t;
 
 typedef enum {
+    FRAMESIZE_96x96,    // 96x96
     FRAMESIZE_QQVGA,    // 160x120
     FRAMESIZE_QQVGA2,   // 128x160
     FRAMESIZE_QCIF,     // 176x144
