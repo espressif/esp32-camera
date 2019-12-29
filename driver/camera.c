@@ -1201,7 +1201,11 @@ esp_err_t camera_init(const camera_config_t* config)
     }
 
     vsync_intr_disable();
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
+    err = gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "gpio_install_isr_service failed (%x)", err);
+        goto fail;
+    }
     err = gpio_isr_handler_add(s_state->config.pin_vsync, &vsync_isr, NULL);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "vsync_isr_handler_add failed (%x)", err);
