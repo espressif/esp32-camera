@@ -27,7 +27,7 @@
 #define TAG ""
 #else
 #include "esp_log.h"
-static const char* TAG = "to_bmp";
+static const char* TAG = "to_jpg";
 #endif
 
 static void *_malloc(size_t size)
