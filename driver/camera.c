@@ -992,8 +992,8 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     ESP_LOGD(TAG, "Detected camera at address=0x%02x", s_state->sensor.slv_addr);
     sensor_id_t* id = &s_state->sensor.id;
 
-#if (CONFIG_OV2640_SUPPORT && CONFIG_OV3660_SUPPORT)
-    if (slv_addr == 0x30) {
+#if (CONFIG_OV2640_SUPPORT)
+    if (s_state->sensor.slv_addr == 0x30) {
         ESP_LOGD(TAG, "Resetting OV2640");
         //camera might be OV2640. try to reset it
         SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
@@ -1201,7 +1201,11 @@ esp_err_t camera_init(const camera_config_t* config)
     }
 
     vsync_intr_disable();
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
+    err = gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "gpio_install_isr_service failed (%x)", err);
+        goto fail;
+    }
     err = gpio_isr_handler_add(s_state->config.pin_vsync, &vsync_isr, NULL);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "vsync_isr_handler_add failed (%x)", err);
