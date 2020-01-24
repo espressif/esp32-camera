@@ -26,6 +26,6 @@ set(COMPONENT_PRIV_INCLUDEDIRS
   )
 
 set(COMPONENT_REQUIRES driver)
-set(COMPONENT_PRIV_REQUIRES freertos)
+set(COMPONENT_PRIV_REQUIRES freertos nvs_flash)
 
 register_component()

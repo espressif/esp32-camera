@@ -29,6 +29,8 @@
 #include "driver/rtc_io.h"
 #include "driver/periph_ctrl.h"
 #include "esp_intr_alloc.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 #include "sensor.h"
 #include "sccb.h"
 #include "esp_camera.h"
@@ -67,6 +69,8 @@ typedef enum {
 #include "esp_log.h"
 static const char* TAG = "camera";
 #endif
+static const char* CAMERA_SENSOR_NVS_KEY = "sensor";
+static const char* CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
 
 typedef void (*dma_filter_t)(const dma_elem_t* src, lldesc_t* dma_desc, uint8_t* dst);
 
@@ -1366,4 +1370,85 @@ sensor_t * esp_camera_sensor_get()
         return NULL;
     }
     return &s_state->sensor;
+}
+
+esp_err_t esp_camera_save_to_nvs(const char *key) 
+{
+    nvs_handle_t handle;
+    
+    esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
+    
+    if (ret == ESP_OK) {
+        sensor_t *s = esp_camera_sensor_get();
+        if (s != NULL) {
+            ret = nvs_set_blob(handle,CAMERA_SENSOR_NVS_KEY,&s->status,sizeof(camera_status_t));
+            if (ret == ESP_OK) {
+                uint8_t pf = s->pixformat;
+                ret = nvs_set_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,pf);
+            }
+            return ret;
+        } else {
+            return ESP_ERR_CAMERA_NOT_DETECTED; 
+        }
+        nvs_close(handle);
+        return ret;
+    } else {
+        return ret;
+    }
+}
+
+esp_err_t esp_camera_load_from_nvs(const char *key) 
+{
+  nvs_handle_t handle;
+  uint8_t pf;
+
+  esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
+  
+  if (ret == ESP_OK) {
+      sensor_t *s = esp_camera_sensor_get();
+      camera_status_t st;
+      if (s != NULL) {
+        size_t size = sizeof(camera_status_t);
+        ret = nvs_get_blob(handle,CAMERA_SENSOR_NVS_KEY,&st,&size);
+        if (ret == ESP_OK) {
+            s->set_ae_level(s,st.ae_level);
+            s->set_aec2(s,st.aec2);
+            s->set_aec_value(s,st.aec_value);
+            s->set_agc_gain(s,st.agc_gain);
+            s->set_awb_gain(s,st.awb_gain);
+            s->set_bpc(s,st.bpc);
+            s->set_brightness(s,st.brightness);
+            s->set_colorbar(s,st.colorbar);
+            s->set_contrast(s,st.contrast);
+            s->set_dcw(s,st.dcw);
+            s->set_denoise(s,st.denoise);
+            s->set_exposure_ctrl(s,st.aec);
+            s->set_framesize(s,st.framesize);
+            s->set_gain_ctrl(s,st.agc);          
+            s->set_gainceiling(s,st.gainceiling);
+            s->set_hmirror(s,st.hmirror);
+            s->set_lenc(s,st.lenc);
+            s->set_quality(s,st.quality);
+            s->set_raw_gma(s,st.raw_gma);
+            s->set_saturation(s,st.saturation);
+            s->set_sharpness(s,st.sharpness);
+            s->set_special_effect(s,st.special_effect);
+            s->set_vflip(s,st.vflip);
+            s->set_wb_mode(s,st.wb_mode);
+            s->set_whitebal(s,st.awb);
+            s->set_wpc(s,st.wpc);
+        }  
+        ret = nvs_get_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,&pf);
+        if (ret == ESP_OK) {
+          s->set_pixformat(s,pf);
+        }
+      } else {
+          return ESP_ERR_CAMERA_NOT_DETECTED;
+      }
+      nvs_close(handle);
+      return ret;
+  } else {
+      ESP_LOGW(TAG,"Error (%d) opening nvs key \"%s\"",ret,key);
+      return ret;
+  }
 }
