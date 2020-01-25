@@ -2,6 +2,7 @@
 #include "driver/ledc.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "xclk.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
@@ -20,7 +21,9 @@ esp_err_t camera_enable_out_clock(camera_config_t* config)
     timer_conf.freq_hz = config->xclk_freq_hz;
     timer_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
     timer_conf.timer_num = config->ledc_timer;
-    //timer_conf.clk_cfg = LEDC_AUTO_CLK; //todo: IDF 4.X support
+#ifdef ESP_IDF_VERSION_MAJOR
+    timer_conf.clk_cfg = LEDC_AUTO_CLK;
+#endif
     esp_err_t err = ledc_timer_config(&timer_conf);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "ledc_timer_config failed, rc=%x", err);

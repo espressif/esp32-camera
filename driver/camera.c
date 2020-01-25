@@ -29,6 +29,7 @@
 #include "driver/rtc_io.h"
 #include "driver/periph_ctrl.h"
 #include "esp_intr_alloc.h"
+#include "esp_system.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "sensor.h"
@@ -1374,8 +1375,11 @@ sensor_t * esp_camera_sensor_get()
 
 esp_err_t esp_camera_save_to_nvs(const char *key) 
 {
+#ifdef ESP_IDF_VERSION_MAJOR
+    nvs_handle_t handle;
+#else
     nvs_handle handle;
-    
+#endif
     esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
     
     if (ret == ESP_OK) {
@@ -1399,7 +1403,11 @@ esp_err_t esp_camera_save_to_nvs(const char *key)
 
 esp_err_t esp_camera_load_from_nvs(const char *key) 
 {
-  nvs_handle handle;
+#ifdef ESP_IDF_VERSION_MAJOR
+    nvs_handle_t handle;
+#else
+    nvs_handle handle;
+#endif
   uint8_t pf;
 
   esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
