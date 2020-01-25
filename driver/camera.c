@@ -19,7 +19,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "rom/lldesc.h"
 #include "soc/soc.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/i2s_reg.h"
