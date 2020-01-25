@@ -1374,7 +1374,7 @@ sensor_t * esp_camera_sensor_get()
 
 esp_err_t esp_camera_save_to_nvs(const char *key) 
 {
-    nvs_handle_t handle;
+    nvs_handle handle;
     
     esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
     
@@ -1399,7 +1399,7 @@ esp_err_t esp_camera_save_to_nvs(const char *key)
 
 esp_err_t esp_camera_load_from_nvs(const char *key) 
 {
-  nvs_handle_t handle;
+  nvs_handle handle;
   uint8_t pf;
 
   esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
