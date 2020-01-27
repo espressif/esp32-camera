@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "esp32/rom/lldesc.h" 
 #include "esp_err.h"
 #include "esp_intr_alloc.h"
 #include "freertos/FreeRTOS.h"
@@ -11,6 +10,16 @@
 #include "freertos/task.h"
 #include "esp_camera.h"
 #include "sensor.h"
+
+#ifdef ESP_IDF_VERSION_MAJOR            // IDF 4+
+    #if CONFIG_IDF_TARGET_ESP32         // ESP32/PICO-D4
+        #include "esp32/rom/lldesc.h"
+    #else 
+        #error Target CONFIG_IDF_TARGET is not supported
+    #endif
+#else
+    #include "rom/lldesc.h"             // ESP32 Before IDF 4.0
+#endif
 
 typedef union {
     struct {

@@ -19,7 +19,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "esp32/rom/lldesc.h" 
 #include "soc/soc.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/i2s_reg.h"
@@ -34,6 +33,15 @@
 #include "esp_camera.h"
 #include "camera_common.h"
 #include "xclk.h"
+#ifdef ESP_IDF_VERSION_MAJOR            // IDF 4+
+    #if CONFIG_IDF_TARGET_ESP32         // ESP32/PICO-D4
+        #include "esp32/rom/lldesc.h"
+    #else 
+        #error Target CONFIG_IDF_TARGET is not supported
+    #endif
+#else
+    #include "rom/lldesc.h"             // ESP32 Before IDF 4.0
+#endif
 #if CONFIG_OV2640_SUPPORT
 #include "ov2640.h"
 #endif
@@ -46,8 +54,6 @@
 #if CONFIG_OV7670_SUPPORT
 #include "ov7670.h"
 #endif
-
-#define ENABLE_TEST_PATTERN CONFIG_ENABLE_TEST_PATTERN
 
 typedef enum {
     CAMERA_NONE = 0,
@@ -1243,16 +1249,6 @@ esp_err_t camera_init(const camera_config_t* config)
         goto fail;
     }
     s_state->sensor.set_pixformat(&s_state->sensor, pix_format);
-
-#if ENABLE_TEST_PATTERN
-    /* Test pattern may get handy
-     if you are unable to get the live image right.
-     Once test pattern is enable, sensor will output
-     vertical shaded bars instead of live image.
-     */
-    s_state->sensor.set_colorbar(&s_state->sensor, 1);
-    ESP_LOGD(TAG, "Test pattern enabled");
-#endif
 
     if (s_state->sensor.id.PID == OV2640_PID) {
         s_state->sensor.set_gainceiling(&s_state->sensor, GAINCEILING_2X);
