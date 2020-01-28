@@ -224,14 +224,15 @@ int ret;
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
+        case PIXFORMAT_RGB888:
             ret = ov7670_write_array(sensor, ov7670_fmt_rgb565);
         break;
  
-       case PIXFORMAT_YUV422:
-       case PIXFORMAT_GRAYSCALE:
-	   default:
+        case PIXFORMAT_YUV422:
+        case PIXFORMAT_GRAYSCALE:
+	    default:
             ret = ov7670_write_array(sensor, ov7670_fmt_yuv422);
-       break;
+        break;
     }
 
     vTaskDelay(30 / portTICK_PERIOD_MS);
