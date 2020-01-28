@@ -11,14 +11,15 @@
 #include "esp_camera.h"
 #include "sensor.h"
 
-#ifdef ESP_IDF_VERSION_MAJOR            // IDF 4+
-    #if CONFIG_IDF_TARGET_ESP32         // ESP32/PICO-D4
-        #include "esp32/rom/lldesc.h"
-    #else 
-        #error Target CONFIG_IDF_TARGET is not supported
-    #endif
-#else
-    #include "rom/lldesc.h"             // ESP32 Before IDF 4.0
+#include "esp_system.h"
+#ifdef ESP_IDF_VERSION_MAJOR // IDF 4+
+#if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
+#include "esp32/rom/lldesc.h"
+#else 
+#error Target CONFIG_IDF_TARGET is not supported
+#endif
+#else // ESP32 Before IDF 4.0
+#include "rom/lldesc.h"
 #endif
 
 typedef union {

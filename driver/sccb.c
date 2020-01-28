@@ -102,7 +102,7 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     esp_err_t ret = ESP_FAIL;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
@@ -110,13 +110,13 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     if(ret != ESP_OK) return -1;
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | READ_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | READ_BIT, ACK_CHECK_EN);
     i2c_master_read_byte(cmd, &data, NACK_VAL);
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     if(ret != ESP_OK) {
-        ESP_LOGE(TAG, "SCCB_Read Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", ESP_SLAVE_ADDR, reg, data, ret);
+        ESP_LOGE(TAG, "SCCB_Read Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", slv_addr, reg, data, ret);
     }
     return data;
 #else
@@ -144,14 +144,14 @@ uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
     esp_err_t ret = ESP_FAIL;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
     if(ret != ESP_OK) {
-        ESP_LOGE(TAG, "SCCB_Write Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", ESP_SLAVE_ADDR, reg, data, ret);
+        ESP_LOGE(TAG, "SCCB_Write Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", slv_addr, reg, data, ret);
     }
     return ret == ESP_OK ? 0 : -1;
 #else
@@ -177,7 +177,7 @@ uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
     uint8_t *reg_u8 = (uint8_t *)&reg_htons;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
     i2c_master_stop(cmd);
@@ -186,7 +186,7 @@ uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
     if(ret != ESP_OK) return -1;
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | READ_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | READ_BIT, ACK_CHECK_EN);
     i2c_master_read_byte(cmd, &data, NACK_VAL);
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
@@ -226,7 +226,7 @@ uint8_t SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
     uint8_t *reg_u8 = (uint8_t *)&reg_htons;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, ( ESP_SLAVE_ADDR << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
     i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
     i2c_master_write_byte(cmd, data, ACK_CHECK_EN);

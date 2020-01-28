@@ -14,12 +14,22 @@
 #include <stddef.h>
 #include <string.h>
 #include "img_converters.h"
-#include "esp32/spiram.h" 
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
 #include "yuv.h"
 #include "sdkconfig.h"
 #include "esp_jpg_decode.h"
+
+#include "esp_system.h"
+#ifdef ESP_IDF_VERSION_MAJOR // IDF 4+
+#if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
+#include "esp32/spiram.h"
+#else 
+#error Target CONFIG_IDF_TARGET is not supported
+#endif
+#else // ESP32 Before IDF 4.0
+#include "esp_spiram.h"
+#endif
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
