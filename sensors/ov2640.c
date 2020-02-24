@@ -133,133 +133,100 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     return ret;
 }
 
-//Functions are not needed currently
-#if 0
-//Set the sensor output window
-int set_output_window(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, uint16_t height)
-{
+static int set_window(sensor_t *sensor, ov2640_sensor_mode_t mode, int offset_x, int offset_y, int max_x, int max_y, int w, int h){
     int ret = 0;
-    uint16_t endx, endy;
-    uint8_t com1, reg32;
-
-    endy = y + height / 2;
-    com1 = read_reg(sensor, BANK_SENSOR, COM1);
-    WRITE_REG_OR_RETURN(BANK_SENSOR, COM1, (com1 & 0XF0) | (((endy & 0X03) << 2) | (y & 0X03)));
-    WRITE_REG_OR_RETURN(BANK_SENSOR, VSTART, y >> 2);
-    WRITE_REG_OR_RETURN(BANK_SENSOR, VSTOP, endy >> 2);
-
-    endx = x + width / 2;
-    reg32 = read_reg(sensor, BANK_SENSOR, REG32);
-    WRITE_REG_OR_RETURN(BANK_SENSOR, REG32, (reg32 & 0XC0) | (((endx & 0X07) << 3) | (x & 0X07)));
-    WRITE_REG_OR_RETURN(BANK_SENSOR, HSTART, x >> 3);
-    WRITE_REG_OR_RETURN(BANK_SENSOR, HSTOP, endx >> 3);
-
-    return ret;
-}
-
-// Set the image output size (final output resolution)
-int set_output_size(sensor_t *sensor, uint16_t width, uint16_t height)
-{
-    int ret = 0;
-    uint16_t h, w;
-
-    if(width % 4) {
-        return -1;
-    }
-    if(height % 4 ) {
-        return -2;
-    }
-
-    w = width / 4;
-    h = height / 4;
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, RESET_DVP);
-    WRITE_REG_OR_RETURN(BANK_DSP, ZMOW, w & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, ZMOH, h & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, ZMHH, ((w >> 8) & 0X03) | ((h >> 6) & 0X04));
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0X00);
-
-    return ret;
-}
-
-//Set the image window size >= output size
-int set_window_size(sensor_t *sensor, uint16_t x, uint16_t y, uint16_t width, uint16_t height)
-{
-    int ret = 0;
-    uint16_t w, h;
-
-    if(width % 4) {
-        return -1;
-    }
-    if(height % 4) {
-        return -2;
-    }
-
-    w = width / 4;
-    h = height / 4;
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, RESET_DVP);
-    WRITE_REG_OR_RETURN(BANK_DSP, HSIZE, w & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, VSIZE, h & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, XOFFL, x & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, YOFFL, y & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, VHYX, ((h >> 1) & 0X80) | ((y >> 4) & 0X70) | ((w >> 5) & 0X08) | ((x >> 8) & 0X07));
-    WRITE_REG_OR_RETURN(BANK_DSP, TEST, (w >> 2) & 0X80);
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0X00);
-
-    return ret;
-}
-
-//Set the sensor resolution (UXGA, SVGA, CIF)
-int set_image_size(sensor_t *sensor, uint16_t width, uint16_t height)
-{
-    int ret = 0;
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, RESET_DVP);
-    WRITE_REG_OR_RETURN(BANK_DSP, HSIZE8, (width >> 3) & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, VSIZE8, (height >> 3) & 0XFF);
-    WRITE_REG_OR_RETURN(BANK_DSP, SIZEL, ((width & 0X07) << 3) | ((width >> 4) & 0X80) | (height & 0X07));
-    //WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0X00);
-
-    return ret;
-}
-#endif
-
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
-    int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
     const uint8_t (*regs)[2];
+    ov2640_clk_t c;
+    c.reserved = 0;
 
-    sensor->status.framesize = framesize;
+    max_x /= 4;
+    max_y /= 4;
+    w /= 4;
+    h /= 4;
+    uint8_t win_regs[][2] = {
+        {BANK_SEL, BANK_DSP},
+        {HSIZE, max_x & 0xFF},
+        {VSIZE, max_y & 0xFF},
+        {XOFFL, offset_x & 0xFF},
+        {YOFFL, offset_y & 0xFF},
+        {VHYX, ((max_y >> 1) & 0X80) | ((offset_y >> 4) & 0X70) | ((max_x >> 5) & 0X08) | ((offset_y >> 8) & 0X07)},
+        {TEST, (max_x >> 2) & 0X80},
+        {ZMOW, (w)&0xFF},
+        {ZMOH, (h)&0xFF},
+        {ZMHH, ((h>>6)&0x04)|((w>>8)&0x03)},
+        {0, 0}
+    };
 
-    if (framesize <= FRAMESIZE_CIF) {
+    c.pclk_auto = 0;
+    c.pclk_div = 8;
+    c.clk_2x = 0;
+    c.clk_div = 0;
+
+    if(sensor->pixformat != PIXFORMAT_JPEG){
+        c.pclk_auto = 1;
+        c.clk_div = 7;
+    }
+
+    if (mode == OV2640_MODE_CIF) {
         regs = ov2640_settings_to_cif;
-    } else if (framesize <= FRAMESIZE_SVGA) {
+        if(sensor->pixformat != PIXFORMAT_JPEG){
+            c.clk_div = 3;
+        }
+    } else if (mode == OV2640_MODE_SVGA) {
         regs = ov2640_settings_to_svga;
     } else {
         regs = ov2640_settings_to_uxga;
+        c.pclk_div = 12;
     }
 
     WRITE_REG_OR_RETURN(BANK_DSP, R_BYPASS, R_BYPASS_DSP_BYPAS);
     WRITE_REGS_OR_RETURN(regs);
-    if (sensor->pixformat == PIXFORMAT_JPEG && sensor->xclk_freq_hz == 10000000) {
-        if (framesize <= FRAMESIZE_CIF) {
-            WRITE_REG_OR_RETURN(BANK_SENSOR, CLKRC, CLKRC_2X_CIF);
-        } else if (framesize <= FRAMESIZE_SVGA) {
-            WRITE_REG_OR_RETURN(BANK_SENSOR, CLKRC, CLKRC_2X_SVGA);
-        } else {
-            WRITE_REG_OR_RETURN(BANK_SENSOR, CLKRC, CLKRC_2X_UXGA);
-        }
-    }
-    WRITE_REG_OR_RETURN(BANK_DSP, ZMOW, (w>>2)&0xFF); // OUTW[7:0] (real/4)
-    WRITE_REG_OR_RETURN(BANK_DSP, ZMOH, (h>>2)&0xFF); // OUTH[7:0] (real/4)
-    WRITE_REG_OR_RETURN(BANK_DSP, ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); // OUTH[8]/OUTW[9:8]
-    WRITE_REG_OR_RETURN(BANK_DSP, RESET, 0x00);
+    WRITE_REGS_OR_RETURN(win_regs);
+    WRITE_REG_OR_RETURN(BANK_SENSOR, CLKRC, c.clk);
+    WRITE_REG_OR_RETURN(BANK_DSP, R_DVP_SP, c.pclk);
     WRITE_REG_OR_RETURN(BANK_DSP, R_BYPASS, R_BYPASS_DSP_EN);
 
     vTaskDelay(10 / portTICK_PERIOD_MS);
     //required when changing resolution
     set_pixformat(sensor, sensor->pixformat);
 
+    return ret;
+}
+
+static int set_framesize(sensor_t *sensor, framesize_t framesize)
+{
+    int ret = 0;
+    uint16_t w = resolution[framesize].width;
+    uint16_t h = resolution[framesize].height;
+    aspect_ratio_t ratio = resolution[framesize].aspect_ratio;
+    uint16_t max_x = ratio_table[ratio].max_x;
+    uint16_t max_y = ratio_table[ratio].max_y;
+    uint16_t offset_x = ratio_table[ratio].offset_x;
+    uint16_t offset_y = ratio_table[ratio].offset_y;
+    ov2640_sensor_mode_t mode = OV2640_MODE_UXGA;
+
+    sensor->status.framesize = framesize;
+
+
+
+    if (framesize <= FRAMESIZE_CIF) {
+        mode = OV2640_MODE_CIF;
+        max_x /= 4;
+        max_y /= 4;
+        offset_x /= 4;
+        offset_y /= 4;
+        if(max_y > 296){
+            max_y = 296;
+        }
+    } else if (framesize <= FRAMESIZE_SVGA) {
+        mode = OV2640_MODE_SVGA;
+        max_x /= 2;
+        max_y /= 2;
+        offset_x /= 2;
+        offset_y /= 2;
+    }
+
+    ret = set_window(sensor, mode, offset_x, offset_y, max_x, max_y, w, h);
     return ret;
 }
 
@@ -482,6 +449,46 @@ static int set_denoise(sensor_t *sensor, int level)
    return -1;
 }
 
+static int get_reg(sensor_t *sensor, int reg, int mask)
+{
+    int ret = read_reg(sensor, (reg >> 8) & 0x01, reg & 0xFF);
+    if(ret > 0){
+        ret &= mask;
+    }
+    return ret;
+}
+
+static int set_reg(sensor_t *sensor, int reg, int mask, int value)
+{
+    int ret = 0;
+    ret = read_reg(sensor, (reg >> 8) & 0x01, reg & 0xFF);
+    if(ret < 0){
+        return ret;
+    }
+    value = (ret & ~mask) | (value & mask);
+    ret = write_reg(sensor, (reg >> 8) & 0x01, reg & 0xFF, value);
+    return ret;
+}
+
+static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning)
+{
+    return set_window(sensor, (ov2640_sensor_mode_t)startX, offsetX, offsetY, totalX, totalY, outputX, outputY);
+}
+
+static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div)
+{
+    return -1;
+}
+
+esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
+static int set_xclk(sensor_t *sensor, int timer, int xclk)
+{
+    int ret = 0;
+    sensor->xclk_freq_hz = xclk * 1000000U;
+    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    return ret;
+}
+
 static int init_status(sensor_t *sensor){
     sensor->status.brightness = 0;
     sensor->status.contrast = 0;
@@ -562,6 +569,12 @@ int ov2640_init(sensor_t *sensor)
     //not supported
     sensor->set_sharpness = set_sharpness;
     sensor->set_denoise = set_denoise;
+
+    sensor->get_reg = get_reg;
+    sensor->set_reg = set_reg;
+    sensor->set_res_raw = set_res_raw;
+    sensor->set_pll = _set_pll;
+    sensor->set_xclk = set_xclk;
     ESP_LOGD(TAG, "OV2640 Attached");
     return 0;
 }

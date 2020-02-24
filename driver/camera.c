@@ -45,6 +45,9 @@
 #if CONFIG_OV3660_SUPPORT
 #include "ov3660.h"
 #endif
+#if CONFIG_OV5640_SUPPORT
+#include "ov5640.h"
+#endif
 
 typedef enum {
     CAMERA_NONE = 0,
@@ -52,6 +55,7 @@ typedef enum {
     CAMERA_OV7725 = 7725,
     CAMERA_OV2640 = 2640,
     CAMERA_OV3660 = 3660,
+    CAMERA_OV5640 = 5640,
 } camera_model_t;
 
 #define REG_PID        0x0A
@@ -80,6 +84,7 @@ typedef struct camera_fb_s {
     size_t width;
     size_t height;
     pixformat_t format;
+    struct timeval timestamp;
     size_t size;
     uint8_t ref;
     uint8_t bad;
@@ -546,6 +551,7 @@ static void IRAM_ATTR signal_dma_buf_received(bool* need_yield)
         }
         //ESP_EARLY_LOGW(TAG, "qsf:%d", s_state->dma_received_count);
         //ets_printf("qsf:%d\n", s_state->dma_received_count);
+        //ets_printf("qovf\n");
     }
     *need_yield = (ret == pdTRUE && higher_priority_task_woken == pdTRUE);
 }
@@ -577,6 +583,7 @@ static void IRAM_ATTR vsync_isr(void* arg)
             if(s_state->dma_filtered_count > 1 || s_state->fb->bad || s_state->config.fb_count > 1) {
                 i2s_stop(&need_yield);
             }
+            //ets_printf("vs\n");
         }
         if(s_state->config.fb_count > 1 || s_state->dma_filtered_count < 2) {
             I2S0.conf.rx_start = 0;
@@ -669,6 +676,7 @@ static void IRAM_ATTR dma_finish_frame()
             if(s_state->config.fb_count == 1) {
                 i2s_start_bus();
             }
+            //ets_printf("bad\n");
         } else {
             s_state->fb->len = s_state->dma_filtered_count * buf_len;
             if(s_state->fb->len) {
@@ -695,6 +703,8 @@ static void IRAM_ATTR dma_finish_frame()
             } else if(s_state->config.fb_count == 1){
                 //frame was empty?
                 i2s_start_bus();
+            } else {
+                //ets_printf("empty\n");
             }
         }
     } else if(s_state->fb->len) {
@@ -728,15 +738,19 @@ static void IRAM_ATTR dma_filter_buffer(size_t buf_idx)
         if(s_state->sensor.pixformat == PIXFORMAT_JPEG) {
             uint32_t sig = *((uint32_t *)s_state->fb->buf) & 0xFFFFFF;
             if(sig != 0xffd8ff) {
-                //ets_printf("bad header\n");
+                ets_printf("bh 0x%08x\n", sig);
                 s_state->fb->bad = 1;
                 return;
             }
         }
         //set the frame properties
-        s_state->fb->width = resolution[s_state->sensor.status.framesize][0];
-        s_state->fb->height = resolution[s_state->sensor.status.framesize][1];
+        s_state->fb->width = resolution[s_state->sensor.status.framesize].width;
+        s_state->fb->height = resolution[s_state->sensor.status.framesize].height;
         s_state->fb->format = s_state->sensor.pixformat;
+
+        uint64_t us = (uint64_t)esp_timer_get_time();
+        s_state->fb->timestamp.tv_sec = us / 1000000UL;
+        s_state->fb->timestamp.tv_usec = us % 1000000UL;
     }
     s_state->dma_filtered_count++;
 }
@@ -972,13 +986,6 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_reset, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
-#if (CONFIG_OV2640_SUPPORT && !CONFIG_OV3660_SUPPORT)
-    } else {
-        //reset OV2640
-        SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
-        SCCB_Write(0x30, 0x12, 0x80);//reset
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-#endif
     }
 
     ESP_LOGD(TAG, "Searching for camera address");
@@ -989,15 +996,13 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         camera_disable_out_clock();
         return ESP_ERR_CAMERA_NOT_DETECTED;
     }
-    s_state->sensor.slv_addr = slv_addr;
-    s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
-
-    //s_state->sensor.slv_addr = 0x30;
-    ESP_LOGD(TAG, "Detected camera at address=0x%02x", s_state->sensor.slv_addr);
+    
+    //slv_addr = 0x30;
+    ESP_LOGD(TAG, "Detected camera at address=0x%02x", slv_addr);
     sensor_id_t* id = &s_state->sensor.id;
 
-#if (CONFIG_OV2640_SUPPORT)
-    if (s_state->sensor.slv_addr == 0x30) {
+#if CONFIG_OV2640_SUPPORT
+    if (slv_addr == 0x30) {
         ESP_LOGD(TAG, "Resetting OV2640");
         //camera might be OV2640. try to reset it
         SCCB_Write(0x30, 0xFF, 0x01);//bank sensor
@@ -1007,7 +1012,10 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     }
 #endif
 
-#if CONFIG_OV3660_SUPPORT
+    s_state->sensor.slv_addr = slv_addr;
+    s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
+
+#if (CONFIG_OV3660_SUPPORT || CONFIG_OV5640_SUPPORT)
     if(s_state->sensor.slv_addr == 0x3c){
         id->PID = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDH);
         id->VER = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDL);
@@ -1022,7 +1030,8 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         vTaskDelay(10 / portTICK_PERIOD_MS);
         ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
                  id->PID, id->VER, id->MIDH, id->MIDL);
-#if CONFIG_OV3660_SUPPORT
+
+#if (CONFIG_OV3660_SUPPORT || CONFIG_OV5640_SUPPORT)
     }
 #endif
 
@@ -1044,6 +1053,12 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     case OV3660_PID:
         *out_camera_model = CAMERA_OV3660;
         ov3660_init(&s_state->sensor);
+        break;
+#endif
+#if CONFIG_OV5640_SUPPORT
+    case OV5640_PID:
+        *out_camera_model = CAMERA_OV5640;
+        ov5640_init(&s_state->sensor);
         break;
 #endif
     default:
@@ -1072,12 +1087,46 @@ esp_err_t camera_init(const camera_config_t* config)
     esp_err_t err = ESP_OK;
     framesize_t frame_size = (framesize_t) config->frame_size;
     pixformat_t pix_format = (pixformat_t) config->pixel_format;
-    s_state->width = resolution[frame_size][0];
-    s_state->height = resolution[frame_size][1];
+
+    switch (s_state->sensor.id.PID) {
+#if CONFIG_OV2640_SUPPORT
+        case OV2640_PID:
+            if (frame_size > FRAMESIZE_UXGA) {
+                frame_size = FRAMESIZE_UXGA;
+            }
+            break;
+#endif
+#if CONFIG_OV7725_SUPPORT
+        case OV7725_PID:
+            if (frame_size > FRAMESIZE_VGA) {
+                frame_size = FRAMESIZE_VGA;
+            }
+            break;
+#endif
+#if CONFIG_OV3660_SUPPORT
+        case OV3660_PID:
+            if (frame_size > FRAMESIZE_QXGA) {
+                frame_size = FRAMESIZE_QXGA;
+            }
+            break;
+#endif
+#if CONFIG_OV5640_SUPPORT
+        case OV5640_PID:
+            if (frame_size > FRAMESIZE_QSXGA) {
+                frame_size = FRAMESIZE_QSXGA;
+            }
+            break;
+#endif
+        default:
+            return ESP_ERR_CAMERA_NOT_SUPPORTED;
+    }
+
+    s_state->width = resolution[frame_size].width;
+    s_state->height = resolution[frame_size].height;
 
     if (pix_format == PIXFORMAT_GRAYSCALE) {
         s_state->fb_size = s_state->width * s_state->height;
-        if (s_state->sensor.id.PID == OV3660_PID) {
+        if (s_state->sensor.id.PID == OV3660_PID || s_state->sensor.id.PID == OV5640_PID) {
             if (is_hs_mode()) {
                 s_state->sampling_mode = SM_0A00_0B00;
                 s_state->dma_filter = &dma_filter_yuyv_highspeed;
@@ -1120,8 +1169,8 @@ esp_err_t camera_init(const camera_config_t* config)
         s_state->in_bytes_per_pixel = 2;       // camera sends RGB565
         s_state->fb_bytes_per_pixel = 3;       // frame buffer stores RGB888
     } else if (pix_format == PIXFORMAT_JPEG) {
-        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID) {
-            ESP_LOGE(TAG, "JPEG format is only supported for ov2640 and ov3660");
+        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID && s_state->sensor.id.PID != OV5640_PID) {
+            ESP_LOGE(TAG, "JPEG format is only supported for ov2640, ov3660 and ov5640");
             err = ESP_ERR_NOT_SUPPORTED;
             goto fail;
         }
@@ -1268,6 +1317,8 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         ESP_LOGD(TAG, "Detected OV2640 camera");
     } else if (camera_model == CAMERA_OV3660) {
         ESP_LOGD(TAG, "Detected OV3660 camera");
+    } else if (camera_model == CAMERA_OV5640) {
+        ESP_LOGD(TAG, "Detected OV5640 camera");
     } else {
         ESP_LOGE(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;

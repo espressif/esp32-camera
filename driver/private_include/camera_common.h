@@ -12,7 +12,7 @@
 #include "sensor.h"
 
 #include "esp_system.h"
-#ifdef ESP_IDF_VERSION_MAJOR // IDF 4+
+#if ESP_IDF_VERSION_MAJOR >= 4 // IDF 4+
 #if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
 #include "esp32/rom/lldesc.h"
 #else 

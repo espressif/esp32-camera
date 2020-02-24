@@ -19,6 +19,48 @@
 #include "esp_attr.h"
 #include "ov2640_regs.h"
 
+typedef enum {
+    OV2640_MODE_UXGA, OV2640_MODE_SVGA, OV2640_MODE_CIF, OV2640_MODE_MAX
+} ov2640_sensor_mode_t;
+
+typedef struct {
+        union {
+                struct {
+                        uint8_t pclk_div:7;
+                        uint8_t pclk_auto:1;
+                };
+                uint8_t pclk;
+        };
+        union {
+                struct {
+                        uint8_t clk_div:6;
+                        uint8_t reserved:1;
+                        uint8_t clk_2x:1;
+                };
+                uint8_t clk;
+        };
+} ov2640_clk_t;
+
+typedef struct {
+        uint16_t offset_x;
+        uint16_t offset_y;
+        uint16_t max_x;
+        uint16_t max_y;
+} ov2640_ratio_settings_t;
+
+static const DRAM_ATTR ov2640_ratio_settings_t ratio_table[] = {
+    // ox,  oy,   mx,   my
+    {   0,   0, 1600, 1200 }, //4x3
+    {   8,  72, 1584, 1056 }, //3x2
+    {   0, 100, 1600, 1000 }, //16x10
+    {   0, 120, 1600,  960 }, //5x3
+    {   0, 150, 1600,  900 }, //16x9
+    {   2, 258, 1596,  684 }, //21x9
+    {  50,   0, 1500, 1200 }, //5x4
+    { 200,   0, 1200, 1200 }, //1x1
+    { 462,   0,  676, 1200 }  //9x16
+};
+
 // 30fps@24MHz
 const DRAM_ATTR uint8_t ov2640_settings_cif[][2] = {
     {BANK_SEL, BANK_DSP},
@@ -193,7 +235,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_cif[][2] = {
     {VSTART, 0x00},
     {VSTOP, 0x25},
 
-    {CLKRC, 0x01},
+    //{CLKRC, 0x00},
     {BD50, 0xca},
     {BD60, 0xa8},
     {0x5a, 0x23},
@@ -228,7 +270,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_cif[][2] = {
 
     {CTRL2, CTRL2_DCW_EN | 0x1D},
     {CTRLI, CTRLI_LP_DP | 0x00},
-    {R_DVP_SP, 0x82},
+    //{R_DVP_SP, 0x08},
     {0, 0}
 };
 
@@ -244,7 +286,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_svga[][2] = {
     {VSTART, 0x00},
     {VSTOP, 0x4b},
 
-    {CLKRC, 0x01},
+    //{CLKRC, 0x00},
     {0x37, 0xc0},
     {BD50, 0xca},
     {BD60, 0xa8},
@@ -281,7 +323,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_svga[][2] = {
 
     {CTRL2, CTRL2_DCW_EN | 0x1D},
     {CTRLI, CTRLI_LP_DP | 0x00},
-    {R_DVP_SP, 0x80},
+    //{R_DVP_SP, 0x08},
     {0, 0}
 };
 
@@ -297,7 +339,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_uxga[][2] = {
     {VSTART, 0x01},
     {VSTOP, 0x97},
 
-    {CLKRC, 0x01},
+    //{CLKRC, 0x00},
     {0x3d, 0x34},
     {BD50, 0xbb},
     {BD60, 0x9c},
@@ -333,7 +375,7 @@ const DRAM_ATTR uint8_t ov2640_settings_to_uxga[][2] = {
 
     {CTRL2, CTRL2_DCW_EN | 0x1d},
     {CTRLI, 0x00},
-    {R_DVP_SP, 0x82},
+    //{R_DVP_SP, 0x06},
     {0, 0}
 };
 
@@ -348,7 +390,6 @@ const DRAM_ATTR uint8_t ov2640_settings_jpeg3[][2] = {
     {0xDF, 0x80},
     {0x33, 0x80},
     {0x3C, 0x10},
-    {R_DVP_SP, 0x04},
     {0xEB, 0x30},
     {0xDD, 0x7F},
     {RESET, 0x00},
