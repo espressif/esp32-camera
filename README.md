@@ -199,6 +199,7 @@ esp_err_t jpg_stream_httpd_handler(httpd_req_t *req){
         if (!fb) {
             ESP_LOGE(TAG, "Camera capture failed");
             res = ESP_FAIL;
+            break;
         } else {
             if(fb->format != PIXFORMAT_JPEG){
                 bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
