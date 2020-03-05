@@ -21,12 +21,19 @@ config OV3660_SUPPORT
         Enable this option if you want to use the OV3360.
         Disable this option to safe memory.
     
-config SCCB_HARDWARE_I2C
-    bool "Use hardware I2C1 for SCCB"
-    default y
+choice SCCB_HARDWARE_I2C
+    bool "Use hardware I2C0/I2C1 for SCCB"
+    default SCCB_HARDWARE_I2C1
     help
         Enable this option if you want to use hardware I2C to control the camera.
         Disable this option to use software I2C.
+
+    config SCCB_HARDWARE_I2C0
+        bool "I2C0"
+    config SCCB_HARDWARE_I2C1
+        bool "I2C1"
+
+endchoice
 
 choice CAMERA_TASK_PINNED_TO_CORE
     bool "Camera task pinned to core"
