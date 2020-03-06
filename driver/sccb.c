@@ -19,13 +19,6 @@
 static const char* TAG = "sccb";
 #endif
 
-#ifdef CONFIG_SCCB_HARDWARE_I2C0
- #define CONFIG_SCCB_HARDWARE_I2C
-#endif
-#ifdef CONFIG_SCCB_HARDWARE_I2C1
- #define CONFIG_SCCB_HARDWARE_I2C
-#endif
-
 #define LITTLETOBIG(x)          ((x<<8)|(x>>8))
 
 #ifdef CONFIG_SCCB_HARDWARE_I2C
@@ -38,7 +31,7 @@ static const char* TAG = "sccb";
 #define ACK_CHECK_DIS           0x0              /*!< I2C master will not check ack from slave */
 #define ACK_VAL                 0x0              /*!< I2C ack value */
 #define NACK_VAL                0x1              /*!< I2C nack value */
-#if CONFIG_SCCB_HARDWARE_I2C1
+#if CONFIG_SCCB_HARDWARE_I2C_PORT1
 const int SCCB_I2C_PORT         = 1;
 #else
 const int SCCB_I2C_PORT         = 0;
