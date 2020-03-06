@@ -31,7 +31,7 @@ config SCCB_HARDWARE_I2C
 choice SCCB_HARDWARE_I2C_PORT
     bool "I2C peripheral to use for SCCB"
     depends on SCCB_HARDWARE_I2C
-    default SCCB_HARDWARE_I2C1
+    default SCCB_HARDWARE_I2C_PORT1
 
     config SCCB_HARDWARE_I2C_PORT0
         bool "I2C0"
