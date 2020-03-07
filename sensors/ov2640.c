@@ -225,8 +225,8 @@ int set_image_size(sensor_t *sensor, uint16_t width, uint16_t height)
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret = 0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = resolution[framesize].width;
+    uint16_t h = resolution[framesize].height;
     const uint8_t (*regs)[2];
 
     sensor->status.framesize = framesize;

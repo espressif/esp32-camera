@@ -124,7 +124,7 @@ static int write_addr_reg(uint8_t slv_addr, const uint16_t reg, uint16_t x_value
 
 #define write_reg_bits(slv_addr, reg, mask, enable) set_reg_bits(slv_addr, reg, 0, mask, enable?mask:0)
 
-int calc_sysclk(int xclk, bool pll_bypass, int pll_multiplier, int pll_sys_div, int pll_pre_div, bool pll_root_2x, int pll_seld5, bool pclk_manual, int pclk_div)
+static int calc_sysclk(int xclk, bool pll_bypass, int pll_multiplier, int pll_sys_div, int pll_pre_div, bool pll_root_2x, int pll_seld5, bool pclk_manual, int pclk_div)
 {
     const int pll_pre_div2x_map[] = { 2, 3, 4, 6 };//values are multiplied by two to avoid floats
     const int pll_seld52x_map[] = { 2, 2, 4, 5 };
@@ -246,18 +246,24 @@ static int set_image_options(sensor_t *sensor)
     uint8_t reg4514 = 0;
     uint8_t reg4514_test = 0;
 
+    uint16_t w = resolution[sensor->status.framesize].width;
+    uint16_t h = resolution[sensor->status.framesize].height;
+    aspect_ratio_t ratio = resolution[sensor->status.framesize].aspect_ratio;
+    ratio_settings_t settings = ratio_table[ratio];
+    bool bining = (w <= (settings.max_width / 2) && h <= (settings.max_height / 2));
+
     // compression
     if (sensor->pixformat == PIXFORMAT_JPEG) {
         reg21 |= 0x20;
     }
 
     // binning
-    if (sensor->status.framesize > FRAMESIZE_SVGA) {
-        reg20 |= 0x40;
-    } else {
+    if (bining) {
         reg20 |= 0x01;
         reg21 |= 0x01;
         reg4514_test |= 4;
+    } else {
+        reg20 |= 0x40;
     }
 
     // V-Flip
@@ -293,7 +299,7 @@ static int set_image_options(sensor_t *sensor)
     }
 
     ESP_LOGD(TAG, "Set Image Options: Compression: %u, Binning: %u, V-Flip: %u, H-Mirror: %u, Reg-4514: 0x%02x",
-        sensor->pixformat == PIXFORMAT_JPEG, sensor->status.framesize <= FRAMESIZE_SVGA, sensor->status.vflip, sensor->status.hmirror, reg4514);
+        sensor->pixformat == PIXFORMAT_JPEG, bining, sensor->status.vflip, sensor->status.hmirror, reg4514);
     return ret;
 }
 
@@ -303,51 +309,48 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     framesize_t old_framesize = sensor->status.framesize;
     sensor->status.framesize = framesize;
 
-    if(framesize >= FRAMESIZE_INVALID){
+    if(framesize > FRAMESIZE_QXGA){
         ESP_LOGE(TAG, "Invalid framesize: %u", framesize);
         return -1;
     }
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
+    uint16_t w = resolution[framesize].width;
+    uint16_t h = resolution[framesize].height;
+    aspect_ratio_t ratio = resolution[sensor->status.framesize].aspect_ratio;
+    ratio_settings_t settings = ratio_table[ratio];
+    bool bining = (w <= (settings.max_width / 2) && h <= (settings.max_height / 2));
 
-    if (framesize > FRAMESIZE_SVGA) {
-        ret  = write_reg(sensor->slv_addr, 0x4520, 0xb0)
-            || write_reg(sensor->slv_addr, X_INCREMENT, 0x11)//odd:1, even: 1
-            || write_reg(sensor->slv_addr, Y_INCREMENT, 0x11);//odd:1, even: 1
-    } else {
+    if (bining) {
         ret  = write_reg(sensor->slv_addr, 0x4520, 0x0b)
             || write_reg(sensor->slv_addr, X_INCREMENT, 0x31)//odd:3, even: 1
             || write_reg(sensor->slv_addr, Y_INCREMENT, 0x31);//odd:3, even: 1
+    } else {
+        ret  = write_reg(sensor->slv_addr, 0x4520, 0xb0)
+            || write_reg(sensor->slv_addr, X_INCREMENT, 0x11)//odd:1, even: 1
+            || write_reg(sensor->slv_addr, Y_INCREMENT, 0x11);//odd:1, even: 1
     }
 
     if (ret) {
         goto fail;
     }
 
-    ret  = write_addr_reg(sensor->slv_addr, X_ADDR_ST_H, 0, 0)
-        || write_addr_reg(sensor->slv_addr, X_ADDR_END_H, 2079, 1547)
+    ret  = write_addr_reg(sensor->slv_addr, X_ADDR_ST_H, settings.start_x, settings.start_y)
+        || write_addr_reg(sensor->slv_addr, X_ADDR_END_H, settings.end_x, settings.end_y)
         || write_addr_reg(sensor->slv_addr, X_OUTPUT_SIZE_H, w, h);
 
     if (ret) {
         goto fail;
     }
 
-    if (framesize > FRAMESIZE_SVGA) {
-        ret  = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, 2300, 1564)
-            || write_addr_reg(sensor->slv_addr, X_OFFSET_H, 16, 6);
+    if (bining) {
+        ret  = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, settings.total_x, (settings.total_y / 2) + 1)
+            || write_addr_reg(sensor->slv_addr, X_OFFSET_H, 8, 2);
     } else {
-        if (framesize == FRAMESIZE_SVGA) {
-            ret = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, 2300, 788);
-        } else {
-            ret = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, 2050, 788);
-        }
-        if (ret == 0) {
-            ret = write_addr_reg(sensor->slv_addr, X_OFFSET_H, 8, 2);
-        }
+        ret  = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, settings.total_x, settings.total_y)
+            || write_addr_reg(sensor->slv_addr, X_OFFSET_H, 16, 6);
     }
 
     if (ret == 0) {
-        ret = write_reg_bits(sensor->slv_addr, ISP_CONTROL_01, 0x20, framesize != FRAMESIZE_QXGA);
+        ret = write_reg_bits(sensor->slv_addr, ISP_CONTROL_01, 0x20, !(w == settings.max_width && h == settings.max_height));
     }
 
     if (ret == 0) {
@@ -880,6 +883,65 @@ static int set_denoise(sensor_t *sensor, int level)
     return ret;
 }
 
+static int get_reg(sensor_t *sensor, int reg, int mask){
+    int ret = 0;
+    if(mask > 0xFF){
+        ret = read_reg16(sensor->slv_addr, reg);
+    } else {
+        ret = read_reg(sensor->slv_addr, reg);
+    }
+    if(ret > 0){
+        ret &= mask;
+    }
+    return ret;
+}
+
+static int sensor_set_reg(sensor_t *sensor, int reg, int mask, int value){
+    return set_reg_bits(sensor->slv_addr, reg & 0xffff, 0, mask & 0xff, value & 0xff);
+}
+
+static int set_res_raw(sensor_t *sensor, int reg4520, int incrementX, int incrementY, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, int reg20, int reg21, int reg4514)
+{
+    int ret = 0;
+    
+    if(outputX > 800 || outputY > 600){
+        reg4520 = 0xb0;
+        incrementX = 0x11;
+        incrementY = 0x11;
+    } else {
+        reg4520 = 0x0b;
+        incrementX = 0x31;
+        incrementY = 0x31;
+    }
+    
+    ret  = write_reg(sensor->slv_addr, 0x4520, reg4520)
+        || write_reg(sensor->slv_addr, X_INCREMENT, incrementX)//odd:1, even: 1
+        || write_reg(sensor->slv_addr, Y_INCREMENT, incrementY)//odd:1, even: 1
+        || write_addr_reg(sensor->slv_addr, X_ADDR_ST_H, startX, startY)
+        || write_addr_reg(sensor->slv_addr, X_ADDR_END_H, endX, endY)
+        || write_addr_reg(sensor->slv_addr, X_OFFSET_H, offsetX, offsetY)
+        || write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, totalX, totalY)
+        || write_addr_reg(sensor->slv_addr, X_OUTPUT_SIZE_H, outputX, outputY)
+        || write_reg_bits(sensor->slv_addr, ISP_CONTROL_01, 0x20, scale);
+    return ret;
+}
+
+static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div)
+{
+    int ret = 0;
+    ret = set_pll(sensor, bypass > 0, multiplier, sys_div, pre_div, root_2x > 0, seld5, pclk_manual > 0, pclk_div);
+    return ret;
+}
+
+esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
+static int set_xclk(sensor_t *sensor, int timer, int xclk)
+{
+    int ret = 0;
+    sensor->xclk_freq_hz = xclk * 1000000U;
+    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    return ret;
+}
+
 static int init_status(sensor_t *sensor)
 {
     sensor->status.brightness = 0;
@@ -941,5 +1003,11 @@ int ov3660_init(sensor_t *sensor)
     sensor->set_raw_gma = set_raw_gma_dsp;
     sensor->set_lenc = set_lenc_dsp;
     sensor->set_denoise = set_denoise;
+
+    sensor->get_reg = get_reg;
+    sensor->set_reg = sensor_set_reg;
+    sensor->set_res_raw = set_res_raw;
+    sensor->set_pll = _set_pll;
+    sensor->set_xclk = set_xclk;
     return 0;
 }
