@@ -19,6 +19,8 @@
 static const char* TAG = "sccb";
 #endif
 
+//#undef CONFIG_SCCB_HARDWARE_I2C
+
 #define LITTLETOBIG(x)          ((x<<8)|(x>>8))
 
 #ifdef CONFIG_SCCB_HARDWARE_I2C

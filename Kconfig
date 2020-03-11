@@ -5,21 +5,28 @@ config OV2640_SUPPORT
 	default y
 	help
 		Enable this option if you want to use the OV2640.
-		Disable this option to safe memory.
+		Disable this option to save memory.
 
 config OV7725_SUPPORT
 	bool "OV7725 Support"
 	default n
 	help
 		Enable this option if you want to use the OV7725.
-		Disable this option to safe memory.
+		Disable this option to save memory.
 	
 config OV3660_SUPPORT
     bool "OV3660 Support"
     default y
     help
         Enable this option if you want to use the OV3360.
-        Disable this option to safe memory.
+        Disable this option to save memory.
+    
+config OV5640_SUPPORT
+    bool "OV5640 Support"
+    default y
+    help
+        Enable this option if you want to use the OV5640.
+        Disable this option to save memory.
     
 config SCCB_HARDWARE_I2C
     bool "Use hardware I2C for SCCB"
