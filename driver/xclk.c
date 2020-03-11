@@ -12,28 +12,19 @@
 static const char* TAG = "camera_xclk";
 #endif
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz)
-{
-    ledc_timer_config_t timer_conf;
-    timer_conf.duty_resolution = 2;
-    timer_conf.freq_hz = xclk_freq_hz;
-    timer_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
-#if ESP_IDF_VERSION_MAJOR >= 4
-    timer_conf.clk_cfg = LEDC_AUTO_CLK;
-#endif
-    timer_conf.timer_num = (ledc_timer_t)ledc_timer;
-    esp_err_t err = ledc_timer_config(&timer_conf);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "ledc_timer_config failed for freq %d, rc=%x", xclk_freq_hz, err);
-    }
-    return err;
-}
-
 esp_err_t camera_enable_out_clock(camera_config_t* config)
 {
     periph_module_enable(PERIPH_LEDC_MODULE);
 
-    esp_err_t err = xclk_timer_conf(config->ledc_timer, config->xclk_freq_hz);
+    ledc_timer_config_t timer_conf = {};
+    timer_conf.duty_resolution = 2;
+    timer_conf.freq_hz = config->xclk_freq_hz;
+    timer_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
+    timer_conf.timer_num = config->ledc_timer;
+#ifdef ESP_IDF_VERSION_MAJOR
+    timer_conf.clk_cfg = LEDC_AUTO_CLK;
+#endif
+    esp_err_t err = ledc_timer_config(&timer_conf);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "ledc_timer_config failed, rc=%x", err);
         return err;

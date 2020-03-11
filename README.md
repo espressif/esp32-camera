@@ -2,7 +2,7 @@
 
 ## General Information
 
-This repository hosts ESP32 compatible driver for OV2640, OV3660, OV5640 and OV7670 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
+This repository hosts ESP32 compatible driver for OV2640, OV3660 and OV7670 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
 
 ## Important to Remember
 

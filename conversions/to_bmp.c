@@ -21,7 +21,7 @@
 #include "esp_jpg_decode.h"
 
 #include "esp_system.h"
-#if ESP_IDF_VERSION_MAJOR >= 4
+#ifdef ESP_IDF_VERSION_MAJOR // IDF 4+
 #if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
 #include "esp32/spiram.h"
 #else 
