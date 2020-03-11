@@ -68,6 +68,7 @@
 #include "esp_err.h"
 #include "driver/ledc.h"
 #include "sensor.h"
+#include "sys/time.h"
 
 #ifdef __cplusplus
 extern "C" {
