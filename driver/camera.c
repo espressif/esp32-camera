@@ -1128,7 +1128,7 @@ esp_err_t camera_init(const camera_config_t* config)
             break;
 #endif
 #if CONFIG_OV7670_SUPPORT
-        case OV7670_PID:
+        case OV7725_PID:
             if (frame_size > FRAMESIZE_VGA) {
                 frame_size = FRAMESIZE_VGA;
             }
