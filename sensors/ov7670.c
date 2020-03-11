@@ -60,7 +60,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{HSYST, 0},
     {HSYEN, 0},   
 
-    {MVFP, MVFP_MIRROR | MVFP_SUN}, 
+    {MVFP, MVFP_SUN}, 
 
 	/* More reserved magic, some of which tweaks white balance */
 	{AWBC1, 0x0a},		
@@ -86,7 +86,7 @@ static struct regval_list ov7670_fmt_yuv422[] = {
 	{ RGB444,   0                           },  /* No RGB444 please */
 	{ COM1,     0                           },  /* CCIR601 */
 	{ COM15,    COM15_R00FF                 },
-    { MVFP,     /*MVFP_FLIP | */MVFP_MIRROR | MVFP_SUN}, /* Mirror and flip image */
+    { MVFP,     MVFP_SUN                    }, 
 	{ COM9,     0x6A                        },  /* 128x gain ceiling; 0x8 is reserved bit */
 	{ MTX1,     0x80                        },  /* "matrix coefficient 1" */
 	{ MTX2,     0x80                        }, 	/* "matrix coefficient 2" */
@@ -103,7 +103,7 @@ static struct regval_list ov7670_fmt_rgb565[] = {
 	{ RGB444,   0                           },	/* No RGB444 please */
 	{ COM1,     0x0                         },	/* CCIR601 */
 	{ COM15,    COM15_RGB565 |COM15_R00FF   },
-    { MVFP,     MVFP_MIRROR | MVFP_SUN      },  /* Mirror image */ 
+    { MVFP,     MVFP_SUN                    },   
 	{ COM9,     0x6A                        }, 	/* 128x gain ceiling; 0x8 is reserved bit */
 	{ MTX1,     0xb3                        }, 	/* "matrix coefficient 1" */
 	{ MTX2,     0xb3                        }, 	/* "matrix coefficient 2" */
@@ -357,14 +357,14 @@ static int set_exposure_ctrl(sensor_t *sensor, int enable)
 
 static int set_hmirror(sensor_t *sensor, int enable)
 {
-    // Read register COM3
-    uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
+    // Read register MVFP
+    uint8_t reg = SCCB_Read(sensor->slv_addr, MVFP);
 
     // Set mirror on/off
-    reg = COM3_SET_MIRROR(reg, enable);
+    reg = MVFP_SET_MIRROR(reg, enable);
 
-    // Write back register COM3
-    return SCCB_Write(sensor->slv_addr, COM3, reg);
+    // Write back register MVFP
+    return SCCB_Write(sensor->slv_addr, MVFP, reg);
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
@@ -375,7 +375,7 @@ static int set_vflip(sensor_t *sensor, int enable)
     // Set mirror on/off
     reg = MVFP_SET_FLIP(reg, enable);
 
-    // Write back register COM3
+    // Write back register MVFP
     return SCCB_Write(sensor->slv_addr, MVFP, reg);
 }
 

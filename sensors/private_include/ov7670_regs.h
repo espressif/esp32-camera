@@ -26,18 +26,12 @@
 #define REG_PID                 0x0A /* Product ID Number MSB */
 #define REG_VER                 0x0B /* Product ID Number LSB */
 
-#define COM3                    0x0C /* Common Control 3 				        */
-#define COM3_VFLIP              0x80 /* Vertical flip image ON/OFF selection                    */
-#define COM3_MIRROR             0x40 /* Horizontal mirror image ON/OFF selection                */
-#define COM3_SWAP_BR            0x20 /* Swap B/R output sequence in RGB output mode             */
-#define COM3_SWAP_YUV           0x10 /* Swap Y/UV output sequence in YUV output mode            */
-#define COM3_SWAP_MSB           0x08 /* Swap output MSB/LSB                                     */
-#define COM3_TRI_CLOCK          0x04 /* Tri-state option for output clock at power-down period  */
-#define COM3_TRI_DATA           0x02 /* Tri-state option for output data at power-down period   */
-#define COM3_COLOR_BAR          0x01 /* Sensor color bar test pattern output enable             */
-#define COM3_SET_CBAR(r, x)     ((r&0xFE)|((x&1)<<0))
-#define COM3_SET_MIRROR(r, x)   ((r&0xBF)|((x&1)<<6))
-#define COM3_SET_FLIP(r, x)     ((r&0x7F)|((x&1)<<7))
+#define COM3                    0x0C /* Common Control 3 		 */
+#define COM3_SWAP_OUT           0x40 /* Output data MSB/LSB swap */
+#define COM3_TRI_CLK            0x20 /* Tri-state output clock   */
+#define COM3_TRI_DATA           0x10 /* Tri-state option output  */
+#define COM3_SCALE_EN           0x08 /* Scale enable             */
+#define COM3_DCW                0x04 /* DCW enable               */
 
 #define COM4                    0x0D /* Common Control 4         */
 #define COM4_PLL_BYPASS         0x00 /* Bypass PLL               */
