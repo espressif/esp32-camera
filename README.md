@@ -2,7 +2,7 @@
 
 ## General Information
 
-This repository hosts ESP32 compatible driver for OV2640, OV3660 and OV7670 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
+This repository hosts ESP32 compatible driver for OV2640, OV3660 OV5640 and OV7670 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
 
 ## Important to Remember
 
@@ -199,18 +199,22 @@ esp_err_t jpg_stream_httpd_handler(httpd_req_t *req){
         if (!fb) {
             ESP_LOGE(TAG, "Camera capture failed");
             res = ESP_FAIL;
-        } else {
-            if(fb->format != PIXFORMAT_JPEG){
-                bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-                if(!jpeg_converted){
-                    ESP_LOGE(TAG, "JPEG compression failed");
-                    esp_camera_fb_return(fb);
-                    res = ESP_FAIL;
-                }
-            } else {
-                _jpg_buf_len = fb->len;
-                _jpg_buf = fb->buf;
+            break;
+        }
+        if(fb->format != PIXFORMAT_JPEG){
+            bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+            if(!jpeg_converted){
+                ESP_LOGE(TAG, "JPEG compression failed");
+                esp_camera_fb_return(fb);
+                res = ESP_FAIL;
             }
+        } else {
+            _jpg_buf_len = fb->len;
+            _jpg_buf = fb->buf;
+        }
+
+        if(res == ESP_OK){
+            res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
         }
         if(res == ESP_OK){
             size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
@@ -219,9 +223,6 @@ esp_err_t jpg_stream_httpd_handler(httpd_req_t *req){
         }
         if(res == ESP_OK){
             res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
-        }
-        if(res == ESP_OK){
-            res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
         }
         if(fb->format != PIXFORMAT_JPEG){
             free(_jpg_buf);

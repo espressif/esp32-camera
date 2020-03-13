@@ -5,7 +5,7 @@ config OV2640_SUPPORT
 	default y
 	help
 		Enable this option if you want to use the OV2640.
-		Disable this option to safe memory.
+		Disable this option to save memory.
 
 config OV7670_SUPPORT
 	bool "OV7670 Support"
@@ -19,21 +19,40 @@ config OV7725_SUPPORT
 	default n
 	help
 		Enable this option if you want to use the OV7725.
-		Disable this option to safe memory.
+		Disable this option to save memory.
 	
 config OV3660_SUPPORT
     bool "OV3660 Support"
     default y
     help
         Enable this option if you want to use the OV3360.
-        Disable this option to safe memory.
+        Disable this option to save memory.
+    
+config OV5640_SUPPORT
+    bool "OV5640 Support"
+    default y
+    help
+        Enable this option if you want to use the OV5640.
+        Disable this option to save memory.
     
 config SCCB_HARDWARE_I2C
-    bool "Use hardware I2C1 for SCCB"
+    bool "Use hardware I2C for SCCB"
     default y
     help
         Enable this option if you want to use hardware I2C to control the camera.
         Disable this option to use software I2C.
+    
+choice SCCB_HARDWARE_I2C_PORT
+    bool "I2C peripheral to use for SCCB"
+    depends on SCCB_HARDWARE_I2C
+    default SCCB_HARDWARE_I2C_PORT1
+
+    config SCCB_HARDWARE_I2C_PORT0
+        bool "I2C0"
+    config SCCB_HARDWARE_I2C_PORT1
+        bool "I2C1"
+
+endchoice
 
 choice CAMERA_TASK_PINNED_TO_CORE
     bool "Camera task pinned to core"
