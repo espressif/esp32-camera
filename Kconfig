@@ -6,6 +6,7 @@ config OV2640_SUPPORT
 	help
 		Enable this option if you want to use the OV2640.
 		Disable this option to save memory.
+<<<<<<< HEAD
 
 config OV7670_SUPPORT
 	bool "OV7670 Support"
@@ -13,6 +14,8 @@ config OV7670_SUPPORT
 	help
 		Enable this option if you want to use the OV7670.
 		Disable this option to safe memory.
+=======
+>>>>>>> upstream/master
 
 config OV7725_SUPPORT
 	bool "OV7725 Support"

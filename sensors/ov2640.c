@@ -449,6 +449,46 @@ static int set_denoise(sensor_t *sensor, int level)
    return -1;
 }
 
+static int get_reg(sensor_t *sensor, int reg, int mask)
+{
+    int ret = read_reg(sensor, (reg >> 8) & 0x01, reg & 0xFF);
+    if(ret > 0){
+        ret &= mask;
+    }
+    return ret;
+}
+
+static int set_reg(sensor_t *sensor, int reg, int mask, int value)
+{
+    int ret = 0;
+    ret = read_reg(sensor, (reg >> 8) & 0x01, reg & 0xFF);
+    if(ret < 0){
+        return ret;
+    }
+    value = (ret & ~mask) | (value & mask);
+    ret = write_reg(sensor, (reg >> 8) & 0x01, reg & 0xFF, value);
+    return ret;
+}
+
+static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning)
+{
+    return set_window(sensor, (ov2640_sensor_mode_t)startX, offsetX, offsetY, totalX, totalY, outputX, outputY);
+}
+
+static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div)
+{
+    return -1;
+}
+
+esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
+static int set_xclk(sensor_t *sensor, int timer, int xclk)
+{
+    int ret = 0;
+    sensor->xclk_freq_hz = xclk * 1000000U;
+    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    return ret;
+}
+
 static int init_status(sensor_t *sensor){
     sensor->status.brightness = 0;
     sensor->status.contrast = 0;
