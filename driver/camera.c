@@ -48,12 +48,9 @@
 #if CONFIG_OV5640_SUPPORT
 #include "ov5640.h"
 #endif
-<<<<<<< HEAD
 #if CONFIG_OV7670_SUPPORT
 #include "ov7670.h"
 #endif
-=======
->>>>>>> upstream/master
 
 typedef enum {
     CAMERA_NONE = 0,
@@ -62,10 +59,7 @@ typedef enum {
     CAMERA_OV2640 = 2640,
     CAMERA_OV3660 = 3660,
     CAMERA_OV5640 = 5640,
-<<<<<<< HEAD
     CAMERA_OV7670 = 7670,
-=======
->>>>>>> upstream/master
 } camera_model_t;
 
 #define REG_PID        0x0A
@@ -1071,15 +1065,12 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         ov5640_init(&s_state->sensor);
         break;
 #endif
-<<<<<<< HEAD
 #if CONFIG_OV7670_SUPPORT
     case OV7670_PID:
         *out_camera_model = CAMERA_OV7670;
         ov7670_init(&s_state->sensor);
         break;
 #endif
-=======
->>>>>>> upstream/master
     default:
         id->PID = 0;
         *out_camera_model = CAMERA_UNKNOWN;
@@ -1133,6 +1124,13 @@ esp_err_t camera_init(const camera_config_t* config)
         case OV5640_PID:
             if (frame_size > FRAMESIZE_QSXGA) {
                 frame_size = FRAMESIZE_QSXGA;
+            }
+            break;
+#endif
+#if CONFIG_OV7670_SUPPORT
+        case OV7670_PID:
+            if (frame_size > FRAMESIZE_VGA) {
+                frame_size = FRAMESIZE_VGA;
             }
             break;
 #endif
@@ -1346,7 +1344,6 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         ESP_LOGD(TAG, "Detected OV3660 camera");
     } else if (camera_model == CAMERA_OV5640) {
         ESP_LOGD(TAG, "Detected OV5640 camera");
-<<<<<<< HEAD
     } else if (camera_model == CAMERA_OV7670) {
         ESP_LOGD(TAG, "Detected OV7670 camera");
         if(config->pixel_format == PIXFORMAT_JPEG) {
@@ -1354,8 +1351,6 @@ esp_err_t esp_camera_init(const camera_config_t* config)
             err = ESP_ERR_CAMERA_NOT_SUPPORTED;
             goto fail;
         }
-=======
->>>>>>> upstream/master
     } else {
         ESP_LOGE(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;
