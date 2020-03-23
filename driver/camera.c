@@ -447,9 +447,9 @@ static void i2s_init()
     I2S0.timing.rx_dsync_sw = 1;
 
     // Allocate I2S interrupt, keep it disabled
-    esp_intr_alloc(ETS_I2S0_INTR_SOURCE,
-                   ESP_INTR_FLAG_INTRDISABLED | ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM,
-                   &i2s_isr, NULL, &s_state->i2s_intr_handle);
+    ESP_ERROR_CHECK(esp_intr_alloc(ETS_I2S0_INTR_SOURCE,
+                   ESP_INTR_FLAG_INTRDISABLED | ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM,
+                   &i2s_isr, NULL, &s_state->i2s_intr_handle));
 }
 
 static void IRAM_ATTR i2s_start_bus()
