@@ -959,7 +959,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     camera_enable_out_clock(config);
 
     ESP_LOGD(TAG, "Initializing SSCB");
-    SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
+    SCCB_Init(config->pin_sccb_sda, config->pin_sccb_scl, config->sccb_external);
 	
     if(config->pin_pwdn >= 0) {
         ESP_LOGD(TAG, "Resetting camera by power down line");
@@ -968,7 +968,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         conf.mode = GPIO_MODE_OUTPUT;
         gpio_config(&conf);
 
-        // carefull, logic is inverted compared to reset pin
+        // careful, logic is inverted compared to reset pin
         gpio_set_level(config->pin_pwdn, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_pwdn, 0);
