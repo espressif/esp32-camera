@@ -198,10 +198,10 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
             *rgb_buf++ = b;
         }
     } else if(format == PIXFORMAT_YUV422) {
+        pix_count = src_len / 2;
         int i, maxi = pix_count / 2;
         uint8_t y0, y1, u, v;
         uint8_t r, g, b;
-        pix_count = src_len / 2;
         for(i=0; i<maxi; i++) {
             y0 = *src_buf++;
             u = *src_buf++;
