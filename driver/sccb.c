@@ -43,9 +43,9 @@ static uint8_t ESP_SLAVE_ADDR   = 0x3c;
 #include "twi.h"
 #endif
 
-int SCCB_Init(int pin_sda, int pin_scl
+int SCCB_Init(int pin_sda, int pin_scl)
 {
-    ESP_LOGI(TAG, "pin_sda %d pin_scl %d \n", pin_sda, pin_scl);
+    ESP_LOGI(TAG, "pin_sda %d pin_scl %d\n", pin_sda, pin_scl);
 #ifdef CONFIG_SCCB_HARDWARE_I2C
     //log_i("SCCB_Init start");
     i2c_config_t conf;
