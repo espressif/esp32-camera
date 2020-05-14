@@ -19,6 +19,8 @@
 static const char* TAG = "sccb";
 #endif
 
+//#undef CONFIG_SCCB_HARDWARE_I2C
+
 #define LITTLETOBIG(x)          ((x<<8)|(x>>8))
 
 #ifdef CONFIG_SCCB_HARDWARE_I2C
@@ -41,29 +43,28 @@ static uint8_t ESP_SLAVE_ADDR   = 0x3c;
 #include "twi.h"
 #endif
 
-int SCCB_Init(int pin_sda, int pin_scl, int external)
+int SCCB_Init(int pin_sda, int pin_scl
 {
-    ESP_LOGI(TAG, "pin_sda %d pin_scl %d external %d \n", pin_sda, pin_scl, external);
+    ESP_LOGI(TAG, "pin_sda %d pin_scl %d \n", pin_sda, pin_scl);
 #ifdef CONFIG_SCCB_HARDWARE_I2C
-    if (external == 0) {
-		i2c_config_t conf;
-		conf.mode = I2C_MODE_MASTER;
-		conf.sda_io_num = pin_sda;
-		conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-		conf.scl_io_num = pin_scl;
-		conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-		conf.master.clk_speed = SCCB_FREQ;
+    //log_i("SCCB_Init start");
+    i2c_config_t conf;
+    conf.mode = I2C_MODE_MASTER;
+    conf.sda_io_num = pin_sda;
+    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.scl_io_num = pin_scl;
+    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf.master.clk_speed = SCCB_FREQ;
 
-        i2c_param_config(SCCB_I2C_PORT, &conf);
-        i2c_driver_install(SCCB_I2C_PORT, conf.mode, 0, 0, 0);
-    }
+    i2c_param_config(SCCB_I2C_PORT, &conf);
+    i2c_driver_install(SCCB_I2C_PORT, conf.mode, 0, 0, 0);
 #else
     twi_init(pin_sda, pin_scl);
 #endif
     return 0;
 }
 
-uint8_t SCCB_Probe(void)
+uint8_t SCCB_Probe()
 {
 #ifdef CONFIG_SCCB_HARDWARE_I2C
     uint8_t slave_addr = 0x0;

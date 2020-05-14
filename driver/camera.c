@@ -959,7 +959,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     camera_enable_out_clock(config);
 
     ESP_LOGD(TAG, "Initializing SSCB");
-    SCCB_Init(config->pin_sccb_sda, config->pin_sccb_scl, config->sccb_external);
+    SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
 	
     if(config->pin_pwdn >= 0) {
         ESP_LOGD(TAG, "Resetting camera by power down line");
@@ -968,7 +968,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         conf.mode = GPIO_MODE_OUTPUT;
         gpio_config(&conf);
 
-        // careful, logic is inverted compared to reset pin
+        // carefull, logic is inverted compared to reset pin
         gpio_set_level(config->pin_pwdn, 1);
         vTaskDelay(10 / portTICK_PERIOD_MS);
         gpio_set_level(config->pin_pwdn, 0);
@@ -1256,13 +1256,8 @@ esp_err_t camera_init(const camera_config_t* config)
     vsync_intr_disable();
     err = gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
     if (err != ESP_OK) {
-    	if (err != ESP_ERR_INVALID_STATE) {
-    		ESP_LOGE(TAG, "gpio_install_isr_service failed (%x)", err);
-        	goto fail;
-    	}
-    	else {
-    		ESP_LOGW(TAG, "gpio_install_isr_service already installed");
-    	}
+        ESP_LOGE(TAG, "gpio_install_isr_service failed (%x)", err);
+        goto fail;
     }
     err = gpio_isr_handler_add(s_state->config.pin_vsync, &vsync_isr, NULL);
     if (err != ESP_OK) {

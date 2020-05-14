@@ -18,8 +18,8 @@
         .pin_pwdn       = PIN_PWDN,
         .pin_reset      = PIN_RESET,
         .pin_xclk       = PIN_XCLK,
-        .pin_sccb_sda   = PIN_SIOD,
-        .pin_sccb_scl   = PIN_SIOC,
+        .pin_sscb_sda   = PIN_SIOD,
+        .pin_sscb_scl   = PIN_SIOC,
         .pin_d7         = PIN_D7,
         .pin_d6         = PIN_D6,
         .pin_d5         = PIN_D5,
@@ -81,8 +81,8 @@ typedef struct {
     int pin_pwdn;                   /*!< GPIO pin for camera power down line */
     int pin_reset;                  /*!< GPIO pin for camera reset line */
     int pin_xclk;                   /*!< GPIO pin for camera XCLK line */
-    int pin_sccb_sda;               /*!< GPIO pin for camera SDA line */
-    int pin_sccb_scl;               /*!< GPIO pin for camera SCL line */
+    int pin_sscb_sda;               /*!< GPIO pin for camera SDA line */
+    int pin_sscb_scl;               /*!< GPIO pin for camera SCL line */
     int pin_d7;                     /*!< GPIO pin for camera D7 line */
     int pin_d6;                     /*!< GPIO pin for camera D6 line */
     int pin_d5;                     /*!< GPIO pin for camera D5 line */
@@ -105,8 +105,6 @@ typedef struct {
 
     int jpeg_quality;               /*!< Quality of JPEG output. 0-63 lower means higher quality  */
     size_t fb_count;                /*!< Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)  */
-
-    int sccb_external;				/*!< Hardware SCCB interface configured externally */
 } camera_config_t;
 
 /**
