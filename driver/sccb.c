@@ -26,7 +26,7 @@ static const char* TAG = "sccb";
 #ifdef CONFIG_SCCB_HARDWARE_I2C
 #include "driver/i2c.h"
 
-#define SCCB_FREQ               200000           /*!< I2C master frequency*/
+#define SCCB_FREQ               100000           /*!< I2C master frequency*/
 #define WRITE_BIT               I2C_MASTER_WRITE /*!< I2C master write */
 #define READ_BIT                I2C_MASTER_READ  /*!< I2C master read */
 #define ACK_CHECK_EN            0x1              /*!< I2C master will check ack from slave*/
