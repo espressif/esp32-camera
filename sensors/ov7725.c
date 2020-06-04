@@ -221,6 +221,9 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret=0;
+    if (framesize > FRAMESIZE_VGA) {
+        return -1;
+    }
     uint16_t w = resolution[framesize].width;
     uint16_t h = resolution[framesize].height;
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
