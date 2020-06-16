@@ -955,8 +955,10 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGD(TAG, "Enabling XCLK output");
-    camera_enable_out_clock(config);
+    if(config->pin_xclk >= 0) {
+      ESP_LOGD(TAG, "Enabling XCLK output");
+      camera_enable_out_clock(config);
+    }
 
     ESP_LOGD(TAG, "Initializing SSCB");
     SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
@@ -1370,9 +1372,12 @@ esp_err_t esp_camera_deinit()
     }
     dma_desc_deinit();
     camera_fb_deinit();
+
+    if(s_state->config.pin_xclk >= 0) {
+      camera_disable_out_clock();
+    }
     free(s_state);
     s_state = NULL;
-    camera_disable_out_clock();
     periph_module_disable(PERIPH_I2S0_MODULE);
     return ESP_OK;
 }
