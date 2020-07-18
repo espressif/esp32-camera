@@ -2,7 +2,7 @@
 
 ## General Information
 
-This repository hosts ESP32 compatible driver for OV2640 and OV3660 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
+This repository hosts ESP32 compatible driver for OV2640, OV3660, OV5640 and OV7725 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
 
 ## Important to Remember
 
@@ -13,9 +13,48 @@ This repository hosts ESP32 compatible driver for OV2640 and OV3660 image sensor
 
 ## Installation Instructions
 
+
+### Using esp-idf
+
 - Clone or download and extract the repository to the components folder of your ESP-IDF project
 - Enable PSRAM in `menuconfig`
 - Include `esp_camera.h` in your code
+
+### Using PlatformIO
+
+On the `env` section of `platformio.ini`, add the following:
+
+```ini
+[env]
+lib_deps =
+  esp32-camera
+```
+
+Now the `esp_camera.h` is available to be included:
+
+```c
+#include "esp_camera.h"
+```
+
+Enable PSRAM on `menuconfig` or type it direclty on `sdkconfig`. Check the [official doc](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html#config-esp32-spiram-support) for more info.
+
+```
+CONFIG_ESP32_SPIRAM_SUPPORT=y
+```
+
+**Make sure to append** [this `Kconfig`](./Kconfig) content into the `Kconfig` of your project. Then, choose the configurations according to your setup.
+
+### Kconfig options
+
+| config                            | description                                                                                                                                                  | default                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| CONFIG_OV2640_SUPPORT             | Support for OV2640 camera                                                                                                                                    | enabled                        |
+| CONFIG_OV7725_SUPPORT             | Support for OV7725 camera                                                                                                                                    | disabled                       |
+| CONFIG_OV3660_SUPPORT             | Support for OV3660 camera                                                                                                                                    | enabled                        |
+| CONFIG_OV5640_SUPPORT             | Support for OV5640 camera                                                                                                                                    | enabled                        |
+| CONFIG_SCCB_HARDWARE_I2C          | Enable this option if you want to use hardware I2C to control the camera. Disable this option to use software I2C.                                           | enabled                        |
+| CONFIG_SCCB_HARDWARE_I2C_PORT     | I2C peripheral to use for SCCB. Can be I2C0 and I2C1.                                                                                                        | CONFIG_SCCB_HARDWARE_I2C_PORT1 |
+| CONFIG_CAMERA_TASK_PINNED_TO_CORE | Pin the camera handle task to a certain core(0/1). It can also be done automatically choosing NO_AFFINITY. Can be CAMERA_CORE0, CAMERA_CORE1 or NO_AFFINITY. | CONFIG_CAMERA_CORE0            |
 
 ## Examples
 
@@ -283,3 +322,6 @@ esp_err_t bmp_httpd_handler(httpd_req_t *req){
     return res;
 }
 ```
+
+
+
