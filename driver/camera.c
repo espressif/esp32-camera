@@ -369,12 +369,10 @@ static inline void IRAM_ATTR i2s_conf_reset()
     }
 }
 
-static void i2s_init()
+static void i2s_gpio_init(const camera_config_t* config)
 {
-    camera_config_t* config = &s_state->config;
-
     // Configure input GPIOs
-    gpio_num_t pins[] = {
+    const gpio_num_t pins[] = {
         config->pin_d7,
         config->pin_d6,
         config->pin_d5,
@@ -391,15 +389,21 @@ static void i2s_init()
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
+        .intr_type = GPIO_INTR_DISABLE,
+        .pin_bit_mask = 0LL
     };
     for (int i = 0; i < sizeof(pins) / sizeof(gpio_num_t); ++i) {
         if (rtc_gpio_is_valid_gpio(pins[i])) {
             rtc_gpio_deinit(pins[i]);
         }
-        conf.pin_bit_mask = 1LL << pins[i];
-        gpio_config(&conf);
+        conf.pin_bit_mask |= 1LL << pins[i];
     }
+    gpio_config(&conf);
+}
+
+static void i2s_init()
+{
+    camera_config_t* config = &s_state->config;
 
     // Route input GPIOs to I2S peripheral using GPIO matrix
     gpio_matrix_in(config->pin_d0, I2S0I_DATA_IN0_IDX, false);
@@ -1306,6 +1310,7 @@ fail:
 esp_err_t esp_camera_init(const camera_config_t* config)
 {
     camera_model_t camera_model = CAMERA_NONE;
+    i2s_gpio_init(config);
     esp_err_t err = camera_probe(config, &camera_model);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera probe failed with error 0x%x", err);
