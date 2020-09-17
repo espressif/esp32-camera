@@ -27,7 +27,14 @@ config OV5640_SUPPORT
     help
         Enable this option if you want to use the OV5640.
         Disable this option to save memory.
-    
+
+config NT99141_SUPPORT
+    bool "NT99141 Support"
+    default y
+    help
+        Enable this option if you want to use the NT99141.
+        Disable this option to save memory.
+        
 config SCCB_HARDWARE_I2C
     bool "Use hardware I2C for SCCB"
     default y
