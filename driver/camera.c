@@ -1204,7 +1204,7 @@ esp_err_t camera_init(const camera_config_t* config)
         s_state->in_bytes_per_pixel = 2;       // camera sends RGB565
         s_state->fb_bytes_per_pixel = 3;       // frame buffer stores RGB888
     } else if (pix_format == PIXFORMAT_JPEG) {
-        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID && s_state->sensor.id.PID != OV5640_PID) {
+        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID && s_state->sensor.id.PID != OV5640_PID  && s_state->sensor.id.PID != NT99141_PID) {
             ESP_LOGE(TAG, "JPEG format is only supported for ov2640, ov3660 and ov5640");
             err = ESP_ERR_NOT_SUPPORTED;
             goto fail;
@@ -1359,6 +1359,8 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         ESP_LOGI(TAG, "Detected OV3660 camera");
     } else if (camera_model == CAMERA_OV5640) {
         ESP_LOGI(TAG, "Detected OV5640 camera");
+    } else if (camera_model == CAMERA_NT99141) {
+        ESP_LOGI(TAG, "Detected NT99141 camera");
     } else {
         ESP_LOGI(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;
