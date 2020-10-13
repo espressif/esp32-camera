@@ -962,8 +962,10 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     ESP_LOGD(TAG, "Enabling XCLK output");
     camera_enable_out_clock(config);
 
-    ESP_LOGD(TAG, "Initializing SSCB");
-    SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
+    if (config->pin_sscb_sda != -1) {
+      ESP_LOGD(TAG, "Initializing SSCB");
+      SCCB_Init(config->pin_sscb_sda, config->pin_sscb_scl);
+    }
 	
     if(config->pin_pwdn >= 0) {
         ESP_LOGD(TAG, "Resetting camera by power down line");
