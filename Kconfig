@@ -35,16 +35,8 @@ config OV5640_SUPPORT
         Enable this option if you want to use the OV5640.
         Disable this option to save memory.
     
-config SCCB_HARDWARE_I2C
-    bool "Use hardware I2C for SCCB"
-    default y
-    help
-        Enable this option if you want to use hardware I2C to control the camera.
-        Disable this option to use software I2C.
-    
 choice SCCB_HARDWARE_I2C_PORT
     bool "I2C peripheral to use for SCCB"
-    depends on SCCB_HARDWARE_I2C
     default SCCB_HARDWARE_I2C_PORT1
 
     config SCCB_HARDWARE_I2C_PORT0
