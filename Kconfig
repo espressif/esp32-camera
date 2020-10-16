@@ -14,6 +14,13 @@ menu "Camera configuration"
             Enable this option if you want to use the OV7725.
             Disable this option to save memory.
 
+    config NT99141_SUPPORT
+        bool "Support NT99141 HD"
+        default y
+        help
+            Enable this option if you want to use the NT99141.
+            Disable this option to save memory.
+
     config OV2640_SUPPORT
         bool "Support OV2640 2MP"
         default y

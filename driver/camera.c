@@ -48,6 +48,9 @@
 #if CONFIG_OV5640_SUPPORT
 #include "ov5640.h"
 #endif
+#if CONFIG_NT99141_SUPPORT
+#include "nt99141.h"
+#endif
 #if CONFIG_OV7670_SUPPORT
 #include "ov7670.h"
 #endif
@@ -60,6 +63,7 @@ typedef enum {
     CAMERA_OV3660 = 3660,
     CAMERA_OV5640 = 5640,
     CAMERA_OV7670 = 7670,
+    CAMERA_NT99141 = 9141,
 } camera_model_t;
 
 #define REG_PID        0x0A
@@ -1023,16 +1027,33 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         slv_addr = SCCB_Probe();
     }
 #endif
+#if CONFIG_NT99141_SUPPORT
+   if (slv_addr == 0x2a)
+    {
+        ESP_LOGD(TAG, "Resetting NT99141");
+        SCCB_Write16(0x2a, 0x3008, 0x01);//bank sensor
+    }
+#endif 
 
     s_state->sensor.slv_addr = slv_addr;
     s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
 
-#if (CONFIG_OV3660_SUPPORT || CONFIG_OV5640_SUPPORT)
+#if (CONFIG_OV3660_SUPPORT || CONFIG_OV5640_SUPPORT || CONFIG_NT99141_SUPPORT)
     if(s_state->sensor.slv_addr == 0x3c){
         id->PID = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDH);
         id->VER = SCCB_Read16(s_state->sensor.slv_addr, REG16_CHIDL);
         vTaskDelay(10 / portTICK_PERIOD_MS);
         ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x", id->PID, id->VER);
+    } else if(s_state->sensor.slv_addr == 0x2a){
+        id->PID = SCCB_Read16(s_state->sensor.slv_addr, 0x3000);
+        id->VER = SCCB_Read16(s_state->sensor.slv_addr, 0x3001);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x", id->PID, id->VER);
+        if(config->xclk_freq_hz > 10000000)
+        {
+            ESP_LOGE(TAG, "NT99141: only XCLK under 10MHz is supported, and XCLK is now set to 10M");
+            s_state->sensor.xclk_freq_hz = 10000000;
+        }    
     } else {
 #endif
         id->PID = SCCB_Read(s_state->sensor.slv_addr, REG_PID);
@@ -1043,7 +1064,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
         ESP_LOGD(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
                  id->PID, id->VER, id->MIDH, id->MIDL);
 
-#if (CONFIG_OV3660_SUPPORT || CONFIG_OV5640_SUPPORT)
+#if (CONFIG_OV3660_SUPPORT || CONFIG_OV5640_SUPPORT || CONFIG_NT99141_SUPPORT)
     }
 #endif
 
@@ -1077,6 +1098,12 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     case OV7670_PID:
         *out_camera_model = CAMERA_OV7670;
         ov7670_init(&s_state->sensor);
+        break;
+#endif
+#if CONFIG_NT99141_SUPPORT
+        case NT99141_PID:
+        *out_camera_model = CAMERA_NT99141;
+        NT99141_init(&s_state->sensor);
         break;
 #endif
     default:
@@ -1142,6 +1169,13 @@ esp_err_t camera_init(const camera_config_t* config)
             }
             break;
 #endif
+#if CONFIG_NT99141_SUPPORT
+        case NT99141_PID:
+            if (frame_size > FRAMESIZE_HD) {
+                frame_size = FRAMESIZE_HD;
+            }
+            break;
+#endif
         default:
             return ESP_ERR_CAMERA_NOT_SUPPORTED;
     }
@@ -1151,7 +1185,7 @@ esp_err_t camera_init(const camera_config_t* config)
 
     if (pix_format == PIXFORMAT_GRAYSCALE) {
         s_state->fb_size = s_state->width * s_state->height;
-        if (s_state->sensor.id.PID == OV3660_PID || s_state->sensor.id.PID == OV5640_PID) {
+        if (s_state->sensor.id.PID == OV3660_PID || s_state->sensor.id.PID == OV5640_PID || s_state->sensor.id.PID == NT99141_PID) {
             if (is_hs_mode()) {
                 s_state->sampling_mode = SM_0A00_0B00;
                 s_state->dma_filter = &dma_filter_yuyv_highspeed;
@@ -1202,7 +1236,7 @@ esp_err_t camera_init(const camera_config_t* config)
         s_state->in_bytes_per_pixel = 2;       // camera sends RGB565
         s_state->fb_bytes_per_pixel = 3;       // frame buffer stores RGB888
     } else if (pix_format == PIXFORMAT_JPEG) {
-        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID && s_state->sensor.id.PID != OV5640_PID) {
+        if (s_state->sensor.id.PID != OV2640_PID && s_state->sensor.id.PID != OV3660_PID && s_state->sensor.id.PID != OV5640_PID  && s_state->sensor.id.PID != NT99141_PID) {
             ESP_LOGE(TAG, "JPEG format is only supported for ov2640, ov3660 and ov5640");
             err = ESP_ERR_NOT_SUPPORTED;
             goto fail;
@@ -1360,6 +1394,8 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         ESP_LOGI(TAG, "Detected OV5640 camera");
     } else if (camera_model == CAMERA_OV7670) {
         ESP_LOGI(TAG, "Detected OV7670 camera");
+    } else if (camera_model == CAMERA_NT99141) {
+        ESP_LOGI(TAG, "Detected NT99141 camera");
     } else {
         ESP_LOGI(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;
