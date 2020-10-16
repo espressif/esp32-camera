@@ -292,7 +292,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 #endif
     } else if (framesize == FRAMESIZE_VGA) {
         ESP_LOGD(TAG, "Set FRAMESIZE_VGA");
-        ret = write_regs(sensor->slv_addr, sensor_framesize_VGA);
+        // ret = write_regs(sensor->slv_addr, sensor_framesize_VGA);
+        ret = write_regs(sensor->slv_addr, sensor_framesize_VGA_xyskip);// Resolution:640*360 This configuration is equally-scaled without deforming
 #ifdef CONFIG_NT99141_SUPPORT_XSKIP
         ESP_LOGD(TAG, "Set FRAMESIZE_QVGA: xskip mode");
         ret = write_regs(sensor->slv_addr, sensor_framesize_VGA_xskip);
@@ -379,7 +380,17 @@ static int set_gain_ctrl(sensor_t *sensor, int enable)
 static int set_exposure_ctrl(sensor_t *sensor, int enable)
 {
     int ret = 0;
-    ret = write_reg_bits(sensor->slv_addr, 0x32bb, 0x87, enable);
+       int data = 0;
+    // ret = write_reg_bits(sensor->slv_addr, 0x32bb, 0x87, enable);
+    data = read_reg(sensor->slv_addr, 0x3201);
+    ESP_LOGD(TAG, "set_exposure_ctrl:enable");
+    if (enable) {
+        ESP_LOGD(TAG, "set_exposure_ctrl:enable");
+        ret = write_reg(sensor->slv_addr, 0x3201, (1 << 5) | data);
+    } else {
+        ESP_LOGD(TAG, "set_exposure_ctrl:disable");
+        ret = write_reg(sensor->slv_addr, 0x3201, (~(1 << 5)) & data);
+    }
 
     if (ret == 0) {
         ESP_LOGD(TAG, "Set exposure_ctrl to: %d", enable);
@@ -486,6 +497,40 @@ static int get_agc_gain(sensor_t *sensor)
 static int set_agc_gain(sensor_t *sensor, int gain)
 {
     ESP_LOGD(TAG, "set_agc_gain can not be configured at present");
+    // ESP_LOGD(TAG, "GAIN = %d\n", gain);
+    int cnt = gain / 2;
+
+    switch (cnt) {
+        case 0:
+            ESP_LOGD(TAG, "set_agc_gain: 1x");
+            write_reg(sensor->slv_addr, 0X301D, 0X00);
+            break;
+
+        case 1:
+            ESP_LOGD(TAG,"set_agc_gain: 2x");
+            write_reg(sensor->slv_addr, 0X301D, 0X0F);
+            break;
+
+        case 2:
+            ESP_LOGD(TAG,"set_agc_gain: 4x");
+            write_reg(sensor->slv_addr, 0X301D, 0X2F);
+            break;
+
+        case 3:
+            ESP_LOGD(TAG,"set_agc_gain: 6x");
+            write_reg(sensor->slv_addr, 0X301D, 0X37);
+            break;
+
+        case 4:
+            ESP_LOGD(TAG,"set_agc_gain: 8x");
+            write_reg(sensor->slv_addr, 0X301D, 0X3F);
+            break;
+
+        default:
+            ESP_LOGD(TAG,"fail set_agc_gain");
+            break;
+    }
+
     return 0;
 }
 
@@ -498,12 +543,38 @@ static int get_aec_value(sensor_t *sensor)
 static int set_aec_value(sensor_t *sensor, int value)
 {
     ESP_LOGD(TAG, "set_aec_value can not be configured at present");
-    return 0;
+    int ret = 0;
+    // ESP_LOGD(TAG, " set_aec_value to: %d", value);
+    ret = write_reg_bits(sensor->slv_addr, 0x3012, 0x00, (value >> 8) & 0xff);
+    ret = write_reg_bits(sensor->slv_addr, 0x3013, 0x01, value & 0xff);
+
+    if (ret == 0) {
+        ESP_LOGD(TAG, " set_aec_value to: %d", value);
+        // sensor->status.aec = enable;
+    }
+
+    return ret;
 }
 
 static int set_ae_level(sensor_t *sensor, int level)
 {
     ESP_LOGD(TAG, "set_ae_level can not be configured at present");
+    int ret = 0;
+
+    if (level < 0) {
+        level = 0;
+    } else if (level > 9) {
+        level = 9;
+    }
+
+    for (int i = 0; i < 5; i++) {
+        ret += write_reg(sensor->slv_addr, sensor_ae_level[ 5 * level + i ][0], sensor_ae_level[5 * level + i ][1]);
+    }
+
+    if (ret) {
+        ESP_LOGE(TAG, " fail to set ae level: %d", ret);
+    }
+
     return 0;
 }
 
