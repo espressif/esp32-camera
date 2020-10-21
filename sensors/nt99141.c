@@ -309,7 +309,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ret = write_regs(sensor->slv_addr, sensor_framesize_VGA);
     }
 
-    return 0;
+    return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
