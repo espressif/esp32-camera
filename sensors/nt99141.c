@@ -730,7 +730,6 @@ static int set_contrast(sensor_t *sensor, int level)
 {
     int ret = 0;
     uint8_t value1 = 0, value2 = 0 ;
-    bool negative = false;
 
     switch (level) {
         case 3:
