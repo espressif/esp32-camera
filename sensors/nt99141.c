@@ -682,7 +682,6 @@ static int set_brightness(sensor_t *sensor, int level)
 {
     int ret = 0;
     uint8_t value = 0;
-    bool negative = false;
 
     switch (level) {
         case 3:
@@ -699,17 +698,14 @@ static int set_brightness(sensor_t *sensor, int level)
 
         case -1:
             value = 0x78;
-            negative = true;
             break;
 
         case -2:
             value = 0x70;
-            negative = true;
             break;
 
         case -3:
             value = 0x60;
-            negative = true;
             break;
 
         default: // 0
