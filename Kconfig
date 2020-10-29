@@ -67,5 +67,21 @@ menu "Camera configuration"
             bool "NO_AFFINITY"
 
     endchoice
+	menu "Camera Pins"
+		choice CAMERA_MODEL
+		    bool "Select Camera Pinout"
+		    default BOARD_ESP32CAM_AITHINKER
+		    help
+			Select Camera Pinout.
 
+		config BOARD_WROVER_KIT
+
+		    bool "WROVER-KIT OV2640 Module"
+		config BOARD_ESP32CAM_AITHINKER
+
+		    bool "ESP32-CAM by AI-Thinker"
+		endchoice
+	endmenu
+    
 endmenu
+
