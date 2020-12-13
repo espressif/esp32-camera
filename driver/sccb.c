@@ -41,13 +41,14 @@ int SCCB_Init(int pin_sda, int pin_scl)
 {
     ESP_LOGI(TAG, "pin_sda %d pin_scl %d\n", pin_sda, pin_scl);
     //log_i("SCCB_Init start");
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = pin_sda;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = pin_scl;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = SCCB_FREQ;
+    i2c_config_t conf= {
+        .mode = I2C_MODE_MASTER
+       ,.sda_io_num = pin_sda
+       ,.sda_pullup_en = GPIO_PULLUP_ENABLE
+       ,.scl_io_num = pin_scl
+       ,.scl_pullup_en = GPIO_PULLUP_ENABLE
+       ,.master.clk_speed = SCCB_FREQ
+    };
 
     i2c_param_config(SCCB_I2C_PORT, &conf);
     i2c_driver_install(SCCB_I2C_PORT, conf.mode, 0, 0, 0);
