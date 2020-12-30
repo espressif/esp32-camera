@@ -11,6 +11,7 @@
 #include <freertos/task.h>
 #include "sccb.h"
 #include <stdio.h>
+#include <string.h>
 #include "sdkconfig.h"
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
