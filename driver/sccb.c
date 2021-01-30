@@ -14,7 +14,6 @@
 #include "sccb.h"
 #include <stdio.h>
 #include "sdkconfig.h"
-#define LOCAL_LOG_LEVEL ESP_LOG_DEBUG
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #else
