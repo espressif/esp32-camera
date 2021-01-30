@@ -6,6 +6,7 @@
  * SCCB (I2C like) driver.
  *
  */
+
 #include <stdbool.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
@@ -13,12 +14,15 @@
 #include "sccb.h"
 #include <stdio.h>
 #include "sdkconfig.h"
+#define LOCAL_LOG_LEVEL ESP_LOG_DEBUG
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #else
+//#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include "esp_log.h"
 static const char* TAG = "sccb";
 #endif
+
 
 #define LITTLETOBIG(x)          ((x<<8)|(x>>8))
 
@@ -40,8 +44,7 @@ static uint8_t ESP_SLAVE_ADDR   = 0x3c;
 
 int SCCB_Init(int pin_sda, int pin_scl)
 {
-    ESP_LOGI(TAG, "pin_sda %d pin_scl %d\n", pin_sda, pin_scl);
-    //log_i("SCCB_Init start");
+    ESP_LOGD(TAG,"SCCB_Init: I2C%d (SDA GPIO=%d, SCL GPIO=%d)",SCCB_I2C_PORT,pin_sda,pin_scl);
     i2c_config_t conf= {
         .mode = I2C_MODE_MASTER
        ,.sda_io_num = pin_sda
@@ -58,17 +61,28 @@ int SCCB_Init(int pin_sda, int pin_scl)
 
 uint8_t SCCB_Probe()
 {
+	ESP_LOGD(TAG,"SCCB_Probe");
     uint8_t slave_addr = 0x0;
-    while(slave_addr < 0x7f) {
+    while (slave_addr < 0x7f) {
         i2c_cmd_handle_t cmd = i2c_cmd_link_create();
         i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, ( slave_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+        i2c_master_write_byte(cmd, (slave_addr<<1) | WRITE_BIT, ACK_CHECK_EN);
         i2c_master_stop(cmd);
         esp_err_t ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
         if( ret == ESP_OK) {
-            ESP_SLAVE_ADDR = slave_addr;
-            return ESP_SLAVE_ADDR;
+        	// Try to read product id
+        	uint8_t result=SCCB_Read(slave_addr,REG_PID);
+        	if ((result==0xFF)
+        	 || (result==REG_PID)) {
+        		ESP_LOGD(TAG,"SCCB_Probe: no camera at 0x%X",slave_addr);
+        	}
+        	else
+        	{
+        		ESP_SLAVE_ADDR = slave_addr;
+        		ESP_LOGD(TAG,"SCCB_Probe: camera addr 0x%X",slave_addr);
+        		return ESP_SLAVE_ADDR;
+        	}
         }
         slave_addr++;
     }
@@ -77,6 +91,7 @@ uint8_t SCCB_Probe()
 
 uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
 {
+	ESP_LOGD(TAG,"SCCB_Read: addr=0x%X, reg=0x%X",slv_addr,reg);
     uint8_t data=0;
     esp_err_t ret = ESP_FAIL;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -86,7 +101,9 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
-    if(ret != ESP_OK) return -1;
+    if (ret != ESP_OK) {
+    	return -1;
+    }
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, ( slv_addr << 1 ) | READ_BIT, ACK_CHECK_EN);
@@ -102,6 +119,7 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
 
 uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 {
+	ESP_LOGD(TAG,"SCCB_Write: addr=0x%X, reg=0x%X, data=0x%X",slv_addr,reg,data);
     esp_err_t ret = ESP_FAIL;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
@@ -119,6 +137,7 @@ uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 
 uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
 {
+	ESP_LOGD(TAG,"SCCB_Read16: addr=0x%X, resg=0x%X",slv_addr,reg);
     uint8_t data=0;
     esp_err_t ret = ESP_FAIL;
     uint16_t reg_htons = LITTLETOBIG(reg);
@@ -147,6 +166,7 @@ uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
 
 uint8_t SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
 {
+	ESP_LOGD(TAG,"SCCB_Write16: addr=0x%X, reg=0x%X, data=0x%X",slv_addr,reg,data);
     static uint16_t i = 0;
     esp_err_t ret = ESP_FAIL;
     uint16_t reg_htons = LITTLETOBIG(reg);

@@ -9,7 +9,16 @@
 #ifndef __SCCB_H__
 #define __SCCB_H__
 #include <stdint.h>
-int SCCB_Init(int pin_sda, int pin_scl);
+
+#define REG_PID        0x0A
+#define REG_VER        0x0B
+#define REG_MIDH       0x1C
+#define REG_MIDL       0x1D
+
+#define REG16_CHIDH     0x300A
+#define REG16_CHIDL     0x300B
+
+int     SCCB_Init(int pin_sda, int pin_scl);
 uint8_t SCCB_Probe();
 uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg);
 uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data);
