@@ -232,6 +232,7 @@ bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixf
 
     *out = jpg_buf;
     *out_len = dst_stream.get_size();
+    free(jpg_buf);
     return true;
 }
 
