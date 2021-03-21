@@ -956,8 +956,8 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
         ESP_LOGE(TAG, "only XCLK under 10MHz is supported, and XCLK is now set to 10M");
         xclk = 10;
     }
-    sensor->xclk_freq_hz = xclk * 1000000U;
-    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    // sensor->xclk_freq_hz = xclk * 1000000U;
+    // ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
     return ret;
 }
 

@@ -66,9 +66,9 @@
 #pragma once
 
 #include "esp_err.h"
-#include "driver/ledc.h"
 #include "sensor.h"
 #include "sys/time.h"
+#include "driver/lcd_cam.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,9 +96,6 @@ typedef struct {
     int pin_pclk;                   /*!< GPIO pin for camera PCLK line */
 
     int xclk_freq_hz;               /*!< Frequency of XCLK signal, in Hz. Either 20KHz or 10KHz for OV2640 double FPS (Experimental) */
-
-    ledc_timer_t ledc_timer;        /*!< LEDC timer to be used for generating XCLK  */
-    ledc_channel_t ledc_channel;    /*!< LEDC channel to be used for generating XCLK  */
 
     pixformat_t pixel_format;       /*!< Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG  */
     framesize_t frame_size;         /*!< Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA  */
@@ -141,7 +138,8 @@ typedef struct {
  *
  * @return ESP_OK on success
  */
-esp_err_t esp_camera_init(const camera_config_t* config);
+esp_err_t esp_camera_init(const camera_config_t* config);//lcd_config_t lcd
+esp_err_t esp_camera_initwith_lcd(const camera_config_t* config, lcd_config_t* lcd, lcd_cam_handle_t ** lcd_cam_handle);
 
 /**
  * @brief Deinitialize the camera driver

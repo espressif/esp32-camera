@@ -1,9 +1,8 @@
-if(IDF_TARGET STREQUAL "esp32")
+#if(IDF_TARGET STREQUAL "esp32")
   set(COMPONENT_SRCS
     driver/camera.c
     driver/sccb.c
     driver/sensor.c
-    driver/xclk.c
     sensors/ov2640.c
     sensors/ov3660.c
     sensors/ov5640.c
@@ -32,4 +31,4 @@ if(IDF_TARGET STREQUAL "esp32")
   set(COMPONENT_PRIV_REQUIRES freertos nvs_flash)
 
   register_component()
-endif()
+#endif()

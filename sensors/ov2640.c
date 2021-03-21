@@ -16,6 +16,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#ifndef CONFIG_IDF_TARGET
+#define CONFIG_IDF_TARGET_ESP32 1
+#endif
+
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #else
@@ -164,7 +168,13 @@ static int set_window(sensor_t *sensor, ov2640_sensor_mode_t mode, int offset_x,
 
     if(sensor->pixformat != PIXFORMAT_JPEG){
         c.pclk_auto = 1;
+#if CONFIG_IDF_TARGET_ESP32
         c.clk_div = 7;
+#elif CONFIG_IDF_TARGET_ESP32S2
+        c.clk_2x = 1;
+#elif CONFIG_IDF_TARGET_ESP32S3
+        c.clk_2x = 1;
+#endif
     }
 
     if (mode == OV2640_MODE_CIF) {
@@ -484,8 +494,8 @@ esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
-    sensor->xclk_freq_hz = xclk * 1000000U;
-    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    // sensor->xclk_freq_hz = xclk * 1000000U;
+    // ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
     return ret;
 }
 

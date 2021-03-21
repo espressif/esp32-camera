@@ -67,8 +67,12 @@ uint8_t SCCB_Probe()
         esp_err_t ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
         if( ret == ESP_OK) {
-            ESP_SLAVE_ADDR = slave_addr;
-            return ESP_SLAVE_ADDR;
+            ESP_LOGI(TAG, "SCCB Device @ 0x%02x", slave_addr);
+            if(slave_addr == 0x21 || slave_addr == 0x2A || slave_addr == 0x30 || slave_addr == 0x3C){
+                ESP_LOGI(TAG, "SCCB Camera @ 0x%02x", slave_addr);
+                ESP_SLAVE_ADDR = slave_addr;
+                return ESP_SLAVE_ADDR;
+            }
         }
         slave_addr++;
     }

@@ -16,6 +16,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#ifndef CONFIG_IDF_TARGET
+#define CONFIG_IDF_TARGET_ESP32 1
+#endif
+
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #else
@@ -439,7 +443,13 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         }
         ret = set_pll(sensor, false, sys_mul, 4, 2, false, 2, true, 4);
     } else {
+#if CONFIG_IDF_TARGET_ESP32
         ret = set_pll(sensor, false, 10, 1, 1, false, 1, true, 4);
+#elif CONFIG_IDF_TARGET_ESP32S2
+        ret = set_pll(sensor, false, 38, 1, 1, false, 1, true, 4); // 34 fps
+#elif CONFIG_IDF_TARGET_ESP32S3
+        ret = set_pll(sensor, false, 38, 1, 1, false, 1, true, 4); // 34 fps
+#endif
     }
 
     if (ret == 0) {
@@ -1029,8 +1039,8 @@ esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
-    sensor->xclk_freq_hz = xclk * 1000000U;
-    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    // sensor->xclk_freq_hz = xclk * 1000000U;
+    // ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
     return ret;
 }
 

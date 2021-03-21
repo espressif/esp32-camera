@@ -16,6 +16,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#ifndef CONFIG_IDF_TARGET
+#define CONFIG_IDF_TARGET_ESP32 1
+#endif
+
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #else
@@ -363,6 +367,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = set_pll(sensor, false, 30, 1, 3, false, 0, true, 10);
         }
     } else {
+#if CONFIG_IDF_TARGET_ESP32
         if (framesize > FRAMESIZE_CIF) {
             //10MHz SYSCLK and 10MHz PCLK (6.19 FPS)
             ret = set_pll(sensor, false, 2, 1, 0, false, 0, true, 2);
@@ -370,6 +375,11 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             //25MHz SYSCLK and 10MHz PCLK (15.45 FPS)
             ret = set_pll(sensor, false, 5, 1, 0, false, 0, true, 5);
         }
+#elif CONFIG_IDF_TARGET_ESP32S2
+        ret = set_pll(sensor, false, 15, 1, 0, false, 0, true, 5); // 39 fps
+#elif CONFIG_IDF_TARGET_ESP32S3
+        ret = set_pll(sensor, false, 15, 1, 0, false, 0, true, 5); // 39 fps
+#endif
     }
 
     if (ret == 0) {
@@ -957,8 +967,8 @@ esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
-    sensor->xclk_freq_hz = xclk * 1000000U;
-    ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
+    // sensor->xclk_freq_hz = xclk * 1000000U;
+    // ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
     return ret;
 }
 
