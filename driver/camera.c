@@ -16,19 +16,8 @@
 #include <string.h>
 #include "time.h"
 #include "sys/time.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
 #include "driver/gpio.h"
 #include "driver/lcd_cam.h"
-// #include "soc/soc.h"
-// #include "soc/gpio_sig_map.h"
-// #include "soc/i2s_reg.h"
-// #include "soc/i2s_struct.h"
-// #include "soc/io_mux_reg.h"
-// #include "driver/rtc_io.h"
-// #include "driver/periph_ctrl.h"
-// #include "esp_intr_alloc.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -102,39 +91,7 @@ typedef struct {
 
 camera_state_t* s_state = NULL;
 
-// static int skip_frame()
-// {
-//     if (s_state == NULL) {
-//         return -1;
-//     }
-//     int64_t st_t = esp_timer_get_time();
-//     while (gpio_get_level(s_state->config.pin_vsync) == 0) {
-//         if((esp_timer_get_time() - st_t) > 1000000LL){
-//             goto timeout;
-//         }
-//     }
-//     while (gpio_get_level(s_state->config.pin_vsync) != 0) {
-//         if((esp_timer_get_time() - st_t) > 1000000LL){
-//             goto timeout;
-//         }
-//     }
-//     while (gpio_get_level(s_state->config.pin_vsync) == 0) {
-//         if((esp_timer_get_time() - st_t) > 1000000LL){
-//             goto timeout;
-//         }
-//     }
-//     return 0;
-
-// timeout:
-//     ESP_LOGE(TAG, "Timeout waiting for VSYNC");
-//     return -1;
-// }
-
-/*
- * Public Methods
- * */
-
-esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera_model)
+static esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera_model)
 {
     if (s_state == NULL) {
         return ESP_ERR_INVALID_STATE;
@@ -286,7 +243,7 @@ esp_err_t camera_probe(const camera_config_t* config, camera_model_t* out_camera
     return ESP_OK;
 }
 
-esp_err_t camera_init(const camera_config_t* config)
+static esp_err_t camera_init(const camera_config_t* config)
 {
     if (!s_state) {
         return ESP_ERR_INVALID_STATE;
