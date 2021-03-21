@@ -14,6 +14,7 @@
     conversions/to_bmp.c
     conversions/jpge.cpp
     conversions/esp_jpg_decode.c
+    conversions/tjpgd.c
     )
 
   set(COMPONENT_ADD_INCLUDEDIRS
@@ -28,7 +29,7 @@
     )
 
   set(COMPONENT_REQUIRES driver)
-  set(COMPONENT_PRIV_REQUIRES freertos nvs_flash)
+  set(COMPONENT_PRIV_REQUIRES freertos nvs_flash esp32_lcd_cam)
 
   register_component()
 #endif()

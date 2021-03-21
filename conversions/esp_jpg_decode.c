@@ -18,7 +18,7 @@
 #if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
 #include "esp32/rom/tjpgd.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
-#include "esp32s2/rom/tjpgd.h"
+#include "tjpgd.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/rom/tjpgd.h"
 #else 

@@ -441,7 +441,7 @@ esp_err_t esp_camera_init(const camera_config_t* config)
             .data = {false, false, false, false, false, false, false, false},
         },
         .mode.jpeg = (config->pixel_format == PIXFORMAT_JPEG),
-        .recv_size = resolution[config->frame_size].width * resolution[config->frame_size].height * 2,
+        .recv_size = (config->pixel_format == PIXFORMAT_JPEG)?resolution[config->frame_size].width * resolution[config->frame_size].height / 8:resolution[config->frame_size].width * resolution[config->frame_size].height * 2,
         .max_dma_buffer_size = 16 * 1024,
         .frame_cnt = 2, 
         .frame_caps = MALLOC_CAP_SPIRAM,
