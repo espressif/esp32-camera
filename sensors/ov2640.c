@@ -171,7 +171,7 @@ static int set_window(sensor_t *sensor, ov2640_sensor_mode_t mode, int offset_x,
 #if CONFIG_IDF_TARGET_ESP32
         c.clk_div = 7;
 #elif CONFIG_IDF_TARGET_ESP32S2
-        c.clk_2x = 1;
+        c.clk_2x = sensor->status.framesize <= FRAMESIZE_HVGA;
 #elif CONFIG_IDF_TARGET_ESP32S3
         c.clk_2x = 1;
 #endif

@@ -446,7 +446,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 #if CONFIG_IDF_TARGET_ESP32
         ret = set_pll(sensor, false, 10, 1, 1, false, 1, true, 4);
 #elif CONFIG_IDF_TARGET_ESP32S2
-        ret = set_pll(sensor, false, 38, 1, 1, false, 1, true, 4); // 34 fps
+        ret = set_pll(sensor, false, 30, 1, 1, false, 1, true, 4); // 27 fps
 #elif CONFIG_IDF_TARGET_ESP32S3
         ret = set_pll(sensor, false, 38, 1, 1, false, 1, true, 4); // 34 fps
 #endif
