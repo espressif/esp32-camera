@@ -1,4 +1,4 @@
-if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2")
+if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
   set(COMPONENT_SRCS
     driver/sccb.c
     driver/sensor.c
@@ -42,6 +42,13 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2")
 
     list(APPEND COMPONENT_PRIV_INCLUDEDIRS
       target/esp32s2/private_include
+      )
+  endif()
+
+  if(IDF_TARGET STREQUAL "esp32s3")
+    list(APPEND COMPONENT_SRCS
+      driver/esp_camera.c
+      target/esp32s3/cam_hal.c
       )
   endif()
 

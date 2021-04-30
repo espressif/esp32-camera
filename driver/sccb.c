@@ -58,6 +58,17 @@ int SCCB_Init(int pin_sda, int pin_scl)
 uint8_t SCCB_Probe()
 {
     uint8_t slave_addr = 0x0;
+    // for (size_t i = 1; i < 0x80; i++) {
+    //     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    //     i2c_master_start(cmd);
+    //     i2c_master_write_byte(cmd, ( i << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    //     i2c_master_stop(cmd);
+    //     esp_err_t ret = i2c_master_cmd_begin(SCCB_I2C_PORT, cmd, 1000 / portTICK_RATE_MS);
+    //     i2c_cmd_link_delete(cmd);
+    //     if( ret == ESP_OK) {
+    //         ESP_LOGW(TAG, "Found I2C Device at 0x%02X", i);
+    //     }
+    // }
     for (size_t i = 0; i < CAMERA_MODEL_MAX; i++) {
         if (slave_addr == camera_sensor[i].sccb_addr) {
             continue;

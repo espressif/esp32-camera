@@ -17,6 +17,8 @@
 #include "esp32/rom/lldesc.h"
 #elif CONFIG_IDF_TARGET_ESP32S2 // ESP32-S2
 #include "esp32s2/rom/lldesc.h"
+#elif CONFIG_IDF_TARGET_ESP32S3 // ESP32-S3
+#include "esp32s3/rom/lldesc.h"
 #else 
 #error Target CONFIG_IDF_TARGET is not supported
 #endif
