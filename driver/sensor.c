@@ -1,5 +1,14 @@
 #include "sensor.h"
 
+const camera_sensor_info_t camera_sensor[CAMERA_MODEL_MAX] = {
+    {CAMERA_OV7725, OV7725_SCCB_ADDR, OV7725_PID},
+    {CAMERA_OV2640, OV2640_SCCB_ADDR, OV2640_PID},
+    {CAMERA_OV3660, OV3660_SCCB_ADDR, OV3660_PID},
+    {CAMERA_OV5640, OV5640_SCCB_ADDR, OV5640_PID},
+    {CAMERA_OV7670, OV7670_SCCB_ADDR, OV7670_PID},
+    {CAMERA_NT99141, NT99141_SCCB_ADDR, NT99141_PID},
+};
+
 const resolution_info_t resolution[FRAMESIZE_INVALID] = {
     {   96,   96, ASPECT_RATIO_1X1   }, /* 96x96 */
     {  160,  120, ASPECT_RATIO_4X3   }, /* QQVGA */

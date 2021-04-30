@@ -15,9 +15,13 @@ static const char* TAG = "camera_xclk";
 esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz)
 {
     ledc_timer_config_t timer_conf;
-    timer_conf.duty_resolution = 2;
+    timer_conf.duty_resolution = LEDC_TIMER_1_BIT;
     timer_conf.freq_hz = xclk_freq_hz;
+#if CONFIG_IDF_TARGET_ESP32
     timer_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
+#else
+    timer_conf.speed_mode = LEDC_LOW_SPEED_MODE;
+#endif
 #if ESP_IDF_VERSION_MAJOR >= 4
     timer_conf.clk_cfg = LEDC_AUTO_CLK;
 #endif
@@ -41,11 +45,15 @@ esp_err_t camera_enable_out_clock(camera_config_t* config)
 
     ledc_channel_config_t ch_conf;
     ch_conf.gpio_num = config->pin_xclk;
+#if CONFIG_IDF_TARGET_ESP32
     ch_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
+#else
+    ch_conf.speed_mode = LEDC_LOW_SPEED_MODE;
+#endif
     ch_conf.channel = config->ledc_channel;
     ch_conf.intr_type = LEDC_INTR_DISABLE;
     ch_conf.timer_sel = config->ledc_timer;
-    ch_conf.duty = 2;
+    ch_conf.duty = 1;
     ch_conf.hpoint = 0;
     err = ledc_channel_config(&ch_conf);
     if (err != ESP_OK) {
