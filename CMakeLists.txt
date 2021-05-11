@@ -1,6 +1,5 @@
-if(IDF_TARGET STREQUAL "esp32")
+if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
   set(COMPONENT_SRCS
-    driver/camera.c
     driver/sccb.c
     driver/sensor.c
     driver/xclk.c
@@ -27,6 +26,31 @@ if(IDF_TARGET STREQUAL "esp32")
     sensors/private_include
     conversions/private_include
     )
+
+  if(IDF_TARGET STREQUAL "esp32")
+    list(APPEND COMPONENT_SRCS
+      driver/camera.c
+      )
+  endif()
+
+  if(IDF_TARGET STREQUAL "esp32s2")
+    list(APPEND COMPONENT_SRCS
+      driver/esp_camera.c
+      target/esp32s2/cam_hal.c
+      target/esp32s2/tjpgd.c
+      )
+
+    list(APPEND COMPONENT_PRIV_INCLUDEDIRS
+      target/esp32s2/private_include
+      )
+  endif()
+
+  if(IDF_TARGET STREQUAL "esp32s3")
+    list(APPEND COMPONENT_SRCS
+      driver/esp_camera.c
+      target/esp32s3/cam_hal.c
+      )
+  endif()
 
   set(COMPONENT_REQUIRES driver)
   set(COMPONENT_PRIV_REQUIRES freertos nvs_flash)

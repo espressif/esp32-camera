@@ -310,13 +310,13 @@ static int set_image_options(sensor_t *sensor)
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret = 0;
-    framesize_t old_framesize = sensor->status.framesize;
-    sensor->status.framesize = framesize;
 
     if(framesize > FRAMESIZE_QXGA){
-        ESP_LOGE(TAG, "Invalid framesize: %u", framesize);
-        return -1;
+        ESP_LOGW(TAG, "Invalid framesize: %u", framesize);
+        framesize = FRAMESIZE_QXGA;
     }
+    framesize_t old_framesize = sensor->status.framesize;
+    sensor->status.framesize = framesize;
     uint16_t w = resolution[framesize].width;
     uint16_t h = resolution[framesize].height;
     aspect_ratio_t ratio = resolution[sensor->status.framesize].aspect_ratio;
