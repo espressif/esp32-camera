@@ -39,6 +39,7 @@ typedef enum {
     CAMERA_NT99141,
     CAMERA_MODEL_MAX,
     CAMERA_NONE,
+    CAMERA_UNKNOWN
 } camera_model_t;
 
 typedef enum {

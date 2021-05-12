@@ -55,25 +55,6 @@
 #include "ov7670.h"
 #endif
 
-typedef enum {
-    CAMERA_NONE = 0,
-    CAMERA_UNKNOWN = 1,
-    CAMERA_OV7725 = 7725,
-    CAMERA_OV2640 = 2640,
-    CAMERA_OV3660 = 3660,
-    CAMERA_OV5640 = 5640,
-    CAMERA_OV7670 = 7670,
-    CAMERA_NT99141 = 9141,
-} camera_model_t;
-
-#define REG_PID        0x0A
-#define REG_VER        0x0B
-#define REG_MIDH       0x1C
-#define REG_MIDL       0x1D
-
-#define REG16_CHIDH     0x300A
-#define REG16_CHIDL     0x300B
-
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #define TAG ""
