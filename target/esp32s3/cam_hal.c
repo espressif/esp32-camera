@@ -107,7 +107,7 @@ static lcd_cam_obj_t *lcd_cam_obj = NULL;
 
 static void IRAM_ATTR lcd_cam_isr(void *arg)
 {
-    GPIO.out_w1ts = (1 << 20);
+    //GPIO.out_w1ts = (1 << 20);
 
     typeof(LCD_CAM.lc_dma_int_st) status = LCD_CAM.lc_dma_int_st;
     BaseType_t HPTaskAwoken = pdFALSE;
@@ -123,7 +123,7 @@ static void IRAM_ATTR lcd_cam_isr(void *arg)
     if (HPTaskAwoken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
-    GPIO.out_w1tc = (1 << 20);
+    //GPIO.out_w1tc = (1 << 20);
 }
 
 static void IRAM_ATTR dma_isr(void *arg)
