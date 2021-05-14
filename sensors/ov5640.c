@@ -209,6 +209,7 @@ static int set_pll(sensor_t *sensor, bool bypass, uint8_t multiplier, uint8_t sy
     if(multiplier > 127){
         multiplier &= 0xFE;//only even integers above 127
     }
+    ESP_LOGI(TAG, "Set PLL: bypass: %u, multiplier: %u, sys_div: %u, pre_div: %u, root_2x: %u, pclk_root_div: %u, pclk_manual: %u, pclk_div: %u", bypass, multiplier, sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div);
 
     calc_sysclk(sensor->xclk_freq_hz, bypass, multiplier, sys_div, pre_div, root_2x, pclk_root_div, pclk_manual, pclk_div);
 
@@ -438,8 +439,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             sys_mul = 180;
         }
         ret = set_pll(sensor, false, sys_mul, 4, 2, false, 2, true, 4);
+        //Set PLL: bypass: 0, multiplier: sys_mul, sys_div: 4, pre_div: 2, root_2x: 0, pclk_root_div: 2, pclk_manual: 1, pclk_div: 4
     } else {
-        ret = set_pll(sensor, false, 10, 1, 1, false, 1, true, 4);
+        //ret = set_pll(sensor, false, 10, 1, 1, false, 1, true, 4);
+        //Set PLL: bypass: 0, multiplier: 10, sys_div: 1, pre_div: 1, root_2x: 0, pclk_root_div: 1, pclk_manual: 1, pclk_div: 4
+        ret = set_pll(sensor, false, 8, 1, 1, false, 1, true, 4);
+        //Set PLL: bypass: 0, multiplier: 8, sys_div: 1, pre_div: 1, root_2x: 0, pclk_root_div: 1, pclk_manual: 1, pclk_div: 4
     }
 
     if (ret == 0) {
