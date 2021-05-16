@@ -51,12 +51,6 @@ typedef enum {
     NT99141_SCCB_ADDR  = 0x2A,
 } camera_sccb_addr_t;
 
-typedef struct {
-    const camera_model_t model;
-    const camera_sccb_addr_t sccb_addr;
-    const camera_pid_t pid;
-} camera_sensor_info_t;
-
 typedef enum {
     PIXFORMAT_RGB565,    // 2BPP/RGB565
     PIXFORMAT_YUV422,    // 2BPP/YUV422
@@ -95,6 +89,13 @@ typedef enum {
     FRAMESIZE_QSXGA,    // 2560x1920
     FRAMESIZE_INVALID
 } framesize_t;
+
+typedef struct {
+    const camera_model_t model;
+    const camera_sccb_addr_t sccb_addr;
+    const camera_pid_t pid;
+    const framesize_t max_size;
+} camera_sensor_info_t;
 
 typedef enum {
     ASPECT_RATIO_4X3,
