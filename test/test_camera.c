@@ -172,7 +172,7 @@ static void print_rgb565_img(uint8_t *img, int width, int height)
             uint8_t b = c & 0x1f;
             c = (r + g + b) / 3;
             c >>= 1;
-            printf("%c", temp2char[16 - c]);
+            printf("%c", temp2char[15 - c]);
         }
         printf("\n");
     }
@@ -190,7 +190,7 @@ static void print_rgb888_img(uint8_t *img, int width, int height)
             uint8_t b = *c;
             uint32_t v = (r + g + b) / 3;
             v >>= 4;
-            printf("%c", temp2char[16 - v]);
+            printf("%c", temp2char[15 - v]);
         }
         printf("\n");
     }

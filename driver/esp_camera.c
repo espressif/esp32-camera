@@ -18,16 +18,7 @@
 #include "sys/time.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "soc/soc.h"
-#include "soc/gpio_sig_map.h"
-#include "soc/i2s_reg.h"
-#include "soc/i2s_struct.h"
-#include "soc/io_mux_reg.h"
 #include "driver/gpio.h"
-#include "driver/rtc_io.h"
-#include "driver/periph_ctrl.h"
-#include "esp_intr_alloc.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -87,7 +78,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         return ESP_ERR_INVALID_STATE;
     }
 
-    s_state = (camera_state_t *) calloc(sizeof(*s_state), 1);
+    s_state = (camera_state_t *) calloc(sizeof(camera_state_t), 1);
     if (!s_state) {
         return ESP_ERR_NO_MEM;
     }
@@ -292,10 +283,21 @@ esp_err_t esp_camera_init(const camera_config_t *config)
     return ESP_OK;
 
 fail:
-    free(s_state);
-    s_state = NULL;
     CAMERA_DISABLE_OUT_CLOCK();
     return err;
+}
+
+esp_err_t esp_camera_deinit()
+{
+    esp_err_t ret = cam_deinit();
+    if (s_state) {
+        SCCB_Deinit();
+
+        free(s_state);
+        s_state = NULL;
+    }
+    
+    return ret;
 }
 
 camera_fb_t *esp_camera_fb_get()
@@ -305,9 +307,11 @@ camera_fb_t *esp_camera_fb_get()
     }
     camera_fb_t *fb = cam_take();
     //set the frame properties
-    fb->width = resolution[s_state->sensor.status.framesize].width;
-    fb->height = resolution[s_state->sensor.status.framesize].height;
-    fb->format = s_state->sensor.pixformat;
+    if (fb) {
+        fb->width = resolution[s_state->sensor.status.framesize].width;
+        fb->height = resolution[s_state->sensor.status.framesize].height;
+        fb->format = s_state->sensor.pixformat;
+    }
     return fb;
 }
 
