@@ -8,6 +8,8 @@
 
 #include "esp_camera.h"
 
+#define TEST_PRINT_IMAGE 1
+
 #define BOARD_ESP32CAM_AITHINKER 0
 #define BOARD_WROVER_KIT 1
 
@@ -59,7 +61,7 @@
 
 static const char *TAG = "test camera";
 
-typedef void (*decode_func_t)(uint8_t *jpegbuffer, uint32_t size, uint8_t *outbuffer);
+typedef bool (*decode_func_t)(const uint8_t *jpegbuffer, uint32_t size, uint8_t *outbuffer);
 
 static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, uint8_t fb_count)
 {
@@ -160,7 +162,7 @@ static camera_sensor_info_t *get_camera_info_from_pid(uint8_t pid)
     return NULL;
 }
 
-
+#if TEST_PRINT_IMAGE
 static void print_rgb565_img(uint8_t *img, int width, int height)
 {
     uint16_t *p = (uint16_t *)img;
@@ -196,15 +198,16 @@ static void print_rgb888_img(uint8_t *img, int width, int height)
         printf("\n");
     }
 }
+#endif
 
-static void tjpgd_decode_rgb565(uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
+static bool tjpgd_decode_rgb565(const uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
 {
-    jpg2rgb565(mjpegbuffer, size, outbuffer, JPG_SCALE_NONE);
+    return jpg2rgb565(mjpegbuffer, size, outbuffer, JPG_SCALE_NONE);
 }
 
-static void tjpgd_decode_rgb888(uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
+static bool tjpgd_decode_rgb888(const uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
 {
-    fmt2rgb888(mjpegbuffer, size, PIXFORMAT_JPEG, outbuffer);
+    return fmt2rgb888(mjpegbuffer, size, PIXFORMAT_JPEG, outbuffer);
 }
 
 typedef enum {
@@ -212,13 +215,93 @@ typedef enum {
     DECODE_RGB888,
 } decode_type_t;
 
+typedef enum {
+    DECODER_TJPGD,
+    DECODER_LIBJPEG,
+} decoder_t;
+
 static const decode_func_t g_decode_func[2][2] = {
-    {tjpgd_decode_rgb565,},
-    {tjpgd_decode_rgb888,},
+    {tjpgd_decode_rgb565, libjpeg_jpeg_to_rgb565},
+    {tjpgd_decode_rgb888, libjpeg_jpeg_to_rgb888},
 };
 
+static float jpg_encode_test(const uint8_t *jpg, uint32_t length, uint32_t img_w, uint32_t img_h, uint32_t times)
+{
+    decode_type_t type = DECODE_RGB888;
+    decoder_t decoder_index = DECODER_LIBJPEG;
+    uint8_t *jpg_buf = malloc(length);
+    if (NULL == jpg_buf) {
+        ESP_LOGE(TAG, "malloc for jpg buffer failed");
+        return 0;
+    }
+    memcpy(jpg_buf, jpg, length);
 
-static float jpg_decode_test(uint8_t decoder_index, decode_type_t type, const uint8_t *jpg, uint32_t length, uint32_t img_w, uint32_t img_h, uint32_t times)
+    uint8_t *rgb_buf = heap_caps_malloc(img_w * img_h * 3, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (NULL == rgb_buf) {
+        free(jpg_buf);
+        ESP_LOGE(TAG, "malloc for rgb buffer failed");
+        return 0;
+    }
+    decode_func_t decode = g_decode_func[type][decoder_index];
+    if (decode) {
+        decode(jpg_buf, length, rgb_buf);
+    } else {
+        ESP_LOGE(TAG, "Can't get api for decode");
+        return 0.0f;
+    }
+
+    if (DECODE_RGB565 == type) {
+        print_rgb565_img(rgb_buf, img_w, img_h);
+    } else {
+        print_rgb888_img(rgb_buf, img_w, img_h);
+    }
+
+    ESP_LOGI(TAG, "jpeg decode to %s by %s", 
+    DECODE_RGB565 == type ? "RGB565" : "RGB888",
+    DECODER_TJPGD == decoder_index ? "TJpgDec" : "Libjpeg");
+
+    uint8_t *jpg_buf_new = jpg_buf;
+    uint32_t length_new = length;
+    
+    uint64_t t_decode[times];
+    for (size_t i = 0; i < times; i++) {
+        uint64_t t1 = esp_timer_get_time();
+        length_new = length;
+        jpg_buf_new = jpg_buf;
+        libjpeg_rgb888_to_jpeg(rgb_buf, img_w, img_h, 80, &jpg_buf_new, &length_new);
+        if (jpg_buf_new != jpg_buf) {
+            ESP_LOGI(TAG, "The encoded size is larger than the original JPEG size, %p - %p", jpg_buf_new, jpg_buf);
+            free(jpg_buf_new); // free the new buffer allocated in libjpeg
+        }
+        t_decode[i] = esp_timer_get_time() - t1;
+    }
+
+    printf("resolution  ,  t \n");
+    uint64_t t_total = 0;
+    for (size_t i = 0; i < times; i++) {
+        t_total += t_decode[i];
+        float t = t_decode[i] / 1000.0f;
+        printf("%4d x %4d ,  %5.2f ms \n", img_w, img_h, t);
+    }
+
+    float fps = times / (t_total / 1000000.0f);
+    printf("Encode FPS Result\n");
+    printf("resolution  , fps \n");
+    printf("%4d x %4d , %5.2f  \n", img_w, img_h, fps);
+
+    decode(jpg_buf_new, length_new, rgb_buf);
+    if (DECODE_RGB565 == type) {
+        print_rgb565_img(rgb_buf, img_w, img_h);
+    } else {
+        print_rgb888_img(rgb_buf, img_w, img_h);
+    }
+
+    free(jpg_buf);
+    heap_caps_free(rgb_buf);
+    return fps;
+}
+
+static float jpg_decode_test(decoder_t decoder_index, decode_type_t type, const uint8_t *jpg, uint32_t length, uint32_t img_w, uint32_t img_h, uint32_t times)
 {
     uint8_t *jpg_buf = malloc(length);
     if (NULL == jpg_buf) {
@@ -234,14 +317,24 @@ static float jpg_decode_test(uint8_t decoder_index, decode_type_t type, const ui
         return 0;
     }
     decode_func_t decode = g_decode_func[type][decoder_index];
-    decode(jpg_buf, length, rgb_buf);
+    if (decode) {
+        decode(jpg_buf, length, rgb_buf);
+    } else {
+        ESP_LOGE(TAG, "Can't get api for decode");
+        return 0.0f;
+    }
+
+#if TEST_PRINT_IMAGE
     if (DECODE_RGB565 == type) {
-        ESP_LOGI(TAG, "jpeg decode to rgb565");
         print_rgb565_img(rgb_buf, img_w, img_h);
     } else {
-        ESP_LOGI(TAG, "jpeg decode to rgb888");
         print_rgb888_img(rgb_buf, img_w, img_h);
     }
+#endif
+
+    ESP_LOGI(TAG, "jpeg decode to %s by %s", 
+    DECODE_RGB565 == type ? "RGB565" : "RGB888",
+    DECODER_TJPGD == decoder_index ? "TJpgDec" : "Libjpeg");
 
     uint64_t t_decode[times];
     for (size_t i = 0; i < times; i++) {
@@ -268,8 +361,10 @@ static float jpg_decode_test(uint8_t decoder_index, decode_type_t type, const ui
     return fps;
 }
 
-static void img_jpeg_decode_test(uint16_t pic_index, uint16_t lib_index)
+static void img_jpeg_codec_test(bool is_decode, uint16_t pic_index, decoder_t decoder_index, decode_type_t type)
 {
+    extern const uint8_t img0_start[] asm("_binary_logo_jpeg_start");
+    extern const uint8_t img0_end[]   asm("_binary_logo_jpeg_end");
     extern const uint8_t img1_start[] asm("_binary_testimg_jpeg_start");
     extern const uint8_t img1_end[]   asm("_binary_testimg_jpeg_end");
     extern const uint8_t img2_start[] asm("_binary_test_inside_jpeg_start");
@@ -282,7 +377,13 @@ static void img_jpeg_decode_test(uint16_t pic_index, uint16_t lib_index)
         uint32_t length;
         uint16_t w, h;
     };
-    struct img_t imgs[3] = {
+    struct img_t imgs[4] = {
+        {
+            .buf = img0_start,
+            .length = img0_end - img0_start,
+            .w = 240,
+            .h = 42,
+        },
         {
             .buf = img1_start,
             .length = img1_end - img1_start,
@@ -303,9 +404,12 @@ static void img_jpeg_decode_test(uint16_t pic_index, uint16_t lib_index)
         },
     };
 
-    ESP_LOGI(TAG, "pic_index:%d", pic_index);
-    ESP_LOGI(TAG, "lib_index:%d", lib_index);
-    jpg_decode_test(lib_index, DECODE_RGB565, imgs[pic_index].buf, imgs[pic_index].length, imgs[pic_index].w, imgs[pic_index].h, 16);
+    ESP_LOGI(TAG, "pic_index:%d (%d x %d)", pic_index, imgs[pic_index].w, imgs[pic_index].h);
+    if (is_decode) {
+        jpg_decode_test(decoder_index, type, imgs[pic_index].buf, imgs[pic_index].length, imgs[pic_index].w, imgs[pic_index].h, 16);
+    } else {
+        jpg_encode_test(imgs[pic_index].buf, imgs[pic_index].length, imgs[pic_index].w, imgs[pic_index].h, 16);
+    }
 }
 
 
@@ -368,17 +472,60 @@ TEST_CASE("Camera driver rgb565 fps test", "[camera]")
     esp_camera_deinit();
 }
 
-TEST_CASE("Conversions image 227x149 jpeg decode test", "[camera]")
+TEST_CASE("Conversions image 240x42 jpeg decode by libjpeg test", "[camera]")
 {
-    img_jpeg_decode_test(0, 0);
+    img_jpeg_codec_test(true, 0, DECODER_LIBJPEG, DECODE_RGB565);
+    img_jpeg_codec_test(true, 0, DECODER_LIBJPEG, DECODE_RGB888);
 }
 
-TEST_CASE("Conversions image 320x240 jpeg decode test", "[camera]")
+TEST_CASE("Conversions image 227x149 jpeg decode by libjpeg test", "[camera]")
 {
-    img_jpeg_decode_test(1, 0);
+    img_jpeg_codec_test(true, 1, DECODER_LIBJPEG, DECODE_RGB565);
+    img_jpeg_codec_test(true, 1, DECODER_LIBJPEG, DECODE_RGB888);
 }
 
-TEST_CASE("Conversions image 480x320 jpeg decode test", "[camera]")
+TEST_CASE("Conversions image 320x240 jpeg decode by libjpeg test", "[camera]")
 {
-    img_jpeg_decode_test(2, 0);
+    img_jpeg_codec_test(true, 2, DECODER_LIBJPEG, DECODE_RGB565);
+    img_jpeg_codec_test(true, 2, DECODER_LIBJPEG, DECODE_RGB888);
+}
+
+TEST_CASE("Conversions image 480x320 jpeg decode by libjpeg test", "[camera]")
+{
+    img_jpeg_codec_test(true, 3, DECODER_LIBJPEG, DECODE_RGB565);
+    img_jpeg_codec_test(true, 3, DECODER_LIBJPEG, DECODE_RGB888);
+}
+
+TEST_CASE("Conversions image 240x42 jpeg decode by tjpgd test", "[camera]")
+{
+    img_jpeg_codec_test(true, 0, DECODER_TJPGD, DECODE_RGB565);
+    img_jpeg_codec_test(true, 0, DECODER_TJPGD, DECODE_RGB888);
+}
+
+TEST_CASE("Conversions image 227x149 jpeg decode by tjpgd test", "[camera]")
+{
+    img_jpeg_codec_test(true, 1, DECODER_TJPGD, DECODE_RGB565);
+    img_jpeg_codec_test(true, 1, DECODER_TJPGD, DECODE_RGB888);
+}
+
+TEST_CASE("Conversions image 320x240 jpeg decode by tjpgd test", "[camera]")
+{
+    img_jpeg_codec_test(true, 2, DECODER_TJPGD, DECODE_RGB565);
+    img_jpeg_codec_test(true, 2, DECODER_TJPGD, DECODE_RGB888);
+}
+
+TEST_CASE("Conversions image 480x320 jpeg decode by tjpgd test", "[camera]")
+{
+    img_jpeg_codec_test(true, 3, DECODER_TJPGD, DECODE_RGB565);
+    img_jpeg_codec_test(true, 3, DECODER_TJPGD, DECODE_RGB888);
+}
+
+TEST_CASE("Conversions image 240x42 jpeg encode by libjpeg test", "[camera]")
+{
+    img_jpeg_codec_test(false, 0, 0, 0);
+}
+
+TEST_CASE("Conversions image 227x149 jpeg encode by libjpeg test", "[camera]")
+{
+    img_jpeg_codec_test(false, 1, 0, 0);
 }

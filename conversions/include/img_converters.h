@@ -23,6 +23,7 @@ extern "C" {
 #include <stdbool.h>
 #include "esp_camera.h"
 #include "esp_jpg_decode.h"
+#include "libjpeg.h"
 
 typedef size_t (* jpg_out_cb)(void * arg, size_t index, const void* data, size_t len);
 
