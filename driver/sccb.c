@@ -40,7 +40,7 @@ const int SCCB_I2C_PORT         = 0;
 
 int SCCB_Init(int pin_sda, int pin_scl)
 {
-    ESP_LOGI(TAG, "pin_sda %d pin_scl %d\n", pin_sda, pin_scl);
+    ESP_LOGI(TAG, "pin_sda %d pin_scl %d", pin_sda, pin_scl);
     i2c_config_t conf;
     memset(&conf, 0, sizeof(i2c_config_t));
     conf.mode = I2C_MODE_MASTER;
@@ -55,7 +55,12 @@ int SCCB_Init(int pin_sda, int pin_scl)
     return 0;
 }
 
-uint8_t SCCB_Probe()
+int SCCB_Deinit(void)
+{
+    return i2c_driver_delete(SCCB_I2C_PORT);
+}
+
+uint8_t SCCB_Probe(void)
 {
     uint8_t slave_addr = 0x0;
     // for (size_t i = 1; i < 0x80; i++) {

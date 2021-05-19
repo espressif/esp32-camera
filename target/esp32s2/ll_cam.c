@@ -30,7 +30,7 @@ static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
     cam_event_t cam_event = CAM_VSYNC_EVENT;
     BaseType_t HPTaskAwoken = pdFALSE;
     // filter
-    esp_rom_delay_us(1);
+    ets_delay_us(1);
     if (gpio_ll_get_level(&GPIO, cam->vsync_pin) == !cam->vsync_invert) {
         xQueueSendFromISR(cam->event_queue, (void *)&cam_event, &HPTaskAwoken);
     }
@@ -235,7 +235,7 @@ void ll_cam_do_vsync(cam_obj_t *cam)
 {
     ll_cam_vsync_intr_enable(cam, false);
     gpio_matrix_in(cam->vsync_pin, I2S0I_V_SYNC_IDX, !cam->vsync_invert);
-    esp_rom_delay_us(10);
+    ets_delay_us(10);
     gpio_matrix_in(cam->vsync_pin, I2S0I_V_SYNC_IDX, cam->vsync_invert);
     ll_cam_vsync_intr_enable(cam, true);
 }
