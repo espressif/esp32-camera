@@ -2,7 +2,7 @@
 
 ## General Information
 
-This repository hosts ESP32 compatible driver for OV2640, OV3660, OV5640, OV7670 and OV7725 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
+This repository hosts ESP32, ESP32-S2 and ESP32-S3 compatible driver for OV2640, OV3660, OV5640, OV7670 and OV7725 image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
 
 ## Important to Remember
 
@@ -17,7 +17,7 @@ This repository hosts ESP32 compatible driver for OV2640, OV3660, OV5640, OV7670
 ### Using esp-idf
 
 - Clone or download and extract the repository to the components folder of your ESP-IDF project
-- Enable PSRAM in `menuconfig`
+- Enable PSRAM in `menuconfig` (also set Flash and PSRAM frequiencies to 80MHz)
 - Include `esp_camera.h` in your code
 
 ### Using PlatformIO
@@ -132,7 +132,6 @@ static camera_config_t camera_config = {
     .pin_href = CAM_PIN_HREF,
     .pin_pclk = CAM_PIN_PCLK,
 
-    //XCLK 20MHz or 10MHz for OV2640 double FPS (Experimental)
     .xclk_freq_hz = 20000000,
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
@@ -141,7 +140,8 @@ static camera_config_t camera_config = {
     .frame_size = FRAMESIZE_UXGA,//QQVGA-QXGA Do not use sizes above QVGA when not JPEG
 
     .jpeg_quality = 12, //0-63 lower number means higher quality
-    .fb_count = 1 //if more than one, i2s runs in continuous mode. Use only with JPEG
+    .fb_count = 1, //if more than one, i2s runs in continuous mode. Use only with JPEG
+    .grab_mode = CAMERA_GRAB_WHEN_EMPTY//CAMERA_GRAB_LATEST. Sets when buffers should be filled
 };
 
 esp_err_t camera_init(){

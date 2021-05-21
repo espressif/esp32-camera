@@ -92,6 +92,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, ui
 
         .jpeg_quality = 12, //0-63 lower number means higher quality
         .fb_count = fb_count,       //if more than one, i2s runs in continuous mode. Use only with JPEG
+        .grab_mode = CAMERA_GRAB_WHEN_EMPTY
     };
 
     //initialize the camera
