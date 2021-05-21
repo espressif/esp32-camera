@@ -27,10 +27,19 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     target/private_include
     )
 
+  # if(IDF_TARGET STREQUAL "esp32")
+  #   list(APPEND COMPONENT_SRCS
+  #     driver/camera.c
+  #     driver/xclk.c
+  #     )
+  # endif()
+
   if(IDF_TARGET STREQUAL "esp32")
     list(APPEND COMPONENT_SRCS
-      driver/camera.c
+      driver/esp_camera.c
       driver/xclk.c
+      target/cam_hal.c
+      target/esp32/ll_cam.c
       )
   endif()
 

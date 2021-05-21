@@ -24,39 +24,41 @@ static const char *TAG = "s3 ll_cam";
 
 static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
 {
+    //DBG_PIN_SET(1);
     cam_obj_t *cam = (cam_obj_t *)arg;
-    cam_event_t cam_event = CAM_VSYNC_EVENT;
     BaseType_t HPTaskAwoken = pdFALSE;
 
     typeof(LCD_CAM.lc_dma_int_st) status = LCD_CAM.lc_dma_int_st;
     if (status.val == 0) {
         return;
     }
+
     LCD_CAM.lc_dma_int_clr.val = status.val;
 
     if (status.cam_vsync) {
-        xQueueSendFromISR(cam->event_queue, (void *)&cam_event, &HPTaskAwoken);
+        ll_cam_send_event(cam, CAM_VSYNC_EVENT, &HPTaskAwoken);
     }
 
     if (HPTaskAwoken == pdTRUE) {
         portYIELD_FROM_ISR();
     }
+    //DBG_PIN_SET(0);
 }
 
 static void IRAM_ATTR ll_cam_dma_isr(void *arg)
 {
     cam_obj_t *cam = (cam_obj_t *)arg;
-    cam_event_t cam_event = CAM_IN_SUC_EOF_EVENT;
     BaseType_t HPTaskAwoken = pdFALSE;
 
     typeof(GDMA.in[cam->dma_num].int_st) status = GDMA.in[cam->dma_num].int_st;
     if (status.val == 0) {
         return;
     }
+
     GDMA.in[cam->dma_num].int_clr.val = status.val;
 
     if (status.in_suc_eof) {
-        xQueueSendFromISR(cam->event_queue, (void *)&cam_event, &HPTaskAwoken);
+        ll_cam_send_event(cam, CAM_IN_SUC_EOF_EVENT, &HPTaskAwoken);
     }
 
     if (HPTaskAwoken == pdTRUE) {
@@ -255,7 +257,9 @@ esp_err_t ll_cam_init_isr(cam_obj_t *cam)
 
 void ll_cam_do_vsync(cam_obj_t *cam)
 {
-
+    gpio_matrix_in(cam->vsync_pin, CAM_V_SYNC_IDX, !cam->vsync_invert);
+    ets_delay_us(10);
+    gpio_matrix_in(cam->vsync_pin, CAM_V_SYNC_IDX, cam->vsync_invert);
 }
 
 uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
@@ -267,6 +271,7 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
 {
     int cnt = 0;
     
+    cam->dma_bytes_per_item = 1;
     if (cam->jpeg_mode) {
         cam->dma_half_buffer_cnt = 16;
         cam->dma_buffer_size = cam->dma_half_buffer_cnt * 1024;
@@ -290,6 +295,38 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
         }
         cam->dma_node_buffer_size = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE - cnt;
     }
+}
+
+size_t ll_cam_memcpy(uint8_t *out, const uint8_t *in, size_t len)
+{
+    memcpy(out, in, len);
+    return len;
+}
+
+esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint8_t sensor_pid)
+{
+    if (pix_format == PIXFORMAT_GRAYSCALE) {
+        if (sensor_pid == OV3660_PID || sensor_pid == OV5640_PID || sensor_pid == NT99141_PID) {
+            cam->in_bytes_per_pixel = 1;       // camera sends Y8
+        } else {
+            cam->in_bytes_per_pixel = 2;       // camera sends YU/YV
+        }
+        cam->fb_bytes_per_pixel = 1;       // frame buffer stores Y8
+    } else if (pix_format == PIXFORMAT_YUV422 || pix_format == PIXFORMAT_RGB565) {
+            cam->in_bytes_per_pixel = 2;       // camera sends YU/YV
+            cam->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
+    } else if (pix_format == PIXFORMAT_JPEG) {
+        if (sensor_pid != OV2640_PID && sensor_pid != OV3660_PID && sensor_pid != OV5640_PID  && sensor_pid != NT99141_PID) {
+            ESP_LOGE(TAG, "JPEG format is not supported on this sensor");
+            return ESP_ERR_NOT_SUPPORTED;
+        }
+        cam->in_bytes_per_pixel = 1;
+        cam->fb_bytes_per_pixel = 1;
+    } else {
+        ESP_LOGE(TAG, "Requested format is not supported");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return ESP_OK;
 }
 
 // implements function from xclk.c to allow dynamic XCLK change

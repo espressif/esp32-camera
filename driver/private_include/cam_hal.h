@@ -45,6 +45,8 @@ esp_err_t cam_deinit(void);
  */
 esp_err_t cam_init(const camera_config_t *config);
 
+esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint8_t sensor_pid);
+
 void cam_stop(void);
 
 void cam_start(void);

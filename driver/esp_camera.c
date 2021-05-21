@@ -61,7 +61,9 @@ typedef struct {
     camera_fb_t fb;
 } camera_state_t;
 
-camera_state_t *s_state = NULL;
+static const char* CAMERA_SENSOR_NVS_KEY = "sensor";
+static const char* CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
+static camera_state_t *s_state = NULL;
 
 #if CONFIG_IDF_TARGET_ESP32S3 // LCD_CAM module of ESP32-S3 will generate xclk
 #define CAMERA_ENABLE_OUT_CLOCK(v)
@@ -233,11 +235,6 @@ esp_err_t esp_camera_init(const camera_config_t *config)
     }
     if (camera_model == CAMERA_OV7725) {
         ESP_LOGI(TAG, "Detected OV7725 camera");
-        if (config->pixel_format == PIXFORMAT_JPEG) {
-            ESP_LOGE(TAG, "Camera does not support JPEG");
-            err = ESP_ERR_CAMERA_NOT_SUPPORTED;
-            goto fail;
-        }
     } else if (camera_model == CAMERA_OV2640) {
         ESP_LOGI(TAG, "Detected OV2640 camera");
     } else if (camera_model == CAMERA_OV3660) {
@@ -256,6 +253,17 @@ esp_err_t esp_camera_init(const camera_config_t *config)
 
     framesize_t frame_size = (framesize_t) config->frame_size;
     pixformat_t pix_format = (pixformat_t) config->pixel_format;
+
+    if (frame_size > camera_sensor[camera_model].max_size) {
+        frame_size = camera_sensor[camera_model].max_size;
+    }
+
+    err = cam_config(config, frame_size, s_state->sensor.id.PID);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Camera config failed with error 0x%x", err);
+        return err;
+    }
+
     s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;
     // ESP_LOGD(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
@@ -329,4 +337,92 @@ sensor_t *esp_camera_sensor_get()
         return NULL;
     }
     return &s_state->sensor;
+}
+
+esp_err_t esp_camera_save_to_nvs(const char *key) 
+{
+#if ESP_IDF_VERSION_MAJOR > 3
+    nvs_handle_t handle;
+#else
+    nvs_handle handle;
+#endif
+    esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
+    
+    if (ret == ESP_OK) {
+        sensor_t *s = esp_camera_sensor_get();
+        if (s != NULL) {
+            ret = nvs_set_blob(handle,CAMERA_SENSOR_NVS_KEY,&s->status,sizeof(camera_status_t));
+            if (ret == ESP_OK) {
+                uint8_t pf = s->pixformat;
+                ret = nvs_set_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,pf);
+            }
+            return ret;
+        } else {
+            return ESP_ERR_CAMERA_NOT_DETECTED; 
+        }
+        nvs_close(handle);
+        return ret;
+    } else {
+        return ret;
+    }
+}
+
+esp_err_t esp_camera_load_from_nvs(const char *key) 
+{
+#if ESP_IDF_VERSION_MAJOR > 3
+    nvs_handle_t handle;
+#else
+    nvs_handle handle;
+#endif
+  uint8_t pf;
+
+  esp_err_t ret = nvs_open(key,NVS_READWRITE,&handle);
+  
+  if (ret == ESP_OK) {
+      sensor_t *s = esp_camera_sensor_get();
+      camera_status_t st;
+      if (s != NULL) {
+        size_t size = sizeof(camera_status_t);
+        ret = nvs_get_blob(handle,CAMERA_SENSOR_NVS_KEY,&st,&size);
+        if (ret == ESP_OK) {
+            s->set_ae_level(s,st.ae_level);
+            s->set_aec2(s,st.aec2);
+            s->set_aec_value(s,st.aec_value);
+            s->set_agc_gain(s,st.agc_gain);
+            s->set_awb_gain(s,st.awb_gain);
+            s->set_bpc(s,st.bpc);
+            s->set_brightness(s,st.brightness);
+            s->set_colorbar(s,st.colorbar);
+            s->set_contrast(s,st.contrast);
+            s->set_dcw(s,st.dcw);
+            s->set_denoise(s,st.denoise);
+            s->set_exposure_ctrl(s,st.aec);
+            s->set_framesize(s,st.framesize);
+            s->set_gain_ctrl(s,st.agc);          
+            s->set_gainceiling(s,st.gainceiling);
+            s->set_hmirror(s,st.hmirror);
+            s->set_lenc(s,st.lenc);
+            s->set_quality(s,st.quality);
+            s->set_raw_gma(s,st.raw_gma);
+            s->set_saturation(s,st.saturation);
+            s->set_sharpness(s,st.sharpness);
+            s->set_special_effect(s,st.special_effect);
+            s->set_vflip(s,st.vflip);
+            s->set_wb_mode(s,st.wb_mode);
+            s->set_whitebal(s,st.awb);
+            s->set_wpc(s,st.wpc);
+        }  
+        ret = nvs_get_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,&pf);
+        if (ret == ESP_OK) {
+          s->set_pixformat(s,pf);
+        }
+      } else {
+          return ESP_ERR_CAMERA_NOT_DETECTED;
+      }
+      nvs_close(handle);
+      return ret;
+  } else {
+      ESP_LOGW(TAG,"Error (%d) opening nvs key \"%s\"",ret,key);
+      return ret;
+  }
 }
