@@ -38,7 +38,8 @@
         .pixel_format   = PIXFORMAT_JPEG,
         .frame_size     = FRAMESIZE_SVGA,
         .jpeg_quality   = 10,
-        .fb_count       = 2
+        .fb_count       = 2,
+        .grab_mode      = CAMERA_GRAB_WHEN_EMPTY
     };
 
     esp_err_t camera_example_init(){
