@@ -413,10 +413,11 @@ void cam_start(void)
     ll_cam_vsync_intr_enable(cam_obj, true);
 }
 
-camera_fb_t *cam_take(void)
+camera_fb_t *cam_take(TickType_t timeout)
 {
     camera_fb_t *dma_buffer;
-    xQueueReceive(cam_obj->frame_buffer_queue, (void *)&dma_buffer, portMAX_DELAY);
+    TickType_t start = xTaskGetTickCount();
+    xQueueReceive(cam_obj->frame_buffer_queue, (void *)&dma_buffer, timeout);
     if (dma_buffer) {
         if(cam_obj->jpeg_mode){
             // find the end marker for JPEG. Data after that can be discarded
@@ -428,10 +429,12 @@ camera_fb_t *cam_take(void)
             } else {
                 ESP_LOGW(TAG, "NO-EOI");
                 cam_give(dma_buffer);
-                return cam_take();//recurse!!!!
+                return cam_take(timeout - (xTaskGetTickCount() - start));//recurse!!!!
             }
         }
         return dma_buffer;
+    } else {
+        ESP_LOGI(TAG, "Failed to get the frame on time!");
     }
     return NULL;
 }

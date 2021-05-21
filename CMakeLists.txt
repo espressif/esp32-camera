@@ -1,5 +1,7 @@
 if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
   set(COMPONENT_SRCS
+    driver/esp_camera.c
+    driver/cam_hal.c
     driver/sccb.c
     driver/sensor.c
     sensors/ov2640.c
@@ -27,27 +29,16 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     target/private_include
     )
 
-  # if(IDF_TARGET STREQUAL "esp32")
-  #   list(APPEND COMPONENT_SRCS
-  #     driver/camera.c
-  #     driver/xclk.c
-  #     )
-  # endif()
-
   if(IDF_TARGET STREQUAL "esp32")
     list(APPEND COMPONENT_SRCS
-      driver/esp_camera.c
-      driver/xclk.c
-      target/cam_hal.c
+      target/xclk.c
       target/esp32/ll_cam.c
       )
   endif()
 
   if(IDF_TARGET STREQUAL "esp32s2")
     list(APPEND COMPONENT_SRCS
-      driver/esp_camera.c
-      driver/xclk.c
-      target/cam_hal.c
+      target/xclk.c
       target/esp32s2/ll_cam.c
       target/esp32s2/tjpgd.c
       )
@@ -59,8 +50,6 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
 
   if(IDF_TARGET STREQUAL "esp32s3")
     list(APPEND COMPONENT_SRCS
-      driver/esp_camera.c
-      target/cam_hal.c
       target/esp32s3/ll_cam.c
       )
   endif()
