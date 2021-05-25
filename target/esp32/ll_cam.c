@@ -357,7 +357,7 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
 static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t dma_half_buffer_max = 16 * 1024 / cam->dma_bytes_per_item;
     size_t dma_buffer_max = 2 * dma_half_buffer_max;
-    size_t node_max = 4095 / cam->dma_bytes_per_item;
+    size_t node_max = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE / cam->dma_bytes_per_item;
 
     size_t line_width = cam->width * cam->in_bytes_per_pixel;
     size_t image_size = cam->height * line_width;

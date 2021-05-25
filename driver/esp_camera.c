@@ -142,7 +142,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
      */
     sensor_id_t *id = &s_state->sensor.id;
 
-    if (slv_addr == OV2640_SCCB_ADDR) {
+    if (slv_addr == OV2640_SCCB_ADDR || slv_addr == OV7725_SCCB_ADDR) {
         SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
         id->PID = SCCB_Read(slv_addr, REG_PID);
         id->VER = SCCB_Read(slv_addr, REG_VER);
