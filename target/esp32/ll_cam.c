@@ -15,7 +15,21 @@
 #include <stdio.h>
 #include <string.h>
 #include "soc/i2s_struct.h"
+#if ESP_IDF_VERSION_MAJOR >= 4
 #include "hal/gpio_ll.h"
+#else
+#include "rom/ets_sys.h"
+#include "soc/gpio_periph.h"
+#define esp_rom_delay_us ets_delay_us
+static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
+{
+    if (gpio_num < 32) {
+        return (hw->in >> gpio_num) & 0x1;
+    } else {
+        return (hw->in1.data >> (gpio_num - 32)) & 0x1;
+    }
+}
+#endif
 #include "ll_cam.h"
 #include "xclk.h"
 #include "cam_hal.h"
