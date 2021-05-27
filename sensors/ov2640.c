@@ -157,26 +157,37 @@ static int set_window(sensor_t *sensor, ov2640_sensor_mode_t mode, int offset_x,
         {0, 0}
     };
 
-    c.pclk_auto = 0;
-    c.pclk_div = 8;
-    c.clk_2x = 0;
-    c.clk_div = 0;
-
-    if(sensor->pixformat != PIXFORMAT_JPEG){
-        c.pclk_auto = 1;
+    if (sensor->pixformat == PIXFORMAT_JPEG) {
+        c.clk_2x = 0;
+        c.clk_div = 0;
+        c.pclk_auto = 0;
+        c.pclk_div = 8;
+        if(mode == OV2640_MODE_UXGA) {
+            c.pclk_div = 12;
+        }
+    } else {
+#if CONFIG_IDF_TARGET_ESP32
+        c.clk_2x = 0;
+#else
+        c.clk_2x = 1;
+#endif
         c.clk_div = 7;
+        c.pclk_auto = 1;
+        c.pclk_div = 8;
+        if (mode == OV2640_MODE_CIF) {
+            c.clk_div = 3;
+        } else if(mode == OV2640_MODE_UXGA) {
+            c.pclk_div = 12;
+        }
     }
+    ESP_LOGI(TAG, "Set PLL: clk_2x: %u, clk_div: %u, pclk_auto: %u, pclk_div: %u", c.clk_2x, c.clk_div, c.pclk_auto, c.pclk_div);
 
     if (mode == OV2640_MODE_CIF) {
         regs = ov2640_settings_to_cif;
-        if(sensor->pixformat != PIXFORMAT_JPEG){
-            c.clk_div = 3;
-        }
     } else if (mode == OV2640_MODE_SVGA) {
         regs = ov2640_settings_to_svga;
     } else {
         regs = ov2640_settings_to_uxga;
-        c.pclk_div = 12;
     }
 
     WRITE_REG_OR_RETURN(BANK_DSP, R_BYPASS, R_BYPASS_DSP_BYPAS);

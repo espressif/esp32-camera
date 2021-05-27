@@ -100,7 +100,7 @@ static void cam_task(void *arg)
 
     while (1) {
         xQueueReceive(cam_obj->event_queue, (void *)&cam_event, portMAX_DELAY);
-        //DBG_PIN_SET(1);
+        DBG_PIN_SET(1);
         switch (cam_obj->state) {
 
             case CAM_STATE_IDLE: {
@@ -203,7 +203,7 @@ static void cam_task(void *arg)
             }
             break;
         }
-        //DBG_PIN_SET(0);
+        DBG_PIN_SET(0);
     }
 }
 
@@ -315,7 +315,7 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
 #if CONFIG_IDF_TARGET_ESP32
     cam_obj->psram_mode = false;
 #else
-    cam_obj->psram_mode = !cam_obj->jpeg_mode;
+    cam_obj->psram_mode = !cam_obj->jpeg_mode && (config->xclk_freq_hz == 16000000);
 #endif
     cam_obj->frame_cnt = config->fb_count;
     cam_obj->width = resolution[frame_size].width;

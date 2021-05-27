@@ -35,12 +35,17 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
-#define DBG_PIN_NUM -1//7//26
-#if DBG_PIN_NUM >= 0
-#include "hal/gpio_ll.h"
-#define DBG_PIN_SET(v) gpio_ll_set_level(&GPIO, DBG_PIN_NUM, v)
+#define CAMERA_DBG_PIN_ENABLE 0
+#if CAMERA_DBG_PIN_ENABLE
+    #if CONFIG_IDF_TARGET_ESP32
+        #define DBG_PIN_NUM 26
+    #else
+        #define DBG_PIN_NUM 7
+    #endif
+    #include "hal/gpio_ll.h"
+    #define DBG_PIN_SET(v) gpio_ll_set_level(&GPIO, DBG_PIN_NUM, v)
 #else
-#define DBG_PIN_SET(v)
+    #define DBG_PIN_SET(v)
 #endif
 
 #define CAM_CHECK(a, str, ret) if (!(a)) {                                          \

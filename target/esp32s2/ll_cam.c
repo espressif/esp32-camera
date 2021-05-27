@@ -249,10 +249,83 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
     return 16 << I2S0.lc_conf.ext_mem_bk_size;
 }
 
+static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
+    size_t node_max = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE / cam->dma_bytes_per_item;
+    size_t line_width = cam->width * cam->in_bytes_per_pixel;
+    size_t node_size = node_max;
+    size_t nodes_per_line = 1;
+    size_t lines_per_node = 1;
+
+    // Calculate DMA Node Size so that it's divisable by or divisor of the line width
+    if(line_width >= node_max){
+        // One or more nodes will be requied for one line
+        for(size_t i = node_max; i > 0; i=i-1){
+            if ((line_width % i) == 0) {
+                node_size = i;
+                nodes_per_line = line_width / node_size;
+                break;
+            }
+        }
+    } else {
+        // One or more lines can fit into one node
+        for(size_t i = node_max; i > 0; i=i-1){
+            if ((i % line_width) == 0) {
+                node_size = i;
+                lines_per_node = node_size / line_width;
+                while((cam->height % lines_per_node) != 0){
+                    lines_per_node = lines_per_node - 1;
+                    node_size = lines_per_node * line_width;
+                }
+                break;
+            }
+        }
+    }
+
+    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u", 
+            node_size * cam->dma_bytes_per_item, nodes_per_line, lines_per_node);
+
+    cam->dma_node_buffer_size = node_size * cam->dma_bytes_per_item;
+
+    if (cam->psram_mode) {
+        cam->dma_buffer_size = cam->recv_size * cam->dma_bytes_per_item;
+        cam->dma_half_buffer_cnt = 2;
+        cam->dma_half_buffer_size = cam->dma_buffer_size / cam->dma_half_buffer_cnt;
+    } else {
+        size_t dma_half_buffer_max = 16 * 1024 / cam->dma_bytes_per_item;
+        if (line_width > dma_half_buffer_max) {
+            ESP_LOGE(TAG, "Resolution too high");
+            return;
+        }
+
+        // Calculate minimum EOF size = max(mode_size, line_size)
+        size_t dma_half_buffer_min = node_size * nodes_per_line;
+
+        // Calculate max EOF size divisable by node size
+        size_t dma_half_buffer = (dma_half_buffer_max / dma_half_buffer_min) * dma_half_buffer_min;
+
+        // Adjust EOF size so that height will be divisable by the number of lines in each EOF
+        size_t lines_per_half_buffer = dma_half_buffer / line_width;
+        while((cam->height % lines_per_half_buffer) != 0){
+            dma_half_buffer = dma_half_buffer - dma_half_buffer_min;
+            lines_per_half_buffer = dma_half_buffer / line_width;
+        }
+
+        // Calculate DMA size
+        size_t dma_buffer_max = 2 * dma_half_buffer_max;
+        size_t dma_buffer_size = dma_buffer_max;
+        dma_buffer_size =(dma_buffer_max / dma_half_buffer) * dma_half_buffer;
+        
+        ESP_LOGI(TAG, "dma_half_buffer_min: %5u, dma_half_buffer: %5u, lines_per_half_buffer: %2u, dma_buffer_size: %5u", 
+                dma_half_buffer_min * cam->dma_bytes_per_item, dma_half_buffer * cam->dma_bytes_per_item, lines_per_half_buffer, dma_buffer_size * cam->dma_bytes_per_item);
+
+        cam->dma_buffer_size = dma_buffer_size * cam->dma_bytes_per_item;
+        cam->dma_half_buffer_size = dma_half_buffer * cam->dma_bytes_per_item;
+        cam->dma_half_buffer_cnt = cam->dma_buffer_size / cam->dma_half_buffer_size;
+    }
+}
+
 void ll_cam_dma_sizes(cam_obj_t *cam)
 {
-    int cnt = 0;
-
     cam->dma_bytes_per_item = 1;
     if (cam->jpeg_mode) {
         cam->dma_half_buffer_cnt = 16;
@@ -260,16 +333,7 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
         cam->dma_half_buffer_size = cam->dma_buffer_size / cam->dma_half_buffer_cnt;
         cam->dma_node_buffer_size = cam->dma_half_buffer_size;
     } else {
-        cam->dma_buffer_size = cam->recv_size;
-        cam->dma_half_buffer_cnt = 2;
-        cam->dma_half_buffer_size = cam->dma_buffer_size / cam->dma_half_buffer_cnt;
-
-        for (cnt = 0; cnt < LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE; cnt++) { // Find a divisible dma size
-            if ((cam->dma_half_buffer_size) % (LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE - cnt) == 0) {
-                break;
-            }
-        }
-        cam->dma_node_buffer_size = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE - cnt;
+        ll_cam_calc_rgb_dma(cam);
     }
 }
 
