@@ -289,7 +289,7 @@ esp_err_t cam_init(const camera_config_t *config)
     ret = ll_cam_config(cam_obj, config);
     CAM_CHECK_GOTO(ret == ESP_OK, "ll_cam initialize failed", err);
 
-#if DBG_PIN_NUM >= 0
+#if CAMERA_DBG_PIN_ENABLE
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[DBG_PIN_NUM], PIN_FUNC_GPIO);
     gpio_set_direction(DBG_PIN_NUM, GPIO_MODE_OUTPUT);
     gpio_set_pull_mode(DBG_PIN_NUM, GPIO_FLOATING);
