@@ -165,6 +165,9 @@ static int set_window(sensor_t *sensor, ov2640_sensor_mode_t mode, int offset_x,
         if(mode == OV2640_MODE_UXGA) {
             c.pclk_div = 12;
         }
+        // if (sensor->xclk_freq_hz == 16000000) {
+        //     c.pclk_div = c.pclk_div / 2;
+        // }
     } else {
 #if CONFIG_IDF_TARGET_ESP32
         c.clk_2x = 0;

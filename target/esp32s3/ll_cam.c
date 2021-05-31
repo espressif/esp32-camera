@@ -264,7 +264,7 @@ void ll_cam_do_vsync(cam_obj_t *cam)
 
 uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
 {
-    return 16 << GDMA.in[cam->dma_num].conf1.in_ext_mem_bk_size;
+    return 64;//16 << GDMA.in[cam->dma_num].conf1.in_ext_mem_bk_size;
 }
 
 static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
@@ -345,10 +345,17 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
 {    
     cam->dma_bytes_per_item = 1;
     if (cam->jpeg_mode) {
-        cam->dma_half_buffer_cnt = 16;
-        cam->dma_buffer_size = cam->dma_half_buffer_cnt * 1024;
-        cam->dma_half_buffer_size = cam->dma_buffer_size / cam->dma_half_buffer_cnt;
-        cam->dma_node_buffer_size = cam->dma_half_buffer_size;
+        if (cam->psram_mode) {
+            cam->dma_buffer_size = cam->recv_size;
+            cam->dma_half_buffer_size = 1024;
+            cam->dma_half_buffer_cnt = cam->dma_buffer_size / cam->dma_half_buffer_size;
+            cam->dma_node_buffer_size = cam->dma_half_buffer_size;
+        } else {
+            cam->dma_half_buffer_cnt = 16;
+            cam->dma_buffer_size = cam->dma_half_buffer_cnt * 1024;
+            cam->dma_half_buffer_size = cam->dma_buffer_size / cam->dma_half_buffer_cnt;
+            cam->dma_node_buffer_size = cam->dma_half_buffer_size;
+        }
     } else {
         ll_cam_calc_rgb_dma(cam);
     }

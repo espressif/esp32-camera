@@ -433,7 +433,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     if (sensor->pixformat == PIXFORMAT_JPEG) {
         //10MHz PCLK
         uint8_t sys_mul = 200;
-        if(framesize < FRAMESIZE_QVGA){
+        if(framesize < FRAMESIZE_QVGA || sensor->xclk_freq_hz == 16000000){
             sys_mul = 160;
         } else if(framesize < FRAMESIZE_XGA){
             sys_mul = 180;
