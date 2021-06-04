@@ -42,6 +42,13 @@ menu "Camera configuration"
             Enable this option if you want to use the OV5640.
             Disable this option to save memory.
 
+    config GC2145_SUPPORT
+        bool "Support GC2145 2MP"
+        default y
+        help
+            Enable this option if you want to use the GC2145.
+            Disable this option to save memory.
+
     choice SCCB_HARDWARE_I2C_PORT
         bool "I2C peripheral to use for SCCB"
         default SCCB_HARDWARE_I2C_PORT1
