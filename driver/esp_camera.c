@@ -52,6 +52,9 @@
 #if CONFIG_GC032A_SUPPORT
 #include "gc032a.h"
 #endif
+#if CONFIG_GC0308_SUPPORT
+#include "gc0308.h"
+#endif
 
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
@@ -206,6 +209,12 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         if (slv_addr == GC032A_SCCB_ADDR) {
             id->PID = gc032a_detect(slv_addr);
             if (GC032A_PID == id->PID) {
+                break;
+            }
+        }
+        if (slv_addr == GC0308_SCCB_ADDR) {
+            id->PID = gc0308_detect(slv_addr);
+            if (GC0308_PID == id->PID) {
                 break;
             }
         }
