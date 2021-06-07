@@ -29,6 +29,7 @@ typedef enum {
     OV7670_PID = 0x76,
     NT99141_PID = 0x14,
     GC2145_PID = 0x21,
+    GC032A_PID = 0x232a,
 } camera_pid_t;
 
 typedef enum {
@@ -39,18 +40,20 @@ typedef enum {
     CAMERA_OV7670,
     CAMERA_NT99141,
     CAMERA_GC2145,
+    CAMERA_GC032A,
     CAMERA_MODEL_MAX,
     CAMERA_NONE,
 } camera_model_t;
 
 typedef enum {
-    OV2640_SCCB_ADDR   = 0x30,
-    OV5640_SCCB_ADDR   = 0x3C,
-    OV3660_SCCB_ADDR   = 0x3C,
-    OV7725_SCCB_ADDR   = 0x21,
-    OV7670_SCCB_ADDR   = 0x21,
-    NT99141_SCCB_ADDR  = 0x2A,
+    OV2640_SCCB_ADDR   = 0x60 >> 1,
+    OV5640_SCCB_ADDR   = 0x78 >> 1,
+    OV3660_SCCB_ADDR   = 0x78 >> 1,
+    OV7725_SCCB_ADDR   = 0x42 >> 1,
+    OV7670_SCCB_ADDR   = 0x42 >> 1,
+    NT99141_SCCB_ADDR  = 0x54 >> 1,
     GC2145_SCCB_ADDR   = 0x78 >> 1,
+    GC032A_SCCB_ADDR   = 0x42 >> 1,
 } camera_sccb_addr_t;
 
 typedef enum {
@@ -149,7 +152,7 @@ extern const camera_sensor_info_t camera_sensor[];
 typedef struct {
     uint8_t MIDH;
     uint8_t MIDL;
-    uint8_t PID;
+    uint16_t PID;
     uint8_t VER;
 } sensor_id_t;
 

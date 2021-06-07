@@ -49,6 +49,13 @@ menu "Camera configuration"
             Enable this option if you want to use the GC2145.
             Disable this option to save memory.
 
+    config GC032A_SUPPORT
+        bool "Support GC032A VGA"
+        default y
+        help
+            Enable this option if you want to use the GC032A.
+            Disable this option to save memory.
+
     choice SCCB_HARDWARE_I2C_PORT
         bool "I2C peripheral to use for SCCB"
         default SCCB_HARDWARE_I2C_PORT1

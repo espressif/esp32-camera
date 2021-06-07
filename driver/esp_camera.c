@@ -49,6 +49,9 @@
 #if CONFIG_GC2145_SUPPORT
 #include "gc2145.h"
 #endif
+#if CONFIG_GC032A_SUPPORT
+#include "gc032a.h"
+#endif
 
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
@@ -144,33 +147,72 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
      * Read sensor ID
      */
     sensor_id_t *id = &s_state->sensor.id;
+    do {
+        if (slv_addr == OV2640_SCCB_ADDR) {
+            SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
+            id->PID = SCCB_Read(slv_addr, REG_PID);
+            id->VER = SCCB_Read(slv_addr, REG_VER);
+            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
+            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
+            if (OV2640_PID == id->PID) {
+                break;
+            }
 
-    if (slv_addr == OV2640_SCCB_ADDR || slv_addr == OV7725_SCCB_ADDR) {
-        SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
-        id->PID = SCCB_Read(slv_addr, REG_PID);
-        id->VER = SCCB_Read(slv_addr, REG_VER);
-        id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
-        id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
-    } else if (slv_addr == OV5640_SCCB_ADDR || slv_addr == OV3660_SCCB_ADDR || slv_addr == GC2145_SCCB_ADDR) {
-        id->PID = SCCB_Read(slv_addr, 0xf0); // read for gc2145
-        if (GC2145_PID == id->PID) {
-            /* sensor is GC2145 */
-        } else {
+        }
+        if (slv_addr == OV7725_SCCB_ADDR) {
+            SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
+            id->PID = SCCB_Read(slv_addr, REG_PID);
+            id->VER = SCCB_Read(slv_addr, REG_VER);
+            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
+            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
+            if (OV7725_PID == id->PID) {
+                break;
+            }
+        }
+        if (slv_addr == OV5640_SCCB_ADDR) {
+
             id->PID = SCCB_Read16(slv_addr, REG16_CHIDH);
             id->VER = SCCB_Read16(slv_addr, REG16_CHIDL);
+            if (OV5640_PID == id->PID) {
+                break;
+            }
         }
-    } else if (slv_addr == NT99141_SCCB_ADDR) {
-        SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
-        id->PID = SCCB_Read16(slv_addr, 0x3000);
-        id->VER = SCCB_Read16(slv_addr, 0x3001);
-        if (config->xclk_freq_hz > 10000000) {
-            ESP_LOGE(TAG, "NT99141: only XCLK under 10MHz is supported, and XCLK is now set to 10M");
-            s_state->sensor.xclk_freq_hz = 10000000;
+        if (slv_addr == OV3660_SCCB_ADDR) {
+
+            id->PID = SCCB_Read16(slv_addr, REG16_CHIDH);
+            id->VER = SCCB_Read16(slv_addr, REG16_CHIDL);
+            if (OV3660_PID == id->PID) {
+                break;
+            }
         }
-    }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-             id->PID, id->VER, id->MIDH, id->MIDL);
+        if (GC2145_PID == id->PID) {
+            id->PID = SCCB_Read(slv_addr, 0xf0); // read for gc2145
+            if (GC2145_PID == id->PID) {
+                break;
+            }
+        }
+        if (slv_addr == NT99141_SCCB_ADDR) {
+            SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
+            id->PID = SCCB_Read16(slv_addr, 0x3000);
+            id->VER = SCCB_Read16(slv_addr, 0x3001);
+            if (GC2145_PID == id->PID) {
+                if (config->xclk_freq_hz > 10000000) {
+                    ESP_LOGE(TAG, "NT99141: only XCLK under 10MHz is supported, and XCLK is now set to 10M");
+                    s_state->sensor.xclk_freq_hz = 10000000;
+                }
+                break;
+            }
+        }
+        if (slv_addr == GC032A_SCCB_ADDR) {
+            id->PID = gc032a_detect(slv_addr);
+            if (GC032A_PID == id->PID) {
+                break;
+            }
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+                 id->PID, id->VER, id->MIDH, id->MIDL);
+    } while (0);
 
     /**
      * Initialize sensor according to sensor ID
@@ -223,6 +265,13 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         *out_camera_model = CAMERA_GC2145;
         ESP_LOGI(TAG, "Detected GC2145 camera");
         gc2145_init(&s_state->sensor);
+        break;
+#endif
+#if CONFIG_GC032A_SUPPORT
+    case GC032A_PID:
+        *out_camera_model = CAMERA_GC032A;
+        ESP_LOGI(TAG, "Detected GC032A camera");
+        gc032a_init(&s_state->sensor);
         break;
 #endif
     default:
