@@ -28,7 +28,7 @@ typedef enum {
     OV5640_PID = 0x56,
     OV7670_PID = 0x76,
     NT99141_PID = 0x14,
-    GC2145_PID = 0x21,
+    GC2145_PID = 0x2145,
     GC032A_PID = 0x232a,
 } camera_pid_t;
 

@@ -185,8 +185,8 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
                 break;
             }
         }
-        if (GC2145_PID == id->PID) {
-            id->PID = SCCB_Read(slv_addr, 0xf0); // read for gc2145
+        if (slv_addr == GC2145_SCCB_ADDR) {
+            id->PID = gc2145_detect(slv_addr);
             if (GC2145_PID == id->PID) {
                 break;
             }
