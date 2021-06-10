@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include "stdint.h"
 
-
-
 /*
  * Include file for users of JPEG library.
  * You will need to have included system headers that define at least
@@ -14,6 +12,7 @@
  */
 
 #include "jpeg-9a/jpeglib.h"
+#include "include/libjpeg.h"
 
 /*
  * <setjmp.h> is used for the optional error recovery mechanism shown in
@@ -30,21 +29,8 @@
  * as error recovery (the JPEG code will just exit() if it gets an error).
  */
 
-/**
- * @brief JPEG compression
- * 
- * @param rgb888_buffer pointer to image data
- * The standard input image format is a rectangular array of pixels, 
- * for example, R,G,B,R,G,B,R,G,B,... for 24-bit RGB color.
- * 
- * @param image_width width of image
- * @param image_height height of image
- * @param quality The input 'quality' factor should be 0 (terrible) to 100 (very good).
- * @param outbuffer 
- * @param outsize 
- * @return 1 on success, 0 on error.
- */
-_Bool libjpeg_rgb888_to_jpeg (const uint8_t *rgb888_buffer, int image_width, int image_height, int quality, uint8_t **outbuffer, uint32_t *outsize)
+
+_Bool libjpeg_encode(const uint8_t *in_buffer, color_space_t src_type, int image_width, int image_height, int quality, uint8_t **outbuffer, uint32_t *outsize)
 {
   /* This struct contains the JPEG compression parameters and pointers to
    * working space (which is allocated as needed by the JPEG library).
@@ -89,7 +75,16 @@ _Bool libjpeg_rgb888_to_jpeg (const uint8_t *rgb888_buffer, int image_width, int
   cinfo.image_width = image_width; 	/* image width and height, in pixels */
   cinfo.image_height = image_height;
   cinfo.input_components = 3;		/* # of color components per pixel */
-  cinfo.in_color_space = JCS_RGB; 	/* colorspace of input image */
+  if(COLOR_TYPE_RGB888 == src_type){
+    cinfo.in_color_space = JCS_RGB; 	/* colorspace of input image */
+  } else if(COLOR_TYPE_RGB565 == src_type){
+    cinfo.in_color_space = JCS_RGB; 	/* colorspace of input image */
+  } else if(COLOR_TYPE_YUV422 == src_type){
+    cinfo.in_color_space = JCS_YCbCr; 	/* colorspace of input image */
+  } else {
+    printf("Unsupported source type\n");
+    return 0;
+  }
   /* Now use the library's routine to set default compression parameters.
    * (You must set at least cinfo.in_color_space before calling this,
    * since the defaults depend on the source color space.)
@@ -115,16 +110,61 @@ _Bool libjpeg_rgb888_to_jpeg (const uint8_t *rgb888_buffer, int image_width, int
    * To keep things simple, we pass one scanline per call; you can pass
    * more if you wish, though.
    */
-  row_stride = image_width * 3;	/* JSAMPLEs per row in rgb888_buffer */
+  if (COLOR_TYPE_RGB888 == src_type) {
+        row_stride = image_width * 3;   /* JSAMPLEs per row in buffer */
+        while (cinfo.next_scanline < cinfo.image_height) {
+            /* jpeg_write_scanlines expects an array of pointers to scanlines.
+             * Here the array is only one element long, but you could pass
+             * more than one scanline at a time if that's more convenient.
+             */
+            row_pointer[0] = (uint8_t *)&in_buffer[cinfo.next_scanline * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+        }
+    } else if (COLOR_TYPE_YUV422 == src_type) {
+        row_stride = cinfo.image_width * cinfo.input_components;
+        row_pointer[0] = (JSAMPROW)(*cinfo.mem->alloc_sarray)
+                         ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-  while (cinfo.next_scanline < cinfo.image_height) {
-    /* jpeg_write_scanlines expects an array of pointers to scanlines.
-     * Here the array is only one element long, but you could pass
-     * more than one scanline at a time if that's more convenient.
-     */
-    row_pointer[0] = (uint8_t*)&rgb888_buffer[cinfo.next_scanline * row_stride];
-    (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
-  }
+        while (cinfo.next_scanline < cinfo.image_height) {
+            uint8_t *out = row_pointer[0];
+            uint8_t *in = (uint8_t *)&in_buffer[cinfo.next_scanline * cinfo.image_width * 2];
+            uint32_t j = 0;
+            for (size_t i = 0; i < cinfo.image_width * 2; i += 4) {
+                out[j++] = in[i]; //y0
+                out[j++] = in[i + 1]; //u0
+                out[j++] = in[i + 3]; //v0
+
+                out[j++] = in[i + 2]; //y1
+                out[j++] = in[i + 1]; //u1
+                out[j++] = in[i + 3]; //v1
+            }
+            (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+        }
+    } else if (COLOR_TYPE_RGB565 == src_type) {
+        row_stride = cinfo.image_width * cinfo.input_components;
+        row_pointer[0] = (JSAMPROW)(*cinfo.mem->alloc_sarray)
+                         ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+
+        while (cinfo.next_scanline < cinfo.image_height) {
+            uint8_t *out = row_pointer[0];
+            uint8_t *in = (uint8_t *)&in_buffer[cinfo.next_scanline * cinfo.image_width * 2];
+            for (size_t i = 0; i < cinfo.image_width * 2; i += 2) {
+              uint16_t *psrcdot = (uint16_t*)&in[i];
+#if ENCODE_LITTLE_ENDIAN
+              //src little-endian
+              *out++ = (unsigned char)(((*psrcdot) >> 11) << 3);
+              *out++ = (unsigned char)(((*psrcdot) >> 5 ) << 2);
+              *out++ = (unsigned char)(((*psrcdot) >> 0 ) << 3);
+#else
+              //src big-endian
+              *out++ = (unsigned char)(((*psrcdot) >> 3 ) << 3);
+              *out++ = (unsigned char)(((*psrcdot) << 5 ) | ((*psrcdot)&0xe0)>>11);
+              *out++ = (unsigned char)(((*psrcdot) >> 8) << 3);
+#endif
+            }
+            (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+        }
+    }
 
   /* Step 6: Finish compression */
 
@@ -138,7 +178,6 @@ _Bool libjpeg_rgb888_to_jpeg (const uint8_t *rgb888_buffer, int image_width, int
   /* And we're done! */
   return 1;
 }
-
 
 /*
  * SOME FINE POINTS:
@@ -237,18 +276,7 @@ my_error_exit (j_common_ptr cinfo)
 }
 
 
-/**
- * @brief JPEG decompression
- * 
- * @param jpeg_data pointer to jpeg image data
- * @param jpeg_size jpeg image size
- * @param is_rgb888 if convert to rgb888 set to 1, if convert to rgb565 set to 0
- * @param outbuffer pointer to output, The buffer must be large enough to store all RGB data corresponding to rgb565/rgb888
- * @param width width of image
- * @param height height of image
- * @return 1 on success, 0 on error. 
- */
-_Bool libjpeg_jpeg_to_rgb(const uint8_t *jpeg_data, uint32_t jpeg_size, uint8_t is_rgb888, uint8_t *outbuffer, uint32_t *width, uint32_t *height)
+_Bool libjpeg_decode(const uint8_t *jpeg_data, uint32_t jpeg_size, color_space_t dst_type, uint8_t *outbuffer, uint32_t *width, uint32_t *height)
 {
   /* This struct contains the JPEG decompression parameters and pointers to
    * working space (which is allocated as needed by the JPEG library).
@@ -305,7 +333,14 @@ _Bool libjpeg_jpeg_to_rgb(const uint8_t *jpeg_data, uint32_t jpeg_size, uint8_t 
    */
   cinfo.dct_method = JDCT_IFAST;
   cinfo.do_fancy_upsampling = 0; 
-  cinfo.out_color_space=JCS_RGB;
+  if(COLOR_TYPE_RGB888 == dst_type){
+    cinfo.out_color_space = JCS_RGB; 	/* colorspace of input image */
+  } else if(COLOR_TYPE_RGB565 == dst_type){
+    cinfo.out_color_space = JCS_RGB; 	/* colorspace of input image */
+  } else {
+    printf("Unsupported destination type\n");
+    return 0;
+  }
   /* Step 5: Start decompressor */
 
   (void) jpeg_start_decompress(&cinfo);
@@ -341,11 +376,11 @@ _Bool libjpeg_jpeg_to_rgb(const uint8_t *jpeg_data, uint32_t jpeg_size, uint8_t 
      * Here the array is only one element long, but you could ask for
      * more than one scanline at a time if that's more convenient.
      */
-    if (is_rgb888) {
+    if (COLOR_TYPE_RGB888 == dst_type) {
       uint8_t *row = outbuffer + 3 * (cinfo.output_scanline * cinfo.output_width);
       JSAMPARRAY out = &row;
       (void) jpeg_read_scanlines(&cinfo, out, 1);
-    } else {
+    } else if(COLOR_TYPE_RGB565 == dst_type) {
       (void) jpeg_read_scanlines(&cinfo, buffer, 1);
       uint8_t *color=buffer[0];
       uint32_t index;

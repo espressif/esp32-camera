@@ -268,7 +268,7 @@ static float jpg_encode_test(const uint8_t *jpg, uint32_t length, uint32_t img_w
         uint64_t t1 = esp_timer_get_time();
         length_new = length;
         jpg_buf_new = jpg_buf;
-        libjpeg_rgb888_to_jpeg(rgb_buf, img_w, img_h, 80, &jpg_buf_new, &length_new);
+        libjpeg_encode(rgb_buf, COLOR_TYPE_RGB888, img_w, img_h, 80, &jpg_buf_new, &length_new);
         if (jpg_buf_new != jpg_buf) {
             ESP_LOGI(TAG, "The encoded size is larger than the original JPEG size, %p - %p", jpg_buf_new, jpg_buf);
             free(jpg_buf_new); // free the new buffer allocated in libjpeg
@@ -528,4 +528,36 @@ TEST_CASE("Conversions image 240x42 jpeg encode by libjpeg test", "[camera]")
 TEST_CASE("Conversions image 227x149 jpeg encode by libjpeg test", "[camera]")
 {
     img_jpeg_codec_test(false, 1, 0, 0);
+}
+
+TEST_CASE("Conversions image 320x240 yuv to jpeg encode by libjpeg test", "[camera]")
+{
+    extern const uint8_t yuv_start[] asm("_binary_test_yuv422_yuv_start");
+    extern const uint8_t yuv_end[]   asm("_binary_test_yuv422_yuv_end");
+
+    uint32_t length=30*1024;
+    uint32_t img_w = 320;
+    uint32_t img_h = 240;
+
+    uint8_t *jpg_buf = malloc(length);
+    if (NULL == jpg_buf) {
+        ESP_LOGE(TAG, "malloc for jpg buffer failed");
+        return ;
+    }
+    libjpeg_encode(yuv_start, COLOR_TYPE_YUV422, img_w, img_h, 40, &jpg_buf, &length);
+
+    uint8_t *rgb_buf = heap_caps_malloc(img_w * img_h * 3, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (NULL == rgb_buf) {
+        free(jpg_buf);
+        ESP_LOGE(TAG, "malloc for rgb buffer failed");
+        return ;
+    }
+    printf("%d, length=%d\n", yuv_end-yuv_start, length);
+    libjpeg_jpeg_to_rgb888(jpg_buf, length, rgb_buf);
+
+    print_rgb888_img(rgb_buf, img_w, img_h);
+
+    free(jpg_buf);
+    free(rgb_buf);
+
 }

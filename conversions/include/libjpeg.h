@@ -21,10 +21,18 @@
 extern "C" {
 #endif
 
+typedef enum {
+	COLOR_TYPE_UNKNOWN,
+    COLOR_TYPE_RGB565,
+	COLOR_TYPE_RGB888,
+	COLOR_TYPE_YUV422,
+} color_space_t;
+
+
 /**
  * @brief JPEG compression
  * 
- * @param rgb888_buffer pointer to image data
+ * @param in_buffer pointer to image data
  * The standard input image format is a rectangular array of pixels, 
  * for example, R,G,B,R,G,B,R,G,B,... for 24-bit RGB color.
  * 
@@ -33,37 +41,28 @@ extern "C" {
  * Therefore, after calling this function, you should check whether the paramter `outbuffer` is the same as before calling this function.
  * If it is different, it means that it has been reallocated internally. At this point, YOU NEED to FREE the new buffer
  * 
+ * @param src_type color space of source
  * @param image_width width of image
  * @param image_height height of image
  * @param quality The input 'quality' factor should be 0 (terrible) to 100 (very good).
- * @param outbuffer 
- * @param outsize 
+ * @param outbuffer pointer to output
+ * @param outsize size of outbuffer
  * @return 1 on success, 0 on error.
  */
-bool libjpeg_rgb888_to_jpeg(const uint8_t *rgb888_buffer, int image_height, int image_width, int quality, uint8_t **outbuffer, uint32_t *outsize);
+_Bool libjpeg_encode(const uint8_t *in_buffer, color_space_t src_type, int image_width, int image_height, int quality, uint8_t **outbuffer, uint32_t *outsize);
 
 /**
  * @brief JPEG decompression
  * 
  * @param jpeg_data pointer to jpeg image data
  * @param jpeg_size jpeg image size
- * @param is_rgb888 if convert to rgb888 set to 1, if convert to rgb565 set to 0
+ * @param dst_type Destination color space
  * @param outbuffer pointer to output, The buffer must be large enough to store all RGB data corresponding to rgb565/rgb888
  * @param width width of image, if you don't care, set to NULL
  * @param height height of image, if you don't care, set to NULL
  * @return 1 on success, 0 on error. 
  */
-bool libjpeg_jpeg_to_rgb(const uint8_t *jpeg_data, uint32_t jpeg_size, uint8_t is_rgb888, uint8_t *outbuffer, uint32_t *width, uint32_t *height);
-
-static inline bool libjpeg_jpeg_to_rgb565(const uint8_t *jpeg_data, uint32_t jpeg_size, uint8_t *outbuffer)
-{
-    return libjpeg_jpeg_to_rgb(jpeg_data, jpeg_size, 0, outbuffer, NULL, NULL);
-}
-
-static inline bool libjpeg_jpeg_to_rgb888(const uint8_t *jpeg_data, uint32_t jpeg_size, uint8_t *outbuffer)
-{
-    return libjpeg_jpeg_to_rgb(jpeg_data, jpeg_size, 1, outbuffer, NULL, NULL);
-}
+_Bool libjpeg_decode(const uint8_t *jpeg_data, uint32_t jpeg_size, color_space_t dst_type, uint8_t *outbuffer, uint32_t *width, uint32_t *height);
 
 #ifdef __cplusplus
 }
