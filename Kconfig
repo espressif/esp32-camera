@@ -5,7 +5,7 @@ menu "Camera configuration"
         default y
         help
             Enable this option if you want to use the OV7670.
-            Disable this option to safe memory.
+            Disable this option to save memory.
 
     config OV7725_SUPPORT
         bool "Support OV7725 SVGA"
