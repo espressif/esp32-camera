@@ -264,7 +264,7 @@ void ll_cam_do_vsync(cam_obj_t *cam)
 
 uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
 {
-    return 64;//16 << GDMA.in[cam->dma_num].conf1.in_ext_mem_bk_size;
+    return 16 << GDMA.in[cam->dma_num].conf1.in_ext_mem_bk_size;
 }
 
 static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
@@ -361,8 +361,23 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
     }
 }
 
-size_t ll_cam_memcpy(uint8_t *out, const uint8_t *in, size_t len)
+size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len)
 {
+    // YUV to Grayscale
+    if (cam->in_bytes_per_pixel == 2 && cam->fb_bytes_per_pixel == 1) {
+        size_t end = len / 8;
+        for (size_t i = 0; i < end; ++i) {
+            out[0] = in[0];
+            out[1] = in[2];
+            out[2] = in[4];
+            out[3] = in[6];
+            out += 4;
+            in += 8;
+        }
+        return len / 2;
+    }
+
+    // just memcpy
     memcpy(out, in, len);
     return len;
 }

@@ -114,6 +114,7 @@ typedef struct {
     uint16_t height;
     uint8_t in_bytes_per_pixel;
     uint8_t fb_bytes_per_pixel;
+    uint32_t fb_size;
 
     cam_state_t state;
 } cam_obj_t;
@@ -128,7 +129,7 @@ esp_err_t ll_cam_init_isr(cam_obj_t *cam);
 void ll_cam_do_vsync(cam_obj_t *cam);
 uint8_t ll_cam_get_dma_align(cam_obj_t *cam);
 void ll_cam_dma_sizes(cam_obj_t *cam);
-size_t ll_cam_memcpy(uint8_t *out, const uint8_t *in, size_t len);
+size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len);
 esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint8_t sensor_pid);
 
 // implemented in cam_hal

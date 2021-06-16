@@ -138,7 +138,7 @@ static size_t IRAM_ATTR ll_cam_dma_filter_grayscale_highspeed(uint8_t* dst, cons
         dst[1] = dma_el[2].sample1;
         elements += 1;
     }
-    return elements * 2;
+    return elements / 2;
 }
 
 static size_t IRAM_ATTR ll_cam_dma_filter_yuyv(uint8_t* dst, const uint8_t* src, size_t len)
@@ -451,7 +451,7 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
 
 static dma_filter_t dma_filter = ll_cam_dma_filter_jpeg;
 
-size_t IRAM_ATTR ll_cam_memcpy(uint8_t *out, const uint8_t *in, size_t len)
+size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len)
 {
     //DBG_PIN_SET(1);
     size_t r = dma_filter(out, in, len);
