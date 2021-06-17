@@ -307,7 +307,7 @@ static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t dma_half_buffer_max = 16 * 1024 / cam->dma_bytes_per_item;
     if (line_width > dma_half_buffer_max) {
         ESP_LOGE(TAG, "Resolution too high");
-        return;
+        return 0;
     }
 
     // Calculate minimum EOF size = max(mode_size, line_size)
@@ -339,6 +339,7 @@ static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
     cam->dma_buffer_size = dma_buffer_size * cam->dma_bytes_per_item;
     cam->dma_half_buffer_size = dma_half_buffer * cam->dma_bytes_per_item;
     cam->dma_half_buffer_cnt = cam->dma_buffer_size / cam->dma_half_buffer_size;
+    return 1;
 }
 
 void ll_cam_dma_sizes(cam_obj_t *cam)
@@ -357,8 +358,9 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
             cam->dma_node_buffer_size = cam->dma_half_buffer_size;
         }
     } else {
-        ll_cam_calc_rgb_dma(cam);
+        return ll_cam_calc_rgb_dma(cam);
     }
+    return 1;
 }
 
 size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len)

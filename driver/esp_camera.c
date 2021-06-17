@@ -130,7 +130,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
 
     if (slv_addr == 0) {
         CAMERA_DISABLE_OUT_CLOCK();
-        return ESP_ERR_CAMERA_NOT_DETECTED;
+        return ESP_ERR_NOT_FOUND;
     }
 
     ESP_LOGI(TAG, "Detected camera at address=0x%02x", slv_addr);
@@ -208,7 +208,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         id->PID = 0;
         CAMERA_DISABLE_OUT_CLOCK();
         ESP_LOGE(TAG, "Detected camera not supported.");
-        return ESP_ERR_CAMERA_NOT_SUPPORTED;
+        return ESP_ERR_NOT_SUPPORTED;
     }
 
     ESP_LOGD(TAG, "Doing SW reset of sensor");
@@ -230,7 +230,7 @@ esp_err_t esp_camera_init(const camera_config_t *config)
     camera_model_t camera_model = CAMERA_NONE;
     err = camera_probe(config, &camera_model);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Camera probe failed with error 0x%x", err);
+        ESP_LOGE(TAG, "Camera probe failed with error 0x%x(%s)", err, esp_err_to_name(err));
         goto fail;
     }
     if (camera_model == CAMERA_OV7725) {
@@ -261,7 +261,7 @@ esp_err_t esp_camera_init(const camera_config_t *config)
     err = cam_config(config, frame_size, s_state->sensor.id.PID);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera config failed with error 0x%x", err);
-        return err;
+        goto fail;
     }
 
     s_state->sensor.status.framesize = frame_size;
