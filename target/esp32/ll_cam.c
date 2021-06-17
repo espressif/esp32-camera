@@ -369,7 +369,7 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
     return 0;
 }
 
-static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
+static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t dma_half_buffer_max = 16 * 1024 / cam->dma_bytes_per_item;
     size_t dma_buffer_max = 2 * dma_half_buffer_max;
     size_t node_max = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE / cam->dma_bytes_per_item;
@@ -378,7 +378,7 @@ static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t image_size = cam->height * line_width;
     if (image_size > (2 * 1024 * 1024) || (line_width > dma_half_buffer_max)) {
         ESP_LOGE(TAG, "Resolution too high");
-        return;
+        return 0;
     }
 
     size_t node_size = node_max;
@@ -433,10 +433,10 @@ static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
     cam->dma_half_buffer_size = dma_half_buffer * cam->dma_bytes_per_item;
     cam->dma_node_buffer_size = node_size * cam->dma_bytes_per_item;
     cam->dma_half_buffer_cnt = cam->dma_buffer_size / cam->dma_half_buffer_size;
-
+    return 1;
 }
 
-void ll_cam_dma_sizes(cam_obj_t *cam)
+bool ll_cam_dma_sizes(cam_obj_t *cam)
 {
     cam->dma_bytes_per_item = ll_cam_bytes_per_sample(sampling_mode);
     if (cam->jpeg_mode) {
@@ -445,8 +445,9 @@ void ll_cam_dma_sizes(cam_obj_t *cam)
         cam->dma_half_buffer_size = cam->dma_node_buffer_size * 2;
         cam->dma_buffer_size = cam->dma_half_buffer_cnt * cam->dma_half_buffer_size;
     } else {
-        ll_cam_calc_rgb_dma(cam);
+        return ll_cam_calc_rgb_dma(cam);
     }
+    return 1;
 }
 
 static dma_filter_t dma_filter = ll_cam_dma_filter_jpeg;
