@@ -144,28 +144,6 @@ static int write_addr_reg(uint8_t slv_addr, const uint16_t reg, uint16_t x_value
 
 #define write_reg_bits(slv_addr, reg, mask, enable) set_reg_bits(slv_addr, reg, 0, mask, enable?mask:0)
 
-static int calc_sysclk(int xclk, bool pll_bypass, int pll_multiplier, int pll_sys_div, int pll_pre_div, bool pll_root_2x, int pll_seld5, bool pclk_manual, int pclk_div)
-{
-    const int pll_pre_div2x_map[] = { 2, 3, 4, 6 };//values are multiplied by two to avoid floats
-    const int pll_seld52x_map[] = { 2, 2, 4, 5 };
-
-    if (!pll_sys_div) {
-        pll_sys_div = 1;
-    }
-
-    int pll_pre_div2x = pll_pre_div2x_map[pll_pre_div];
-    int pll_root_div = pll_root_2x ? 2 : 1;
-    int pll_seld52x = pll_seld52x_map[pll_seld5];
-
-    int VCO = (xclk / 1000) * pll_multiplier * pll_root_div * 2 / pll_pre_div2x;
-    int PLLCLK = pll_bypass ? (xclk) : (VCO * 1000 * 2 / pll_sys_div / pll_seld52x);
-    int PCLK = PLLCLK / 2 / ((pclk_manual && pclk_div) ? pclk_div : 1);
-    int SYSCLK = PLLCLK / 4;
-
-    ESP_LOGD(TAG, "Calculated VCO: %d Hz, PLLCLK: %d Hz, SYSCLK: %d Hz, PCLK: %d Hz", VCO * 1000, PLLCLK, SYSCLK, PCLK);
-    return SYSCLK;
-}
-
 static int set_pll(sensor_t *sensor, bool bypass, uint8_t multiplier, uint8_t sys_div, uint8_t pre_div, bool root_2x, uint8_t seld5, bool pclk_manual, uint8_t pclk_div)
 {
     return -1;
@@ -309,7 +287,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ret = write_regs(sensor->slv_addr, sensor_framesize_VGA);
     }
 
-    return 0;
+    return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
@@ -682,7 +660,6 @@ static int set_brightness(sensor_t *sensor, int level)
 {
     int ret = 0;
     uint8_t value = 0;
-    bool negative = false;
 
     switch (level) {
         case 3:
@@ -699,17 +676,14 @@ static int set_brightness(sensor_t *sensor, int level)
 
         case -1:
             value = 0x78;
-            negative = true;
             break;
 
         case -2:
             value = 0x70;
-            negative = true;
             break;
 
         case -3:
             value = 0x60;
-            negative = true;
             break;
 
         default: // 0
@@ -730,7 +704,6 @@ static int set_contrast(sensor_t *sensor, int level)
 {
     int ret = 0;
     uint8_t value1 = 0, value2 = 0 ;
-    bool negative = false;
 
     switch (level) {
         case 3:
