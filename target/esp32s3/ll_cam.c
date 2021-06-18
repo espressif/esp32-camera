@@ -267,7 +267,7 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
     return 16 << GDMA.in[cam->dma_num].conf1.in_ext_mem_bk_size;
 }
 
-static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
+static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t node_max = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE / cam->dma_bytes_per_item;
     size_t line_width = cam->width * cam->in_bytes_per_pixel;
     size_t node_size = node_max;
@@ -342,7 +342,7 @@ static void ll_cam_calc_rgb_dma(cam_obj_t *cam){
     return 1;
 }
 
-void ll_cam_dma_sizes(cam_obj_t *cam)
+bool ll_cam_dma_sizes(cam_obj_t *cam)
 {    
     cam->dma_bytes_per_item = 1;
     if (cam->jpeg_mode) {
