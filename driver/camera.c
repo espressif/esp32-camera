@@ -1575,7 +1575,10 @@ esp_err_t esp_camera_load_from_nvs(const char *key)
             s->set_wb_mode(s,st.wb_mode);
             s->set_whitebal(s,st.awb);
             s->set_wpc(s,st.wpc);
-        }  
+        } else {
+          nvs_close(handle);
+          return ret;
+        }
         ret = nvs_get_u8(handle,CAMERA_PIXFORMAT_NVS_KEY,&pf);
         if (ret == ESP_OK) {
           s->set_pixformat(s,pf);
