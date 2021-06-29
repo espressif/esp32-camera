@@ -4,56 +4,104 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "unity.h"
+#include <mbedtls/base64.h>
 #include "esp_log.h"
 
 #include "esp_camera.h"
 
-#define BOARD_ESP32CAM_AITHINKER 0
+#ifdef CONFIG_IDF_TARGET_ESP32
 #define BOARD_WROVER_KIT 1
+#elif defined CONFIG_IDF_TARGET_ESP32S2
+#define BOARD_CAMERA_MODEL_ESP32S2 1
+#elif defined CONFIG_IDF_TARGET_ESP32S3
+#define BOARD_CAMERA_MODEL_ESP32_S3_EYE 1
+#endif
 
 // WROVER-KIT PIN Map
 #if BOARD_WROVER_KIT
 
-#define CAM_PIN_PWDN -1  //power down is not used
-#define CAM_PIN_RESET -1 //software reset will be performed
-#define CAM_PIN_XCLK 21
-#define CAM_PIN_SIOD 26
-#define CAM_PIN_SIOC 27
+#define PWDN_GPIO_NUM -1  //power down is not used
+#define RESET_GPIO_NUM -1 //software reset will be performed
+#define XCLK_GPIO_NUM 21
+#define SIOD_GPIO_NUM 26
+#define SIOC_GPIO_NUM 27
 
-#define CAM_PIN_D7 35
-#define CAM_PIN_D6 34
-#define CAM_PIN_D5 39
-#define CAM_PIN_D4 36
-#define CAM_PIN_D3 19
-#define CAM_PIN_D2 18
-#define CAM_PIN_D1 5
-#define CAM_PIN_D0 4
-#define CAM_PIN_VSYNC 25
-#define CAM_PIN_HREF 23
-#define CAM_PIN_PCLK 22
-
-#endif
+#define Y9_GPIO_NUM 35
+#define Y8_GPIO_NUM 34
+#define Y7_GPIO_NUM 39
+#define Y6_GPIO_NUM 36
+#define Y5_GPIO_NUM 19
+#define Y4_GPIO_NUM 18
+#define Y3_GPIO_NUM 5
+#define Y2_GPIO_NUM 4
+#define VSYNC_GPIO_NUM 25
+#define HREF_GPIO_NUM 23
+#define PCLK_GPIO_NUM 22
 
 // ESP32Cam (AiThinker) PIN Map
-#if BOARD_ESP32CAM_AITHINKER
+#elif BOARD_ESP32CAM_AITHINKER
 
-#define CAM_PIN_PWDN 32
-#define CAM_PIN_RESET -1 //software reset will be performed
-#define CAM_PIN_XCLK 0
-#define CAM_PIN_SIOD 26
-#define CAM_PIN_SIOC 27
+#define PWDN_GPIO_NUM 32
+#define RESET_GPIO_NUM -1 //software reset will be performed
+#define XCLK_GPIO_NUM 0
+#define SIOD_GPIO_NUM 26
+#define SIOC_GPIO_NUM 27
 
-#define CAM_PIN_D7 35
-#define CAM_PIN_D6 34
-#define CAM_PIN_D5 39
-#define CAM_PIN_D4 36
-#define CAM_PIN_D3 21
-#define CAM_PIN_D2 19
-#define CAM_PIN_D1 18
-#define CAM_PIN_D0 5
-#define CAM_PIN_VSYNC 25
-#define CAM_PIN_HREF 23
-#define CAM_PIN_PCLK 22
+#define Y9_GPIO_NUM 35
+#define Y8_GPIO_NUM 34
+#define Y7_GPIO_NUM 39
+#define Y6_GPIO_NUM 36
+#define Y5_GPIO_NUM 21
+#define Y4_GPIO_NUM 19
+#define Y3_GPIO_NUM 18
+#define Y2_GPIO_NUM 5
+#define VSYNC_GPIO_NUM 25
+#define HREF_GPIO_NUM 23
+#define PCLK_GPIO_NUM 22
+
+#elif BOARD_CAMERA_MODEL_ESP32S2
+
+#define PWDN_GPIO_NUM     -1
+#define RESET_GPIO_NUM    -1
+
+#define VSYNC_GPIO_NUM    21
+#define HREF_GPIO_NUM     38
+#define PCLK_GPIO_NUM     11
+#define XCLK_GPIO_NUM     40
+
+#define SIOD_GPIO_NUM     17
+#define SIOC_GPIO_NUM     18
+
+#define Y9_GPIO_NUM       39
+#define Y8_GPIO_NUM       41
+#define Y7_GPIO_NUM       42
+#define Y6_GPIO_NUM       12
+#define Y5_GPIO_NUM       3
+#define Y4_GPIO_NUM       14
+#define Y3_GPIO_NUM       37
+#define Y2_GPIO_NUM       13
+
+#elif BOARD_CAMERA_MODEL_ESP32_S3_EYE
+
+#define PWDN_GPIO_NUM     -1
+#define RESET_GPIO_NUM    -1
+
+#define VSYNC_GPIO_NUM    6
+#define HREF_GPIO_NUM     7
+#define PCLK_GPIO_NUM     13
+#define XCLK_GPIO_NUM     15
+
+#define SIOD_GPIO_NUM     4
+#define SIOC_GPIO_NUM     5
+
+#define Y9_GPIO_NUM       16
+#define Y8_GPIO_NUM       17
+#define Y7_GPIO_NUM       18
+#define Y6_GPIO_NUM       12
+#define Y5_GPIO_NUM       11
+#define Y4_GPIO_NUM       10
+#define Y3_GPIO_NUM       9
+#define Y2_GPIO_NUM       8
 
 #endif
 
@@ -61,26 +109,30 @@ static const char *TAG = "test camera";
 
 typedef void (*decode_func_t)(uint8_t *jpegbuffer, uint32_t size, uint8_t *outbuffer);
 
-static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, uint8_t fb_count)
+static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, framesize_t frame_size, uint8_t fb_count)
 {
+    framesize_t size_bak = frame_size;
+    if (PIXFORMAT_JPEG == pixel_format && FRAMESIZE_SVGA > frame_size) {
+        frame_size = FRAMESIZE_HD;
+    }
     camera_config_t camera_config = {
-        .pin_pwdn = CAM_PIN_PWDN,
-        .pin_reset = CAM_PIN_RESET,
-        .pin_xclk = CAM_PIN_XCLK,
-        .pin_sscb_sda = CAM_PIN_SIOD,
-        .pin_sscb_scl = CAM_PIN_SIOC,
+        .pin_pwdn = PWDN_GPIO_NUM,
+        .pin_reset = RESET_GPIO_NUM,
+        .pin_xclk = XCLK_GPIO_NUM,
+        .pin_sscb_sda = SIOD_GPIO_NUM,
+        .pin_sscb_scl = SIOC_GPIO_NUM,
 
-        .pin_d7 = CAM_PIN_D7,
-        .pin_d6 = CAM_PIN_D6,
-        .pin_d5 = CAM_PIN_D5,
-        .pin_d4 = CAM_PIN_D4,
-        .pin_d3 = CAM_PIN_D3,
-        .pin_d2 = CAM_PIN_D2,
-        .pin_d1 = CAM_PIN_D1,
-        .pin_d0 = CAM_PIN_D0,
-        .pin_vsync = CAM_PIN_VSYNC,
-        .pin_href = CAM_PIN_HREF,
-        .pin_pclk = CAM_PIN_PCLK,
+        .pin_d7 = Y9_GPIO_NUM,
+        .pin_d6 = Y8_GPIO_NUM,
+        .pin_d5 = Y7_GPIO_NUM,
+        .pin_d4 = Y6_GPIO_NUM,
+        .pin_d3 = Y5_GPIO_NUM,
+        .pin_d2 = Y4_GPIO_NUM,
+        .pin_d1 = Y3_GPIO_NUM,
+        .pin_d0 = Y2_GPIO_NUM,
+        .pin_vsync = VSYNC_GPIO_NUM,
+        .pin_href = HREF_GPIO_NUM,
+        .pin_pclk = PCLK_GPIO_NUM,
 
         //EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
         .xclk_freq_hz = xclk_freq_hz,
@@ -88,7 +140,7 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, ui
         .ledc_channel = LEDC_CHANNEL_0,
 
         .pixel_format = pixel_format, //YUV422,GRAYSCALE,RGB565,JPEG
-        .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+        .frame_size = frame_size,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
 
         .jpeg_quality = 12, //0-63 lower number means higher quality
         .fb_count = fb_count,       //if more than one, i2s runs in continuous mode. Use only with JPEG
@@ -96,11 +148,20 @@ static esp_err_t init_camera(uint32_t xclk_freq_hz, pixformat_t pixel_format, ui
     };
 
     //initialize the camera
-    return esp_camera_init(&camera_config);
+    esp_err_t ret = esp_camera_init(&camera_config);
+
+    if (ESP_OK == ret && PIXFORMAT_JPEG == pixel_format && FRAMESIZE_SVGA > size_bak) {
+        sensor_t *s = esp_camera_sensor_get();
+        s->set_framesize(s, size_bak);
+    }
+
+    return ret;
 }
 
-static float camera_test_fps(uint16_t times, uint32_t *size)
+static bool camera_test_fps(uint16_t times, float *fps, uint32_t *size)
 {
+    *fps = 0.0f;
+    *size = 0;
     uint32_t s = 0;
     uint32_t num = 0;
     uint64_t total_time = esp_timer_get_time();
@@ -108,7 +169,7 @@ static float camera_test_fps(uint16_t times, uint32_t *size)
         camera_fb_t *pic = esp_camera_fb_get();
         if (NULL == pic) {
             ESP_LOGW(TAG, "fb get failed");
-            continue;
+            return 0;
         } else {
             s += pic->len;
             num++;
@@ -116,41 +177,27 @@ static float camera_test_fps(uint16_t times, uint32_t *size)
         esp_camera_fb_return(pic);
     }
     total_time = esp_timer_get_time() - total_time;
-    float fps = 0.0f;
-    *size = 0;
     if (num) {
-        fps = num * 1000000.0f / total_time ;
+        *fps = num * 1000000.0f / total_time ;
         *size = s / num;
     }
-    return fps;
+    return 1;
 }
 
-static void camera_test(framesize_t max_size, uint32_t pic_num)
+static const char *get_cam_format_name(pixformat_t pixel_format)
 {
-    float fps[max_size];
-    uint32_t size[max_size];
-
-    for (size_t i = 0; i < max_size; i++) {
-        fps[i] = 0.0f;
-        ESP_LOGI(TAG, "Testing %d x %d", resolution[i].width, resolution[i].height);
-        sensor_t *sensor = esp_camera_sensor_get();
-        int ret = sensor->set_framesize(sensor, i);
-        if (0 != ret) {
-            ESP_LOGE(TAG, "set_framesize %d error", i);
-            continue;
-        }
-        vTaskDelay(100 / portTICK_RATE_MS);
-        fps[i] = camera_test_fps(pic_num, &size[i]);
+    switch (pixel_format) {
+    case PIXFORMAT_JPEG: return "JPEG";
+    case PIXFORMAT_RGB565: return "RGB565";
+    case PIXFORMAT_RGB888: return "RGB888";
+    case PIXFORMAT_YUV422: return "YUV422";
+    default:
+        break;
     }
-
-    printf("FPS Result\n");
-    printf("resolution  ,  size ,    fps  \n");
-    for (size_t i = 0; i < max_size; i++) {
-        printf("%4d x %4d , %5d, %5.2f  \n", resolution[i].width, resolution[i].height, size[i], fps[i]);
-    }
+    return "UNKNOW";
 }
 
-static camera_sensor_info_t *get_camera_info_from_pid(uint8_t pid)
+static camera_sensor_info_t *get_camera_info_from_pid(uint16_t pid)
 {
     for (size_t i = 0; i < CAMERA_MODEL_MAX; i++) {
         if (pid == camera_sensor[i].pid) {
@@ -158,6 +205,129 @@ static camera_sensor_info_t *get_camera_info_from_pid(uint8_t pid)
         }
     }
     return NULL;
+}
+
+static void printf_img_base64(const camera_fb_t *pic)
+{
+    uint8_t *outbuffer = NULL;
+    size_t outsize = 0;
+    if (PIXFORMAT_JPEG != pic->format) {
+        fmt2jpg(pic->buf, pic->width * pic->height * 2, pic->width, pic->height, pic->format, 50, &outbuffer, &outsize);
+    } else {
+        outbuffer = pic->buf;
+        outsize = pic->len;
+    }
+
+    uint8_t *base64_buf = calloc(1, outsize * 4);
+    if (NULL != base64_buf) {
+        size_t out_len = 0;
+        mbedtls_base64_encode(base64_buf, outsize * 4, &out_len, outbuffer, outsize);
+        printf("%s\n", base64_buf);
+        free(base64_buf);
+        if (PIXFORMAT_JPEG != pic->format) {
+            free(outbuffer);
+        }
+    } else {
+        ESP_LOGE(TAG, "malloc for base64 buffer failed");
+    }
+}
+
+static void camera_performance_test(uint32_t xclk_freq, uint32_t pic_num)
+{
+    esp_err_t ret = ESP_OK;
+    //detect sensor information
+    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
+    sensor_t *s = esp_camera_sensor_get();
+    camera_sensor_info_t *info = get_camera_info_from_pid(s->id.PID);
+    TEST_ASSERT_NOT_NULL(info);
+    TEST_ESP_OK(esp_camera_deinit());
+    vTaskDelay(500 / portTICK_RATE_MS);
+    framesize_t max_size = info->max_size;
+    pixformat_t all_format[] = {PIXFORMAT_JPEG, PIXFORMAT_RGB565, PIXFORMAT_YUV422, };
+    pixformat_t *format_s = &all_format[0];
+    pixformat_t *format_e = &all_format[2];
+    if (false == info->support_jpeg) {
+        format_s++; // skip jpeg
+    }
+
+    struct fps_result {
+        float fps[FRAMESIZE_INVALID];
+        uint32_t size[FRAMESIZE_INVALID];
+    };
+    struct fps_result results[3] = {0};
+
+    for (; format_s <= format_e; format_s++) {
+        for (size_t i = 0; i <= max_size; i++) {
+            ESP_LOGI(TAG, "\n\n===> Testing format:%s resolution: %d x %d <===", get_cam_format_name(*format_s), resolution[i].width, resolution[i].height);
+            ret = init_camera(xclk_freq, *format_s, i, 2);
+            vTaskDelay(100 / portTICK_RATE_MS);
+            if (ESP_OK != ret) {
+                ESP_LOGW(TAG, "Testing init failed :-(, skip this item");
+                vTaskDelay(500 / portTICK_RATE_MS);
+                continue;
+            }
+            camera_test_fps(pic_num, &results[format_s - all_format].fps[i], &results[format_s - all_format].size[i]);
+            TEST_ESP_OK(esp_camera_deinit());
+        }
+    }
+
+    printf("FPS Result\n");
+    printf("resolution  ,  JPEG fps, JPEG size, RGB565 fps, RGB565 size, YUV422 fps, YUV422 size \n");
+    for (size_t i = 0; i <= max_size; i++) {
+        printf("%4d x %4d ,     %5.2f,     %6d,      %5.2f,     %7d,      %5.2f,     %7d \n",
+               resolution[i].width, resolution[i].height,
+               results[0].fps[i], results[0].size[i],
+               results[1].fps[i], results[1].size[i],
+               results[2].fps[i], results[2].size[i]);
+    }
+    printf("----------------------------------------------------------------------------------------\n");
+}
+
+TEST_CASE("Camera driver init, deinit test", "[camera]")
+{
+    uint64_t t1 = esp_timer_get_time();
+    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
+    uint64_t t2 = esp_timer_get_time();
+    ESP_LOGI(TAG, "Camera init time %llu ms", (t2 - t1) / 1000);
+
+    TEST_ESP_OK(esp_camera_deinit());
+}
+
+TEST_CASE("Camera driver take RGB565 picture test", "[camera]")
+{
+    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
+
+    ESP_LOGI(TAG, "Taking picture...");
+    camera_fb_t *pic = esp_camera_fb_get();
+    if (pic) {
+        ESP_LOGI(TAG, "picture: %d x %d, size: %u", pic->width, pic->height, pic->len);
+        printf_img_base64(pic);
+        esp_camera_fb_return(pic);
+    }
+
+    TEST_ESP_OK(esp_camera_deinit());
+    TEST_ASSERT_NOT_NULL(pic);
+}
+
+TEST_CASE("Camera driver take JPEG picture test", "[camera]")
+{
+    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_JPEG, FRAMESIZE_QVGA, 2));
+
+    ESP_LOGI(TAG, "Taking picture...");
+    camera_fb_t *pic = esp_camera_fb_get();
+    if (pic) {
+        ESP_LOGI(TAG, "picture: %d x %d, size: %u", pic->width, pic->height, pic->len);
+        printf_img_base64(pic);
+        esp_camera_fb_return(pic);
+    }
+
+    TEST_ESP_OK(esp_camera_deinit());
+    TEST_ASSERT_NOT_NULL(pic);
+}
+
+TEST_CASE("Camera driver performance test", "[camera]")
+{
+    camera_performance_test(20 * 1000000, 16);
 }
 
 
@@ -306,66 +476,6 @@ static void img_jpeg_decode_test(uint16_t pic_index, uint16_t lib_index)
     ESP_LOGI(TAG, "pic_index:%d", pic_index);
     ESP_LOGI(TAG, "lib_index:%d", lib_index);
     jpg_decode_test(lib_index, DECODE_RGB565, imgs[pic_index].buf, imgs[pic_index].length, imgs[pic_index].w, imgs[pic_index].h, 16);
-}
-
-
-TEST_CASE("Camera driver init, deinit test", "[camera]")
-{
-    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_JPEG, 2));
-    TEST_ESP_OK(esp_camera_deinit());
-}
-
-TEST_CASE("Camera driver take picture test", "[camera]")
-{
-    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_JPEG, 2));
-
-    ESP_LOGI(TAG, "Taking picture...");
-    camera_fb_t *pic = esp_camera_fb_get();
-    if (pic) {
-        ESP_LOGI(TAG, "picrute: %d x %d, size: %u", pic->width, pic->height, pic->len);
-        esp_camera_fb_return(pic);
-    }
-
-    TEST_ESP_OK(esp_camera_deinit());
-    TEST_ASSERT_NOT_NULL(pic);
-}
-
-TEST_CASE("Camera driver jpeg fps test", "[camera]")
-{
-    uint64_t t1 = esp_timer_get_time();
-    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_JPEG, 2));
-    uint64_t t2 = esp_timer_get_time();
-    ESP_LOGI(TAG, "Camera init time %llu ms", (t2 - t1) / 1000);
-
-    sensor_t *s = esp_camera_sensor_get();
-    camera_sensor_info_t *info = get_camera_info_from_pid(s->id.PID);
-    framesize_t max_size = info->max_size;
-    int pic_num = 16;
-
-    ESP_LOGI(TAG, "max_framesize:%d", max_size);
-    ESP_LOGI(TAG, "pic_number:%d", pic_num);
-
-    camera_test(max_size, pic_num);
-    esp_camera_deinit();
-}
-
-TEST_CASE("Camera driver rgb565 fps test", "[camera]")
-{
-    uint64_t t1 = esp_timer_get_time();
-    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, 2));
-    uint64_t t2 = esp_timer_get_time();
-    ESP_LOGI(TAG, "Camera init time %llu ms", (t2 - t1) / 1000);
-
-    sensor_t *s = esp_camera_sensor_get();
-    camera_sensor_info_t *info = get_camera_info_from_pid(s->id.PID);
-    framesize_t max_size = info->max_size;
-    int pic_num = 16;
-
-    ESP_LOGI(TAG, "max_framesize:%d", max_size);
-    ESP_LOGI(TAG, "pic_number:%d", pic_num);
-
-    camera_test(max_size, pic_num);
-    esp_camera_deinit();
 }
 
 TEST_CASE("Conversions image 227x149 jpeg decode test", "[camera]")

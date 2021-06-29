@@ -95,6 +95,7 @@ typedef struct {
     const camera_sccb_addr_t sccb_addr;
     const camera_pid_t pid;
     const framesize_t max_size;
+    const bool support_jpeg;
 } camera_sensor_info_t;
 
 typedef enum {
