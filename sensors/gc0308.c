@@ -1,3 +1,16 @@
+// Copyright 2015-2021 Espressif Systems (Shanghai) PTE LTD
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,6 +28,9 @@
 #include "esp_log.h"
 static const char *TAG = "gc0308";
 #endif
+
+#define H8(v) ((v)>>8)
+#define L8(v) ((v)&0xff)
 
 //#define REG_DEBUG_ON
 
@@ -86,6 +102,27 @@ static int write_regs(uint8_t slv_addr, const uint16_t (*regs)[2])
     return ret;
 }
 
+static void print_regs(uint8_t slv_addr)
+{
+#ifdef DEBUG_PRINT_REG
+    ESP_LOGI(TAG, "REG list look ======================");
+    for (size_t i = 0xf0; i <= 0xfe; i++) {
+        ESP_LOGI(TAG, "reg[0x%02x] = 0x%02x", i, read_reg(slv_addr, i));
+    }
+    ESP_LOGI(TAG, "\npage 0 ===");
+    write_reg(slv_addr, 0xfe, 0x00); // page 0
+    for (size_t i = 0x03; i <= 0xa2; i++) {
+        ESP_LOGI(TAG, "p0 reg[0x%02x] = 0x%02x", i, read_reg(slv_addr, i));
+    }
+
+    ESP_LOGI(TAG, "\npage 3 ===");
+    write_reg(slv_addr, 0xfe, 0x03); // page 3
+    for (size_t i = 0x01; i <= 0x43; i++) {
+        ESP_LOGI(TAG, "p3 reg[0x%02x] = 0x%02x", i, read_reg(slv_addr, i));
+    }
+#endif
+}
+
 static int reset(sensor_t *sensor)
 {
     int ret = 0;
@@ -96,12 +133,14 @@ static int reset(sensor_t *sensor)
         return ret;
     }
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    ret = write_regs(sensor->slv_addr, GC0308_DEFAULT_CONFIG);
+    ret = write_regs(sensor->slv_addr, gc0308_sensor_default_regs);
     if (ret == 0) {
         ESP_LOGD(TAG, "Camera defaults loaded");
         vTaskDelay(100 / portTICK_PERIOD_MS);
-        // write_reg(sensor->slv_addr, 0xfe, 0x00);
-        // set_reg_bits(sensor->slv_addr, 0x86, 0, 0x01, 1);  //vsync polarity
+        write_reg(sensor->slv_addr, 0xfe, 0x00);
+#ifdef CONFIG_IDF_TARGET_ESP32
+        set_reg_bits(sensor->slv_addr, 0x28, 4, 0x07, 1);  //frequency division for esp32, ensure pclk <= 15MHz
+#endif
     }
     return ret;
 }
@@ -133,11 +172,121 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     return ret;
 }
 
+static int set_framesize(sensor_t *sensor, framesize_t framesize)
+{
+    int ret = 0;
+    if (framesize > FRAMESIZE_VGA) {
+        ESP_LOGW(TAG, "Invalid framesize: %u", framesize);
+        framesize = FRAMESIZE_VGA;
+    }
+    sensor->status.framesize = framesize;
+    uint16_t w = resolution[framesize].width;
+    uint16_t h = resolution[framesize].height;
+    uint16_t row_s = (resolution[FRAMESIZE_VGA].height - h) / 2;
+    uint16_t col_s = (resolution[FRAMESIZE_VGA].width - w) / 2;
+#define SUBSAMPLE_MODE 1
+
+#if SUBSAMPLE_MODE
+    struct subsample_cfg {
+        uint16_t ratio_numerator;
+        uint16_t ratio_denominator;
+        uint8_t reg0x54;
+        uint8_t reg0x56;
+        uint8_t reg0x57;
+        uint8_t reg0x58;
+        uint8_t reg0x59;
+    };
+    const struct subsample_cfg subsample_cfgs[] = { // define some subsample ratio
+        {84, 420, 0x55, 0x00, 0x00, 0x00, 0x00}, //1/5
+        {105, 420, 0x44, 0x00, 0x00, 0x00, 0x00},//1/4
+        {140, 420, 0x33, 0x00, 0x00, 0x00, 0x00},//1/3
+        {210, 420, 0x22, 0x00, 0x00, 0x00, 0x00},//1/2
+        {240, 420, 0x77, 0x02, 0x46, 0x02, 0x46},//4/7
+        {252, 420, 0x55, 0x02, 0x04, 0x02, 0x04},//3/5
+        {280, 420, 0x33, 0x02, 0x00, 0x02, 0x00},//2/3
+        {420, 420, 0x11, 0x00, 0x00, 0x00, 0x00},//1/1
+    };
+    uint16_t win_w = 640;
+    uint16_t win_h = 480;
+    const struct subsample_cfg *cfg = NULL;
+    /**
+     * Strategy: try to keep the maximum perspective
+     */
+    for (size_t i = 0; i < sizeof(subsample_cfgs) / sizeof(struct subsample_cfg); i++) {
+        cfg = &subsample_cfgs[i];
+        if ((win_w * cfg->ratio_numerator / cfg->ratio_denominator >= w) && (win_h * cfg->ratio_numerator / cfg->ratio_denominator >= h)) {
+            win_w = w * cfg->ratio_denominator / cfg->ratio_numerator;
+            win_h = h * cfg->ratio_denominator / cfg->ratio_numerator;
+            row_s = (resolution[FRAMESIZE_VGA].height - win_h) / 2;
+            col_s = (resolution[FRAMESIZE_VGA].width - win_w) / 2;
+            ESP_LOGI(TAG, "subsample win:%dx%d, ratio:%f", win_w, win_h, (float)cfg->ratio_numerator / (float)cfg->ratio_denominator);
+            break;
+        }
+    }
+
+    write_reg(sensor->slv_addr, 0xfe, 0x00);
+
+    write_reg(sensor->slv_addr, 0x05, H8(row_s));
+    write_reg(sensor->slv_addr, 0x06, L8(row_s));
+    write_reg(sensor->slv_addr, 0x07, H8(col_s));
+    write_reg(sensor->slv_addr, 0x08, L8(col_s));
+    write_reg(sensor->slv_addr, 0x09, H8(win_h + 8));
+    write_reg(sensor->slv_addr, 0x0a, L8(win_h + 8));
+    write_reg(sensor->slv_addr, 0x0b, H8(win_w + 8));
+    write_reg(sensor->slv_addr, 0x0c, L8(win_w + 8));
+
+    write_reg(sensor->slv_addr, 0xfe, 0x01);
+    set_reg_bits(sensor->slv_addr, 0x53, 7, 0x01, 1);
+    set_reg_bits(sensor->slv_addr, 0x55, 0, 0x01, 1);
+    write_reg(sensor->slv_addr, 0x54, cfg->reg0x54);
+    write_reg(sensor->slv_addr, 0x56, cfg->reg0x56);
+    write_reg(sensor->slv_addr, 0x57, cfg->reg0x57);
+    write_reg(sensor->slv_addr, 0x58, cfg->reg0x58);
+    write_reg(sensor->slv_addr, 0x59, cfg->reg0x59);
+
+    write_reg(sensor->slv_addr, 0xfe, 0x00);
+
+#elif WINDOWING_MODE
+    write_reg(sensor->slv_addr, 0xfe, 0x00);
+
+    write_reg(sensor->slv_addr, 0xf7, col_s / 4);
+    write_reg(sensor->slv_addr, 0xf8, row_s / 4);
+    write_reg(sensor->slv_addr, 0xf9, (col_s + h) / 4);
+    write_reg(sensor->slv_addr, 0xfa, (row_s + w) / 4);
+
+    write_reg(sensor->slv_addr, 0x05, H8(row_s));
+    write_reg(sensor->slv_addr, 0x06, L8(row_s));
+    write_reg(sensor->slv_addr, 0x07, H8(col_s));
+    write_reg(sensor->slv_addr, 0x08, L8(col_s));
+
+    write_reg(sensor->slv_addr, 0x09, H8(h + 8));
+    write_reg(sensor->slv_addr, 0x0a, L8(h + 8));
+    write_reg(sensor->slv_addr, 0x0b, H8(w + 8));
+    write_reg(sensor->slv_addr, 0x0c, L8(w + 8));
+
+#elif CROP_WINDOW_MODE
+    write_reg(sensor->slv_addr, 0xfe, 0x00);
+
+    write_reg(sensor->slv_addr, 0x46, 0x80 | (H8(row_s) << 4) | (H8(col_s) << 0)); // [7]enable crop, [6]NA, [5:4]crop win y0[9:8], [2:0]crop win x0[10:8]
+    write_reg(sensor->slv_addr, 0x47, L8(row_s));  // crop_win_y0[7:0]
+    write_reg(sensor->slv_addr, 0x48, L8(col_s));  // crop_win_x0[7:0]
+
+    write_reg(sensor->slv_addr, 0x49, H8(h));  // [0]crop_win_height[8]
+    write_reg(sensor->slv_addr, 0x4a, L8(h));  // crop_win_height[7:0]
+    write_reg(sensor->slv_addr, 0x4b, H8(w));  // [0]crop_win_width[8]
+    write_reg(sensor->slv_addr, 0x4c, L8(w));  // crop_win_width[7:0]
+#endif
+    if (ret == 0) {
+        ESP_LOGD(TAG, "Set framesize to: %ux%u", w, h);
+    }
+    return 0;
+}
+
 static int set_contrast(sensor_t *sensor, uint8_t contrast)
 {
     if (contrast != 0) {
-        SCCB_Write(sensor->slv_addr, 0xfe, 0x00);
-        SCCB_Write(sensor->slv_addr, 0xb3, contrast);
+        write_reg(sensor->slv_addr, 0xfe, 0x00);
+        write_reg(sensor->slv_addr, 0xb3, contrast);
     }
     return 0;
 }
@@ -145,41 +294,9 @@ static int set_contrast(sensor_t *sensor, uint8_t contrast)
 static int set_global_gain(sensor_t *sensor, uint8_t gain_level)
 {
     if (gain_level != 0) {
-        SCCB_Write(sensor->slv_addr, 0xfe, 0x00);
-        SCCB_Write(sensor->slv_addr, 0x50, gain_level);
+        write_reg(sensor->slv_addr, 0xfe, 0x00);
+        write_reg(sensor->slv_addr, 0x50, gain_level);
     }
-    return 0;
-}
-
-static void set_AEC(sensor_t *sensor, bool aec, uint8_t *aec_value)
-{
-    for (int i = 0; i < sizeof(GC0308_HB_VB_STEPS) / 2; i++) {
-        SCCB_Write(sensor->slv_addr, GC0308_HB_VB_STEPS[i][0], GC0308_HB_VB_STEPS[i][1]);
-    }
-    if (aec == true) { // Auto exposure control
-        for (int i = 0; i < sizeof(aec_value); i++) {
-            uint8_t index = aec_value[i] + 1;
-            SCCB_Write(sensor->slv_addr, GC0308_AEC_EXP_LEVEL[i][0], GC0308_AEC_EXP_LEVEL[index][0]);
-            SCCB_Write(sensor->slv_addr, GC0308_AEC_EXP_LEVEL[i][1], GC0308_AEC_EXP_LEVEL[index][1]);
-            SCCB_Write(sensor->slv_addr, 0xec, 0x00 + i * 16);
-        };
-    } else { // Fixed exposure
-        uint8_t index = *aec_value + 1;
-        SCCB_Write(sensor->slv_addr, GC0308_AEC_EXP_LEVEL[0][0], GC0308_AEC_EXP_LEVEL[index][0]);
-        SCCB_Write(sensor->slv_addr, GC0308_AEC_EXP_LEVEL[0][1], GC0308_AEC_EXP_LEVEL[index][1]);
-        SCCB_Write(sensor->slv_addr, 0xec, 0x00);
-    }
-}
-
-static void set_AEC_target_Y(sensor_t *sensor, uint8_t AEC_target_Y)
-{
-    SCCB_Write(sensor->slv_addr, 0xfe, 0x00);
-    SCCB_Write(sensor->slv_addr, 0xd3, AEC_target_Y);
-}
-
-static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
-    SCCB_Write(sensor->slv_addr, 0xfe, 0x00);
     return 0;
 }
 
@@ -210,8 +327,8 @@ static int set_vflip(sensor_t *sensor, int enable)
 static int set_colorbar(sensor_t *sensor, int enable)
 {
     int ret = 0;
-    // ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
-    // ret |= set_reg_bits(sensor->slv_addr, P0_DEBUG_MODE3, 3, 0x01, enable);
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    ret |= set_reg_bits(sensor->slv_addr, 0x2e, 0, 0x01, enable);
     if (ret == 0) {
         sensor->status.colorbar = enable;
         ESP_LOGD(TAG, "Set colorbar to: %d", enable);
@@ -282,6 +399,8 @@ static int init_status(sensor_t *sensor)
     sensor->status.agc_gain = 0;
     sensor->status.aec_value = 0;
     sensor->status.aec2 = 0;
+
+    print_regs(sensor->slv_addr);
     return 0;
 }
 
@@ -299,9 +418,12 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
 int gc0308_detect(int slv_addr)
 {
     if (GC0308_SCCB_ADDR == slv_addr) {
+        write_reg(slv_addr, 0xfe, 0x00);
         uint8_t PID = SCCB_Read(slv_addr, 0x00);
         if (GC0308_PID == PID) {
             return PID;
+        } else {
+            ESP_LOGE(TAG, "PID=0X%X", PID);
         }
     }
     return 0;

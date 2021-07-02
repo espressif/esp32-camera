@@ -219,9 +219,10 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
             }
         }
         vTaskDelay(10 / portTICK_PERIOD_MS);
-        ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-                 id->PID, id->VER, id->MIDH, id->MIDL);
+        
     } while (0);
+    ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+                 id->PID, id->VER, id->MIDH, id->MIDL);
 
     /**
      * Initialize sensor according to sensor ID
@@ -281,6 +282,13 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         *out_camera_model = CAMERA_GC032A;
         ESP_LOGI(TAG, "Detected GC032A camera");
         gc032a_init(&s_state->sensor);
+        break;
+#endif
+#if CONFIG_GC0308_SUPPORT
+    case GC0308_PID:
+        *out_camera_model = CAMERA_GC0308;
+        ESP_LOGI(TAG, "Detected GC0308 camera");
+        gc0308_init(&s_state->sensor);
         break;
 #endif
     default:
