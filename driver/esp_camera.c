@@ -26,7 +26,6 @@
 #include "sccb.h"
 #include "cam_hal.h"
 #include "esp_camera.h"
-// #include "camera_common.h"
 #include "xclk.h"
 #if CONFIG_OV2640_SUPPORT
 #include "ov2640.h"
@@ -172,6 +171,16 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
                 break;
             }
         }
+        if (slv_addr == OV7670_SCCB_ADDR) {
+            SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
+            id->PID = SCCB_Read(slv_addr, REG_PID);
+            id->VER = SCCB_Read(slv_addr, REG_VER);
+            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
+            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
+            if (OV7670_PID == id->PID) {
+                break;
+            }
+        }
         if (slv_addr == OV5640_SCCB_ADDR) {
 
             id->PID = SCCB_Read16(slv_addr, REG16_CHIDH);
@@ -198,10 +207,11 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
             SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
             id->PID = SCCB_Read16(slv_addr, 0x3000);
             id->VER = SCCB_Read16(slv_addr, 0x3001);
-            if (GC2145_PID == id->PID) {
+            if (NT99141_PID == id->PID) {
                 if (config->xclk_freq_hz > 10000000) {
                     ESP_LOGE(TAG, "NT99141: only XCLK under 10MHz is supported, and XCLK is now set to 10M");
                     s_state->sensor.xclk_freq_hz = 10000000;
+                    xclk_timer_conf(config->ledc_timer, s_state->sensor.xclk_freq_hz);
                 }
                 break;
             }
@@ -368,7 +378,6 @@ esp_err_t esp_camera_init(const camera_config_t *config)
     return ESP_OK;
 
 fail:
-    CAMERA_DISABLE_OUT_CLOCK();
     esp_camera_deinit();
     return err;
 }
@@ -376,6 +385,7 @@ fail:
 esp_err_t esp_camera_deinit()
 {
     esp_err_t ret = cam_deinit();
+    CAMERA_DISABLE_OUT_CLOCK();
     if (s_state) {
         SCCB_Deinit();
 

@@ -29,7 +29,6 @@
 #endif
 #include "esp_log.h"
 #include "esp_camera.h"
-#include "camera_common.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"

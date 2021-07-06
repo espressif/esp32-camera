@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sccb.h"
+#include "xclk.h"
 #include "ov2640.h"
 #include "ov2640_regs.h"
 #include "ov2640_settings.h"
@@ -494,7 +495,6 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
     return -1;
 }
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;

@@ -11,6 +11,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Chip ID Registers
 #define REG_PID        0x0A
 #define REG_VER        0x0B
@@ -239,5 +243,11 @@ typedef struct _sensor {
     int  (*set_pll)             (sensor_t *sensor, int bypass, int mul, int sys, int root, int pre, int seld5, int pclken, int pclk);
     int  (*set_xclk)            (sensor_t *sensor, int timer, int xclk);
 } sensor_t;
+
+camera_sensor_info_t *esp_camera_get_info_from_pid(uint16_t pid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SENSOR_H__ */

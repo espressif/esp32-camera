@@ -8,8 +8,8 @@ menu "Camera configuration"
             Disable this option to save memory.
 
     config OV7725_SUPPORT
-        bool "Support OV7725 SVGA"
-        default n
+        bool "Support OV7725 VGA"
+        default y
         help
             Enable this option if you want to use the OV7725.
             Disable this option to save memory.

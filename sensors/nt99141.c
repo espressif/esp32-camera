@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sccb.h"
+#include "xclk.h"
 #include "nt99141.h"
 #include "nt99141_regs.h"
 #include "nt99141_settings.h"
@@ -920,7 +921,6 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
     return set_pll(sensor, bypass > 0, multiplier, sys_div, pre_div, root_2x > 0, seld5, pclk_manual > 0, pclk_div);
 }
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;

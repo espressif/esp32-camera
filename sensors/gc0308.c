@@ -282,7 +282,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return 0;
 }
 
-static int set_contrast(sensor_t *sensor, uint8_t contrast)
+static int set_contrast(sensor_t *sensor, int contrast)
 {
     if (contrast != 0) {
         write_reg(sensor->slv_addr, 0xfe, 0x00);
@@ -291,7 +291,7 @@ static int set_contrast(sensor_t *sensor, uint8_t contrast)
     return 0;
 }
 
-static int set_global_gain(sensor_t *sensor, uint8_t gain_level)
+static int set_global_gain(sensor_t *sensor, int gain_level)
 {
     if (gain_level != 0) {
         write_reg(sensor->slv_addr, 0xfe, 0x00);

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "sccb.h"
+#include "xclk.h"
 #include "ov7725.h"
 #include "ov7725_regs.h"
 #include "freertos/FreeRTOS.h"
@@ -493,7 +494,6 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1
 static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning){return -1;}
 static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div){return -1;}
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
