@@ -386,7 +386,6 @@ esp_err_t cam_deinit(void)
     }
 
     cam_stop();
-    gpio_isr_handler_remove(cam_obj->vsync_pin);
     if (cam_obj->task_handle) {
         vTaskDelete(cam_obj->task_handle);
     }
@@ -412,9 +411,7 @@ esp_err_t cam_deinit(void)
         free(cam_obj->frames);
     }
 
-    if (cam_obj->cam_intr_handle) {
-        esp_intr_free(cam_obj->cam_intr_handle);
-    }
+    ll_cam_deinit(cam_obj);
 
     free(cam_obj);
     cam_obj = NULL;

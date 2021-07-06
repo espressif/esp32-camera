@@ -236,6 +236,18 @@ bool ll_cam_stop(cam_obj_t *cam)
     return true;
 }
 
+esp_err_t ll_cam_deinit(cam_obj_t *cam)
+{
+    gpio_isr_handler_remove(cam->vsync_pin);
+
+    if (cam->cam_intr_handle) {
+        esp_intr_free(cam->cam_intr_handle);
+        cam->cam_intr_handle = NULL;
+    }
+
+    return ESP_OK;
+}
+
 bool ll_cam_start(cam_obj_t *cam, int frame_pos)
 {
     I2S0.conf.rx_start = 0;
