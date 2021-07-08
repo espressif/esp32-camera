@@ -303,7 +303,7 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
         cam->dma_half_buffer_cnt = 2;
         cam->dma_half_buffer_size = cam->dma_buffer_size / cam->dma_half_buffer_cnt;
     } else {
-        size_t dma_half_buffer_max = 16 * 1024 / cam->dma_bytes_per_item;
+        size_t dma_half_buffer_max = CONFIG_CAMERA_DMA_BUFFER_SIZE_MAX / 2 / cam->dma_bytes_per_item;
         if (line_width > dma_half_buffer_max) {
             ESP_LOGE(TAG, "Resolution too high");
             return 0;
@@ -358,7 +358,7 @@ bool ll_cam_dma_sizes(cam_obj_t *cam)
     return 1;
 }
 
-size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len)
+size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len)
 {
     // YUV to Grayscale
     if (cam->in_bytes_per_pixel == 2 && cam->fb_bytes_per_pixel == 1) {

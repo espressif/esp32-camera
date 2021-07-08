@@ -93,7 +93,7 @@ void IRAM_ATTR ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType
     if (xQueueSendFromISR(cam->event_queue, (void *)&cam_event, HPTaskAwoken) != pdTRUE) {
         ll_cam_stop(cam);
         cam->state = CAM_STATE_IDLE;
-        ESP_EARLY_LOGE(TAG, "EV-OVF");
+        ESP_EARLY_LOGE(TAG, "EV-%s-OVF", cam_event==CAM_IN_SUC_EOF_EVENT ? "EOF" : "VSYNC");
     }
 }
 
@@ -266,6 +266,7 @@ static esp_err_t cam_dma_config()
         cam_obj->frames[x].dma = NULL;
         cam_obj->frames[x].fb_offset = 0;
         cam_obj->frames[x].en = 0;
+        ESP_LOGI(TAG, "Allocating %d Byte frame buffer in PSRAM", fb_size * sizeof(uint8_t) + dma_align);
         cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_malloc(fb_size * sizeof(uint8_t) + dma_align, MALLOC_CAP_SPIRAM);
         CAM_CHECK(cam_obj->frames[x].fb.buf != NULL, "frame buffer malloc failed", ESP_FAIL);
         if (cam_obj->psram_mode) {
@@ -281,7 +282,11 @@ static esp_err_t cam_dma_config()
 
     if (!cam_obj->psram_mode) {
         cam_obj->dma_buffer = (uint8_t *)heap_caps_malloc(cam_obj->dma_buffer_size * sizeof(uint8_t), MALLOC_CAP_DMA);
-        CAM_CHECK(cam_obj->dma_buffer != NULL, "dma_buffer malloc failed", ESP_FAIL);
+        if(NULL == cam_obj->dma_buffer) {
+            ESP_LOGE(TAG,"%s(%d): DMA buffer %d Byte malloc failed, the current largest free block:%d Byte", __FUNCTION__, __LINE__, 
+                     cam_obj->dma_buffer_size, heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+            return ESP_FAIL;
+        }
 
         cam_obj->dma = allocate_dma_descriptors(cam_obj->dma_node_cnt, cam_obj->dma_node_buffer_size, cam_obj->dma_buffer);
         CAM_CHECK(cam_obj->dma != NULL, "dma malloc failed", ESP_FAIL);
@@ -453,7 +458,7 @@ camera_fb_t *cam_take(TickType_t timeout)
         }
         return dma_buffer;
     } else {
-        ESP_LOGI(TAG, "Failed to get the frame on time!");
+        ESP_LOGW(TAG, "Failed to get the frame on time!");
     }
     return NULL;
 }

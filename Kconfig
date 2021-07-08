@@ -89,4 +89,12 @@ menu "Camera configuration"
 
     endchoice
 
+    config CAMERA_DMA_BUFFER_SIZE_MAX
+        int "DMA buffer size"
+        range 8192 32768
+        default 32768
+        help
+            Maximum value of DMA buffer
+            Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent
+
 endmenu
