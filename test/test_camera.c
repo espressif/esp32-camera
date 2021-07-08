@@ -83,8 +83,8 @@
 
 #elif BOARD_CAMERA_MODEL_ESP32_S3_EYE
 
-#define PWDN_GPIO_NUM     -1
-#define RESET_GPIO_NUM    -1
+#define PWDN_GPIO_NUM     43
+#define RESET_GPIO_NUM    44
 
 #define VSYNC_GPIO_NUM    6
 #define HREF_GPIO_NUM     7
@@ -197,16 +197,6 @@ static const char *get_cam_format_name(pixformat_t pixel_format)
     return "UNKNOW";
 }
 
-static camera_sensor_info_t *get_camera_info_from_pid(uint16_t pid)
-{
-    for (size_t i = 0; i < CAMERA_MODEL_MAX; i++) {
-        if (pid == camera_sensor[i].pid) {
-            return (camera_sensor_info_t *)&camera_sensor[i];
-        }
-    }
-    return NULL;
-}
-
 static void printf_img_base64(const camera_fb_t *pic)
 {
     uint8_t *outbuffer = NULL;
@@ -238,7 +228,7 @@ static void camera_performance_test(uint32_t xclk_freq, uint32_t pic_num)
     //detect sensor information
     TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
     sensor_t *s = esp_camera_sensor_get();
-    camera_sensor_info_t *info = get_camera_info_from_pid(s->id.PID);
+    camera_sensor_info_t *info = esp_camera_get_info_from_pid(s->id.PID);
     TEST_ASSERT_NOT_NULL(info);
     TEST_ESP_OK(esp_camera_deinit());
     vTaskDelay(500 / portTICK_RATE_MS);
@@ -272,7 +262,7 @@ static void camera_performance_test(uint32_t xclk_freq, uint32_t pic_num)
     }
 
     printf("FPS Result\n");
-    printf("resolution  ,  JPEG fps, JPEG size, RGB565 fps, RGB565 size, YUV422 fps, YUV422 size \n");
+    printf("resolution  ,  JPEG fps,  JPEG size, RGB565 fps, RGB565 size, YUV422 fps, YUV422 size \n");
     for (size_t i = 0; i <= max_size; i++) {
         printf("%4d x %4d ,     %5.2f,     %6d,      %5.2f,     %7d,      %5.2f,     %7d \n",
                resolution[i].width, resolution[i].height,
@@ -295,8 +285,24 @@ TEST_CASE("Camera driver init, deinit test", "[camera]")
 
 TEST_CASE("Camera driver take RGB565 picture test", "[camera]")
 {
-    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
+    TEST_ESP_OK(init_camera(10000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
+    vTaskDelay(500 / portTICK_RATE_MS);
+    ESP_LOGI(TAG, "Taking picture...");
+    camera_fb_t *pic = esp_camera_fb_get();
+    if (pic) {
+        ESP_LOGI(TAG, "picture: %d x %d, size: %u", pic->width, pic->height, pic->len);
+        printf_img_base64(pic);
+        esp_camera_fb_return(pic);
+    }
 
+    TEST_ESP_OK(esp_camera_deinit());
+    TEST_ASSERT_NOT_NULL(pic);
+}
+
+TEST_CASE("Camera driver take YUV422 picture test", "[camera]")
+{
+    TEST_ESP_OK(init_camera(10000000, PIXFORMAT_YUV422, FRAMESIZE_QVGA, 2));
+    vTaskDelay(500 / portTICK_RATE_MS);
     ESP_LOGI(TAG, "Taking picture...");
     camera_fb_t *pic = esp_camera_fb_get();
     if (pic) {
@@ -312,7 +318,7 @@ TEST_CASE("Camera driver take RGB565 picture test", "[camera]")
 TEST_CASE("Camera driver take JPEG picture test", "[camera]")
 {
     TEST_ESP_OK(init_camera(20000000, PIXFORMAT_JPEG, FRAMESIZE_QVGA, 2));
-
+    vTaskDelay(500 / portTICK_RATE_MS);
     ESP_LOGI(TAG, "Taking picture...");
     camera_fb_t *pic = esp_camera_fb_get();
     if (pic) {
