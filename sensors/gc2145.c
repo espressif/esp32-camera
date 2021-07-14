@@ -190,9 +190,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize].height;
     uint16_t row_s = (resolution[FRAMESIZE_UXGA].height - h) / 2;
     uint16_t col_s = (resolution[FRAMESIZE_UXGA].width - w) / 2;
-#define SUBSAMPLE_MODE 1
 
-#if SUBSAMPLE_MODE
+#if CONFIG_GC_SENSOR_SUBSAMPLE_MODE
     struct subsample_cfg {
         uint16_t ratio_numerator;
         uint16_t ratio_denominator;
@@ -266,7 +265,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     write_reg(sensor->slv_addr, 0x98, L8(w));
 
 
-#elif CROP_WINDOW_MODE
+#elif CONFIG_GC_SENSOR_WINDOWING_MODE
     write_reg(sensor->slv_addr, 0xfe, 0x00);
 
     write_reg(sensor->slv_addr, P0_CROP_ENABLE, 0x01);

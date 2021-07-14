@@ -74,6 +74,20 @@ menu "Camera configuration"
 
     endchoice
 
+    choice GC_SENSOR_WINDOW_MODE
+        bool "GalaxyCore Sensor Window Mode"
+        depends on (GC2145_SUPPORT || GC032A_SUPPORT || GC0308_SUPPORT)
+        default GC_SENSOR_SUBSAMPLE_MODE
+        help
+            This option determines how to reduce the output size when the resolution you set is less than the maximum resolution.
+            SUBSAMPLE_MODE has a bigger perspective and WINDOWING_MODE has a higher frame rate.
+
+        config GC_SENSOR_WINDOWING_MODE
+            bool "Windowing Mode"
+        config GC_SENSOR_SUBSAMPLE_MODE
+            bool "Subsample Mode"
+    endchoice
+
     choice CAMERA_TASK_PINNED_TO_CORE
         bool "Camera task pinned to core"
         default CAMERA_CORE0

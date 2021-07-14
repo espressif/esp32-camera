@@ -184,9 +184,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize].height;
     uint16_t row_s = (resolution[FRAMESIZE_VGA].height - h) / 2;
     uint16_t col_s = (resolution[FRAMESIZE_VGA].width - w) / 2;
-#define SUBSAMPLE_MODE 1
 
-#if SUBSAMPLE_MODE
+#if CONFIG_GC_SENSOR_SUBSAMPLE_MODE
     struct subsample_cfg {
         uint16_t ratio_numerator;
         uint16_t ratio_denominator;
@@ -246,7 +245,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     write_reg(sensor->slv_addr, 0xfe, 0x00);
 
-#elif WINDOWING_MODE
+#elif CONFIG_GC_SENSOR_WINDOWING_MODE
     write_reg(sensor->slv_addr, 0xfe, 0x00);
 
     write_reg(sensor->slv_addr, 0xf7, col_s / 4);
@@ -264,17 +263,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     write_reg(sensor->slv_addr, 0x0b, H8(w + 8));
     write_reg(sensor->slv_addr, 0x0c, L8(w + 8));
 
-#elif CROP_WINDOW_MODE
-    write_reg(sensor->slv_addr, 0xfe, 0x00);
-
-    write_reg(sensor->slv_addr, 0x46, 0x80 | (H8(row_s) << 4) | (H8(col_s) << 0)); // [7]enable crop, [6]NA, [5:4]crop win y0[9:8], [2:0]crop win x0[10:8]
-    write_reg(sensor->slv_addr, 0x47, L8(row_s));  // crop_win_y0[7:0]
-    write_reg(sensor->slv_addr, 0x48, L8(col_s));  // crop_win_x0[7:0]
-
-    write_reg(sensor->slv_addr, 0x49, H8(h));  // [0]crop_win_height[8]
-    write_reg(sensor->slv_addr, 0x4a, L8(h));  // crop_win_height[7:0]
-    write_reg(sensor->slv_addr, 0x4b, H8(w));  // [0]crop_win_width[8]
-    write_reg(sensor->slv_addr, 0x4c, L8(w));  // crop_win_width[7:0]
 #endif
     if (ret == 0) {
         ESP_LOGD(TAG, "Set framesize to: %ux%u", w, h);
