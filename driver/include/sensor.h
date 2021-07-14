@@ -15,23 +15,14 @@
 extern "C" {
 #endif
 
-// Chip ID Registers
-#define REG_PID        0x0A
-#define REG_VER        0x0B
-#define REG_MIDH       0x1C
-#define REG_MIDL       0x1D
-
-#define REG16_CHIDH     0x300A
-#define REG16_CHIDL     0x300B
-
 typedef enum {
     OV9650_PID = 0x96,
     OV7725_PID = 0x77,
     OV2640_PID = 0x26,
-    OV3660_PID = 0x36,
-    OV5640_PID = 0x56,
+    OV3660_PID = 0x3660,
+    OV5640_PID = 0x5640,
     OV7670_PID = 0x76,
-    NT99141_PID = 0x14,
+    NT99141_PID = 0x1410,
     GC2145_PID = 0x2145,
     GC032A_PID = 0x232a,
     GC0308_PID = 0x9b,
@@ -244,7 +235,7 @@ typedef struct _sensor {
     int  (*set_xclk)            (sensor_t *sensor, int timer, int xclk);
 } sensor_t;
 
-camera_sensor_info_t *esp_camera_get_info_from_pid(uint16_t pid);
+camera_sensor_info_t *esp_camera_sensor_get_info(sensor_id_t *id);
 
 #ifdef __cplusplus
 }

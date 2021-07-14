@@ -9,14 +9,15 @@
 #include "sensor.h"
 
 /**
- * @brief detect sensor pid
+ * @brief Detect sensor pid
  *
- * @param slv_addr sccb address
+ * @param slv_addr SCCB address
+ * @param id Detection result
  * @return
- *     0:       can't detect this sensor
- *     Nonzero: sensor pid
+ *     0:       Can't detect this sensor
+ *     Nonzero: This sensor has been detected
  */
-int gc032a_detect(int slv_addr);
+int gc032a_detect(int slv_addr, sensor_id_t *id);
 
 /**
  * @brief initialize sensor function pointers

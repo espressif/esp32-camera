@@ -403,15 +403,16 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
     return -1;
 }
 
-int gc0308_detect(int slv_addr)
+int gc0308_detect(int slv_addr, sensor_id_t *id)
 {
     if (GC0308_SCCB_ADDR == slv_addr) {
         write_reg(slv_addr, 0xfe, 0x00);
         uint8_t PID = SCCB_Read(slv_addr, 0x00);
         if (GC0308_PID == PID) {
+            id->PID = PID;
             return PID;
         } else {
-            ESP_LOGE(TAG, "PID=0X%X", PID);
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
         }
     }
     return 0;

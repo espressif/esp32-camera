@@ -934,6 +934,23 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
+int nt99141_detect(int slv_addr, sensor_id_t *id)
+{
+    if (NT99141_SCCB_ADDR == slv_addr) {
+        SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
+        uint16_t h = SCCB_Read16(slv_addr, 0x3000);
+        uint16_t l = SCCB_Read16(slv_addr, 0x3001);
+        uint16_t PID = (h<<8) | l;
+        if (NT99141_PID == PID) {
+            id->PID = PID;
+            return PID;
+        } else {
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
+        }
+    }
+    return 0;
+}
+
 static int init_status(sensor_t *sensor)
 {
     sensor->status.brightness = 0;
@@ -964,7 +981,7 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
-int NT99141_init(sensor_t *sensor)
+int nt99141_init(sensor_t *sensor)
 {
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;

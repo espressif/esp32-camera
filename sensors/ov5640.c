@@ -1073,6 +1073,22 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
+int ov5640_detect(int slv_addr, sensor_id_t *id)
+{
+    if (OV5640_SCCB_ADDR == slv_addr) {
+        uint8_t h = SCCB_Read16(slv_addr, 0x300A);
+        uint8_t l = SCCB_Read16(slv_addr, 0x300B);
+        uint16_t PID = (h<<8) | l;
+        if (OV5640_PID == PID) {
+            id->PID = PID;
+            return PID;
+        } else {
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
+        }
+    }
+    return 0;
+}
+
 int ov5640_init(sensor_t *sensor)
 {
     sensor->reset = reset;

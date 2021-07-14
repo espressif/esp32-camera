@@ -502,6 +502,24 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
+int ov7725_detect(int slv_addr, sensor_id_t *id)
+{
+    if (OV7725_SCCB_ADDR == slv_addr) {
+        SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
+        uint16_t PID = SCCB_Read(slv_addr, 0x0A);
+        if (OV7725_PID == PID) {
+            id->PID = PID;
+            id->VER = SCCB_Read(slv_addr, REG_VER);
+            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
+            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
+            return PID;
+        } else {
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
+        }
+    }
+    return 0;
+}
+
 int ov7725_init(sensor_t *sensor)
 {
     // Set function pointers

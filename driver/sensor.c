@@ -41,10 +41,10 @@ const resolution_info_t resolution[FRAMESIZE_INVALID] = {
     { 2560, 1920, ASPECT_RATIO_4X3   }, /* QSXGA  */
 };
 
-camera_sensor_info_t *esp_camera_get_info_from_pid(uint16_t pid)
+camera_sensor_info_t *esp_camera_sensor_get_info(sensor_id_t *id)
 {
     for (int i = 0; i < CAMERA_MODEL_MAX; i++) {
-        if (pid == camera_sensor[i].pid) {
+        if (id->PID == camera_sensor[i].pid) {
             return (camera_sensor_info_t *)&camera_sensor[i];
         }
     }

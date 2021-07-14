@@ -6,8 +6,6 @@
 #define REG_DLY 0xffff
 #define REGLIST_TAIL 0x0000 /* Array end token */
 
-/*默认寄存器配置*/
-
 static const uint16_t gc0308_sensor_default_regs[][2] = {
     {0xfe, 0x00},
     {0xec, 0x20},

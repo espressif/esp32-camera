@@ -146,174 +146,122 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
     s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
 
     /**
-     * Read sensor ID
+     * Read sensor ID and then initialize sensor
+     * Attention: Some sensors have the same SCCB address. Therefore, several attempts may be made in the detection process
      */
     sensor_id_t *id = &s_state->sensor.id;
     do {
-        if (slv_addr == OV2640_SCCB_ADDR) {
-            SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
-            id->PID = SCCB_Read(slv_addr, REG_PID);
-            id->VER = SCCB_Read(slv_addr, REG_VER);
-            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
-            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
-            if (OV2640_PID == id->PID) {
-                break;
-            }
 
-        }
+#if CONFIG_OV7725_SUPPORT
         if (slv_addr == OV7725_SCCB_ADDR) {
-            SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
-            id->PID = SCCB_Read(slv_addr, REG_PID);
-            id->VER = SCCB_Read(slv_addr, REG_VER);
-            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
-            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
-            if (OV7725_PID == id->PID) {
+            if (ov7725_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected OV7725 camera");
+                ov7725_init(&s_state->sensor);
                 break;
             }
         }
+#endif
+#if CONFIG_OV7670_SUPPORT
         if (slv_addr == OV7670_SCCB_ADDR) {
-            SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
-            id->PID = SCCB_Read(slv_addr, REG_PID);
-            id->VER = SCCB_Read(slv_addr, REG_VER);
-            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
-            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
-            if (OV7670_PID == id->PID) {
+            if (ov7670_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected OV7670 camera");
+                ov7670_init(&s_state->sensor);
                 break;
             }
         }
-        if (slv_addr == OV5640_SCCB_ADDR) {
-
-            id->PID = SCCB_Read16(slv_addr, REG16_CHIDH);
-            id->VER = SCCB_Read16(slv_addr, REG16_CHIDL);
-            if (OV5640_PID == id->PID) {
+#endif
+#if CONFIG_OV2640_SUPPORT
+        if (slv_addr == OV2640_SCCB_ADDR) {
+            if (ov2640_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected OV2640 camera");
+                ov2640_init(&s_state->sensor);
                 break;
             }
         }
+#endif
+#if CONFIG_OV3660_SUPPORT
         if (slv_addr == OV3660_SCCB_ADDR) {
-
-            id->PID = SCCB_Read16(slv_addr, REG16_CHIDH);
-            id->VER = SCCB_Read16(slv_addr, REG16_CHIDL);
-            if (OV3660_PID == id->PID) {
+            if (ov3660_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected OV3660 camera");
+                ov3660_init(&s_state->sensor);
                 break;
             }
         }
-        if (slv_addr == GC2145_SCCB_ADDR) {
-            id->PID = gc2145_detect(slv_addr);
-            if (GC2145_PID == id->PID) {
+#endif
+#if CONFIG_OV5640_SUPPORT
+        if (slv_addr == OV5640_SCCB_ADDR) {
+            if (ov5640_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected OV5640 camera");
+                ov5640_init(&s_state->sensor);
                 break;
             }
         }
+#endif
+#if CONFIG_NT99141_SUPPORT
         if (slv_addr == NT99141_SCCB_ADDR) {
-            SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
-            id->PID = SCCB_Read16(slv_addr, 0x3000);
-            id->VER = SCCB_Read16(slv_addr, 0x3001);
-            if (NT99141_PID == id->PID) {
+            if (nt99141_detect(slv_addr, id)) {
                 if (config->xclk_freq_hz > 10000000) {
                     ESP_LOGE(TAG, "NT99141: only XCLK under 10MHz is supported, and XCLK is now set to 10M");
                     s_state->sensor.xclk_freq_hz = 10000000;
                     xclk_timer_conf(config->ledc_timer, s_state->sensor.xclk_freq_hz);
                 }
+                ESP_LOGI(TAG, "Detected NT99141 camera");
+                nt99141_init(&s_state->sensor);
                 break;
             }
         }
-        if (slv_addr == GC032A_SCCB_ADDR) {
-            id->PID = gc032a_detect(slv_addr);
-            if (GC032A_PID == id->PID) {
-                break;
-            }
-        }
-        if (slv_addr == GC0308_SCCB_ADDR) {
-            id->PID = gc0308_detect(slv_addr);
-            if (GC0308_PID == id->PID) {
-                break;
-            }
-        }
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        
-    } while (0);
-    ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-                 id->PID, id->VER, id->MIDH, id->MIDL);
-
-    /**
-     * Initialize sensor according to sensor ID
-     */
-    switch (id->PID) {
-#if CONFIG_OV2640_SUPPORT
-    case OV2640_PID:
-        *out_camera_model = CAMERA_OV2640;
-        ESP_LOGI(TAG, "Detected OV2640 camera");
-        ov2640_init(&s_state->sensor);
-        break;
-#endif
-#if CONFIG_OV7725_SUPPORT
-    case OV7725_PID:
-        *out_camera_model = CAMERA_OV7725;
-        ESP_LOGI(TAG, "Detected OV7725 camera");
-        ov7725_init(&s_state->sensor);
-        break;
-#endif
-#if CONFIG_OV3660_SUPPORT
-    case OV3660_PID:
-        *out_camera_model = CAMERA_OV3660;
-        ESP_LOGI(TAG, "Detected OV3660 camera");
-        ov3660_init(&s_state->sensor);
-        break;
-#endif
-#if CONFIG_OV5640_SUPPORT
-    case OV5640_PID:
-        *out_camera_model = CAMERA_OV5640;
-        ESP_LOGI(TAG, "Detected OV5640 camera");
-        ov5640_init(&s_state->sensor);
-        break;
-#endif
-#if CONFIG_OV7670_SUPPORT
-    case OV7670_PID:
-        *out_camera_model = CAMERA_OV7670;
-        ESP_LOGI(TAG, "Detected OV7670 camera");
-        ov7670_init(&s_state->sensor);
-        break;
-#endif
-#if CONFIG_NT99141_SUPPORT
-    case NT99141_PID:
-        *out_camera_model = CAMERA_NT99141;
-        ESP_LOGI(TAG, "Detected NT99141 camera");
-        NT99141_init(&s_state->sensor);
-        break;
 #endif
 #if CONFIG_GC2145_SUPPORT
-    case GC2145_PID:
-        *out_camera_model = CAMERA_GC2145;
-        ESP_LOGI(TAG, "Detected GC2145 camera");
-        gc2145_init(&s_state->sensor);
-        break;
+        if (slv_addr == GC2145_SCCB_ADDR) {
+            if (gc2145_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected GC2145 camera");
+                gc2145_init(&s_state->sensor);
+                break;
+            }
+        }
 #endif
 #if CONFIG_GC032A_SUPPORT
-    case GC032A_PID:
-        *out_camera_model = CAMERA_GC032A;
-        ESP_LOGI(TAG, "Detected GC032A camera");
-        gc032a_init(&s_state->sensor);
-        break;
+        if (slv_addr == GC032A_SCCB_ADDR) {
+            if (gc032a_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected GC032A camera");
+                gc032a_init(&s_state->sensor);
+                break;
+            }
+        }
 #endif
 #if CONFIG_GC0308_SUPPORT
-    case GC0308_PID:
-        *out_camera_model = CAMERA_GC0308;
-        ESP_LOGI(TAG, "Detected GC0308 camera");
-        gc0308_init(&s_state->sensor);
-        break;
+        if (slv_addr == GC0308_SCCB_ADDR) {
+            if (gc0308_detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Detected GC0308 camera");
+                gc0308_init(&s_state->sensor);
+                break;
+            }
+        }
 #endif
-    default:
+        camera_sensor_info_t *info = esp_camera_sensor_get_info(id);
+        if (NULL != info) {
+            *out_camera_model = info->model;
+        }
+
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+
+        /**
+         * If no supported sensors are detected, run here
+         */
         id->PID = 0;
         CAMERA_DISABLE_OUT_CLOCK();
         ESP_LOGE(TAG, "Detected camera not supported.");
         return ESP_ERR_NOT_SUPPORTED;
-    }
+
+    } while (0);
+    ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+             id->PID, id->VER, id->MIDH, id->MIDL);
 
     ESP_LOGD(TAG, "Doing SW reset of sensor");
     s_state->sensor.reset(&s_state->sensor);
 
     return ESP_OK;
 }
-
 
 esp_err_t esp_camera_init(const camera_config_t *config)
 {
@@ -353,7 +301,7 @@ esp_err_t esp_camera_init(const camera_config_t *config)
 
     s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;
-    // ESP_LOGD(TAG, "Setting frame size to %dx%d", s_state->width, s_state->height);
+    ESP_LOGD(TAG, "Setting frame size to %dx%d", resolution[frame_size].width, resolution[frame_size].height);
     if (s_state->sensor.set_framesize(&s_state->sensor, frame_size) != 0) {
         ESP_LOGE(TAG, "Failed to set frame size");
         err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;

@@ -228,7 +228,7 @@ static void camera_performance_test(uint32_t xclk_freq, uint32_t pic_num)
     //detect sensor information
     TEST_ESP_OK(init_camera(20000000, PIXFORMAT_RGB565, FRAMESIZE_QVGA, 2));
     sensor_t *s = esp_camera_sensor_get();
-    camera_sensor_info_t *info = esp_camera_get_info_from_pid(s->id.PID);
+    camera_sensor_info_t *info = esp_camera_sensor_get_info(&s->id);
     TEST_ASSERT_NOT_NULL(info);
     TEST_ESP_OK(esp_camera_deinit());
     vTaskDelay(500 / portTICK_RATE_MS);

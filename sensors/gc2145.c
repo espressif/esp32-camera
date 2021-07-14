@@ -412,16 +412,17 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
     return -1;
 }
 
-int gc2145_detect(int slv_addr)
+int gc2145_detect(int slv_addr, sensor_id_t *id)
 {
     if (GC2145_SCCB_ADDR == slv_addr) {
         uint8_t MIDL = SCCB_Read(slv_addr, CHIP_ID_LOW);
         uint8_t MIDH = SCCB_Read(slv_addr, CHIP_ID_HIGH);
         uint16_t PID = MIDH << 8 | MIDL;
         if (GC2145_PID == PID) {
+            id->PID = PID;
             return PID;
         } else {
-            ESP_LOGE(TAG, "PID=0X%X", PID);
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
         }
     }
     return 0;
