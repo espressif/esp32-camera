@@ -95,6 +95,7 @@ typedef enum {
 
 typedef struct {
     const camera_model_t model;
+    const char *name;
     const camera_sccb_addr_t sccb_addr;
     const camera_pid_t pid;
     const framesize_t max_size;
