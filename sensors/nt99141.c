@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sccb.h"
+#include "xclk.h"
 #include "nt99141.h"
 #include "nt99141_regs.h"
 #include "nt99141_settings.h"
@@ -920,7 +921,6 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
     return set_pll(sensor, bypass > 0, multiplier, sys_div, pre_div, root_2x > 0, seld5, pclk_manual > 0, pclk_div);
 }
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
@@ -932,6 +932,23 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     sensor->xclk_freq_hz = xclk * 1000000U;
     ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
     return ret;
+}
+
+int nt99141_detect(int slv_addr, sensor_id_t *id)
+{
+    if (NT99141_SCCB_ADDR == slv_addr) {
+        SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
+        uint16_t h = SCCB_Read16(slv_addr, 0x3000);
+        uint16_t l = SCCB_Read16(slv_addr, 0x3001);
+        uint16_t PID = (h<<8) | l;
+        if (NT99141_PID == PID) {
+            id->PID = PID;
+            return PID;
+        } else {
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
+        }
+    }
+    return 0;
 }
 
 static int init_status(sensor_t *sensor)
@@ -964,7 +981,7 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
-int NT99141_init(sensor_t *sensor)
+int nt99141_init(sensor_t *sensor)
 {
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;

@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sccb.h"
+#include "xclk.h"
 #include "ov2640.h"
 #include "ov2640_regs.h"
 #include "ov2640_settings.h"
@@ -494,7 +495,6 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
     return -1;
 }
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
@@ -542,6 +542,24 @@ static int init_status(sensor_t *sensor){
 
     sensor->status.sharpness = 0;//not supported
     sensor->status.denoise = 0;
+    return 0;
+}
+
+int ov2640_detect(int slv_addr, sensor_id_t *id)
+{
+    if (OV2640_SCCB_ADDR == slv_addr) {
+        SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
+        uint16_t PID = SCCB_Read(slv_addr, 0x0A);
+        if (OV2640_PID == PID) {
+            id->PID = PID;
+            id->VER = SCCB_Read(slv_addr, REG_VER);
+            id->MIDL = SCCB_Read(slv_addr, REG_MIDL);
+            id->MIDH = SCCB_Read(slv_addr, REG_MIDH);
+            return PID;
+        } else {
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
+        }
+    }
     return 0;
 }
 

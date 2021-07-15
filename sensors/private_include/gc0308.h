@@ -1,8 +1,10 @@
-
-#ifndef __OV5640_H__
-#define __OV5640_H__
+#pragma once
 
 #include "sensor.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Detect sensor pid
@@ -13,7 +15,7 @@
  *     0:       Can't detect this sensor
  *     Nonzero: This sensor has been detected
  */
-int ov5640_detect(int slv_addr, sensor_id_t *id);
+int gc0308_detect(int slv_addr, sensor_id_t *id);
 
 /**
  * @brief initialize sensor function pointers
@@ -22,6 +24,8 @@ int ov5640_detect(int slv_addr, sensor_id_t *id);
  * @return
  *      Always 0
  */
-int ov5640_init(sensor_t *sensor);
+int gc0308_init(sensor_t *sensor);
 
-#endif // __OV5640_H__
+#ifdef __cplusplus
+}
+#endif

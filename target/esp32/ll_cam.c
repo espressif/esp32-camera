@@ -196,7 +196,7 @@ static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
     cam_obj_t *cam = (cam_obj_t *)arg;
     BaseType_t HPTaskAwoken = pdFALSE;
     // filter
-    esp_rom_delay_us(1);
+    ets_delay_us(1);
     if (gpio_ll_get_level(&GPIO, cam->vsync_pin) == !cam->vsync_invert) {
         ll_cam_send_event(cam, CAM_VSYNC_EVENT, &HPTaskAwoken);
         if (HPTaskAwoken == pdTRUE) {
@@ -382,13 +382,13 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam)
 }
 
 static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
-    size_t dma_half_buffer_max = 16 * 1024 / cam->dma_bytes_per_item;
+    size_t dma_half_buffer_max = CONFIG_CAMERA_DMA_BUFFER_SIZE_MAX / 2 / cam->dma_bytes_per_item;
     size_t dma_buffer_max = 2 * dma_half_buffer_max;
     size_t node_max = LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE / cam->dma_bytes_per_item;
 
     size_t line_width = cam->width * cam->in_bytes_per_pixel;
     size_t image_size = cam->height * line_width;
-    if (image_size > (2 * 1024 * 1024) || (line_width > dma_half_buffer_max)) {
+    if (image_size > (4 * 1024 * 1024) || (line_width > dma_half_buffer_max)) {
         ESP_LOGE(TAG, "Resolution too high");
         return 0;
     }
@@ -472,7 +472,7 @@ size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, 
     return r;
 }
 
-esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint8_t sensor_pid)
+esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint16_t sensor_pid)
 {
     if (pix_format == PIXFORMAT_GRAYSCALE) {
         if (sensor_pid == OV3660_PID || sensor_pid == OV5640_PID || sensor_pid == NT99141_PID) {
@@ -510,10 +510,6 @@ esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_
             cam->in_bytes_per_pixel = 2;       // camera sends YU/YV
             cam->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
     } else if (pix_format == PIXFORMAT_JPEG) {
-        if (sensor_pid != OV2640_PID && sensor_pid != OV3660_PID && sensor_pid != OV5640_PID  && sensor_pid != NT99141_PID) {
-            ESP_LOGE(TAG, "JPEG format is not supported on this sensor");
-            return ESP_ERR_NOT_SUPPORTED;
-        }
         cam->in_bytes_per_pixel = 1;
         cam->fb_bytes_per_pixel = 1;
         dma_filter = ll_cam_dma_filter_jpeg;

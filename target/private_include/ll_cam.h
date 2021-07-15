@@ -29,7 +29,6 @@
 #endif
 #include "esp_log.h"
 #include "esp_camera.h"
-#include "camera_common.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -130,8 +129,8 @@ esp_err_t ll_cam_init_isr(cam_obj_t *cam);
 void ll_cam_do_vsync(cam_obj_t *cam);
 uint8_t ll_cam_get_dma_align(cam_obj_t *cam);
 bool ll_cam_dma_sizes(cam_obj_t *cam);
-size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len);
-esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint8_t sensor_pid);
+size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len);
+esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint16_t sensor_pid);
 
 // implemented in cam_hal
 void ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType_t * HPTaskAwoken);

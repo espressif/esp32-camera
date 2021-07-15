@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sccb.h"
+#include "xclk.h"
 #include "ov5640.h"
 #include "ov5640_regs.h"
 #include "ov5640_settings.h"
@@ -1034,7 +1035,6 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
     return ret;
 }
 
-esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz);
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
@@ -1070,6 +1070,22 @@ static int init_status(sensor_t *sensor)
     sensor->status.agc_gain = get_agc_gain(sensor);
     sensor->status.aec_value = get_aec_value(sensor);
     sensor->status.aec2 = check_reg_mask(sensor->slv_addr, 0x3a00, 0x04);
+    return 0;
+}
+
+int ov5640_detect(int slv_addr, sensor_id_t *id)
+{
+    if (OV5640_SCCB_ADDR == slv_addr) {
+        uint8_t h = SCCB_Read16(slv_addr, 0x300A);
+        uint8_t l = SCCB_Read16(slv_addr, 0x300B);
+        uint16_t PID = (h<<8) | l;
+        if (OV5640_PID == PID) {
+            id->PID = PID;
+            return PID;
+        } else {
+            ESP_LOGI(TAG, "Mismatch PID=0x%x", PID);
+        }
+    }
     return 0;
 }
 
