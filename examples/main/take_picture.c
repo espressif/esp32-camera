@@ -29,7 +29,6 @@
 
 // ================================ CODE ======================================
 
-#include <esp_event_loop.h>
 #include <esp_log.h>
 #include <esp_system.h>
 #include <nvs_flash.h>
@@ -40,6 +39,8 @@
 #include "freertos/task.h"
 
 #include "esp_camera.h"
+
+#define BOARD_WROVER_KIT 1
 
 // WROVER-KIT PIN Map
 #ifdef BOARD_WROVER_KIT
@@ -113,8 +114,8 @@ static camera_config_t camera_config = {
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
 
-    .pixel_format = PIXFORMAT_JPEG, //YUV422,GRAYSCALE,RGB565,JPEG
-    .frame_size = FRAMESIZE_VGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+    .pixel_format = PIXFORMAT_RGB565, //YUV422,GRAYSCALE,RGB565,JPEG
+    .frame_size = FRAMESIZE_QVGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
 
     .jpeg_quality = 12, //0-63 lower number means higher quality
     .fb_count = 1,       //if more than one, i2s runs in continuous mode. Use only with JPEG
@@ -136,7 +137,9 @@ static esp_err_t init_camera()
 
 void app_main()
 {
-    init_camera();
+    if(ESP_OK != init_camera()) {
+        return;
+    }
 
     while (1)
     {

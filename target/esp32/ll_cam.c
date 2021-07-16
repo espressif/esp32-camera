@@ -16,10 +16,9 @@
 #include <string.h>
 #include "soc/i2s_struct.h"
 #include "esp_idf_version.h"
-#if ESP_IDF_VERSION_MAJOR >= 4
+#if (ESP_IDF_VERSION_MAJOR >= 4) && (ESP_IDF_VERSION_MINOR > 1)
 #include "hal/gpio_ll.h"
 #else
-#include "rom/ets_sys.h"
 #include "soc/gpio_periph.h"
 #define esp_rom_delay_us ets_delay_us
 static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)

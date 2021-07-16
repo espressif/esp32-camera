@@ -16,6 +16,7 @@
 
 #include <stdint.h>
 #include "sdkconfig.h"
+#include "esp_idf_version.h"
 #if CONFIG_IDF_TARGET_ESP32
 #if ESP_IDF_VERSION_MAJOR >= 4
 #include "esp32/rom/lldesc.h"
