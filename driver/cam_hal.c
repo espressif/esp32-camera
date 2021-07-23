@@ -235,7 +235,7 @@ static lldesc_t * allocate_dma_descriptors(uint32_t count, uint16_t size, uint8_
     return dma;
 }
 
-static esp_err_t cam_dma_config()
+static esp_err_t cam_dma_config(const camera_config_t *config)
 {
     bool ret = ll_cam_dma_sizes(cam_obj);
     if (0 == ret) {
@@ -262,12 +262,21 @@ static esp_err_t cam_dma_config()
             fb_size = cam_obj->recv_size;
         }
     }
+
+    /* Allocate memeory for frame buffer */
+    size_t alloc_size = fb_size * sizeof(uint8_t) + dma_align;
+    uint32_t _caps = MALLOC_CAP_8BIT;
+    if (CAMERA_FB_IN_DRAM == config->fb_location) {
+        _caps |= MALLOC_CAP_INTERNAL;
+    } else {
+        _caps |= MALLOC_CAP_SPIRAM;
+    }
     for (int x = 0; x < cam_obj->frame_cnt; x++) {
         cam_obj->frames[x].dma = NULL;
         cam_obj->frames[x].fb_offset = 0;
         cam_obj->frames[x].en = 0;
-        ESP_LOGI(TAG, "Allocating %d Byte frame buffer in PSRAM", fb_size * sizeof(uint8_t) + dma_align);
-        cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_malloc(fb_size * sizeof(uint8_t) + dma_align, MALLOC_CAP_SPIRAM);
+        ESP_LOGI(TAG, "Allocating %d Byte frame buffer in %s", alloc_size, _caps & MALLOC_CAP_SPIRAM ? "PSRAM" : "OnBoard RAM");
+        cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_malloc(alloc_size, _caps);
         CAM_CHECK(cam_obj->frames[x].fb.buf != NULL, "frame buffer malloc failed", ESP_FAIL);
         if (cam_obj->psram_mode) {
             //align PSRAM buffer. TODO: save the offset so proper address can be freed later
@@ -326,7 +335,7 @@ err:
     return ESP_FAIL;
 }
 
-esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint8_t sensor_pid)
+esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint16_t sensor_pid)
 {
     CAM_CHECK(NULL != config, "config pointer is invalid", ESP_ERR_INVALID_ARG);
     esp_err_t ret = ESP_OK;
@@ -351,7 +360,7 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
         cam_obj->fb_size = cam_obj->width * cam_obj->height * cam_obj->fb_bytes_per_pixel;
     }
     
-    ret = cam_dma_config();
+    ret = cam_dma_config(config);
     CAM_CHECK_GOTO(ret == ESP_OK, "cam_dma_config failed", err);
 
     cam_obj->event_queue = xQueueCreate(cam_obj->dma_half_buffer_cnt - 1, sizeof(cam_event_t));
