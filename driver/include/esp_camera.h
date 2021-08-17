@@ -187,6 +187,12 @@ esp_err_t esp_camera_save_to_nvs(const char *key);
  */
 esp_err_t esp_camera_load_from_nvs(const char *key);
 
+// Enable camera clock
+esp_err_t esp_camera_enable_xclk(const camera_config_t* config);
+
+// Diseble camera clock
+void esp_camera_disable_xclk();
+
 #ifdef __cplusplus
 }
 #endif

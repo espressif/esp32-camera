@@ -1593,3 +1593,13 @@ esp_err_t esp_camera_load_from_nvs(const char *key)
       return ret;
   }
 }
+
+esp_err_t esp_camera_enable_xclk(const camera_config_t* config) 
+{
+    return camera_enable_out_clock(config);
+}
+
+void esp_camera_disable_xclk() 
+{
+    camera_disable_out_clock();
+}
