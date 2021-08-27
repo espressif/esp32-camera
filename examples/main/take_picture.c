@@ -7,6 +7,7 @@
 // 1. Board setup (Uncomment):
 // #define BOARD_WROVER_KIT
 // #define BOARD_ESP32CAM_AITHINKER
+// #define BOARD_M5CAMERA_TIMERCAM_X_F_CAMERA_DIY_KIT_UNIT_CAM_M5STACK
 
 /**
  * 2. Kconfig setup
@@ -85,6 +86,35 @@
 #define CAM_PIN_VSYNC 25
 #define CAM_PIN_HREF 23
 #define CAM_PIN_PCLK 22
+
+#endif
+
+// M5STACK camera series PIN Map
+// M5Camera        shell and battery
+// TimerCAM        no shell no battery
+// TimerCAM    X   DFOV 66.5 with shell and battery
+// TimerCAM    F   DFOV 120 with shell and battery
+// Camera DIY KIT  DIY shell with 2 lens no battery
+// UNIT CAM        no shell no battery
+#ifdef BOARD_M5CAMERA_TIMERCAM_X_F_CAMERA_DIY_KIT_UNIT_CAM_M5STACK
+
+#define CAM_PIN_PWDN -1  //power down is not used
+#define CAM_PIN_RESET 15 //software reset will be performed
+#define CAM_PIN_XCLK 27
+#define CAM_PIN_SIOD 25
+#define CAM_PIN_SIOC 23
+
+#define CAM_PIN_D7 19
+#define CAM_PIN_D6 36
+#define CAM_PIN_D5 18
+#define CAM_PIN_D4 39
+#define CAM_PIN_D3 5
+#define CAM_PIN_D2 34
+#define CAM_PIN_D1 35
+#define CAM_PIN_D0 32
+#define CAM_PIN_VSYNC 22
+#define CAM_PIN_HREF 26
+#define CAM_PIN_PCLK 21
 
 #endif
 
