@@ -16,7 +16,10 @@
 #include <string.h>
 #include "soc/system_reg.h"
 #include "soc/lcd_cam_struct.h"
+#include "soc/lcd_cam_reg.h"
 #include "soc/gdma_struct.h"
+#include "soc/gdma_periph.h"
+#include "soc/gdma_reg.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
 
@@ -35,7 +38,7 @@ static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
 
     LCD_CAM.lc_dma_int_clr.val = status.val;
 
-    if (status.cam_vsync) {
+    if (status.cam_vsync_int_st) {
         ll_cam_send_event(cam, CAM_VSYNC_EVENT, &HPTaskAwoken);
     }
 
@@ -88,6 +91,10 @@ esp_err_t ll_cam_deinit(cam_obj_t *cam)
         cam->dma_intr_handle = NULL;
     }
     GDMA.channel[cam->dma_num].in.link.addr = 0x0;
+
+    LCD_CAM.cam_ctrl1.cam_start = 0;
+    LCD_CAM.cam_ctrl1.cam_reset = 1;
+    LCD_CAM.cam_ctrl1.cam_reset = 0;
     return ESP_OK;
 }
 
@@ -216,11 +223,11 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
 
 void ll_cam_vsync_intr_enable(cam_obj_t *cam, bool en)
 {
-    LCD_CAM.lc_dma_int_clr.cam_vsync = 1;
+    LCD_CAM.lc_dma_int_clr.cam_vsync_int_clr = 1;
     if (en) {
-        LCD_CAM.lc_dma_int_ena.cam_vsync = 1;
+        LCD_CAM.lc_dma_int_ena.cam_vsync_int_ena = 1;
     } else {
-        LCD_CAM.lc_dma_int_ena.cam_vsync = 0;
+        LCD_CAM.lc_dma_int_ena.cam_vsync_int_ena = 0;
     }
 }
 
@@ -262,12 +269,24 @@ esp_err_t ll_cam_set_pin(cam_obj_t *cam, const camera_config_t *config)
 esp_err_t ll_cam_init_isr(cam_obj_t *cam)
 {
 	esp_err_t ret = ESP_OK;
-	ret = esp_intr_alloc((ETS_DMA_IN_CH0_INTR_SOURCE + cam->dma_num), ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, ll_cam_dma_isr, cam, &cam->dma_intr_handle);
-	if (ret != ESP_OK) {
+    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[cam->dma_num].rx_irq_id,
+                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                                     (uint32_t)&GDMA.channel[cam->dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
+                                     ll_cam_dma_isr, cam, &cam->dma_intr_handle);
+    if (ret != ESP_OK) {
         ESP_LOGE(TAG, "DMA interrupt allocation of camera failed");
 		return ret;
 	}
-	return esp_intr_alloc(ETS_LCD_CAM_INTR_SOURCE, ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM, ll_cam_vsync_isr, cam, &cam->cam_intr_handle);
+
+    ret = esp_intr_alloc_intrstatus(ETS_LCD_CAM_INTR_SOURCE,
+                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                                     (uint32_t)&LCD_CAM.lc_dma_int_st.val, LCD_CAM_CAM_VSYNC_INT_ST_M,
+                                     ll_cam_vsync_isr, cam, &cam->cam_intr_handle);
+	if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "LCD_CAM interrupt allocation of camera failed");
+		return ret;
+	}
+    return ESP_OK;
 }
 
 void ll_cam_do_vsync(cam_obj_t *cam)
