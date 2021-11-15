@@ -35,6 +35,10 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
+#if __has_include("esp_private/periph_ctrl.h")
+# include "esp_private/periph_ctrl.h"
+#endif
+
 #define CAMERA_DBG_PIN_ENABLE 0
 #if CAMERA_DBG_PIN_ENABLE
     #if CONFIG_IDF_TARGET_ESP32
