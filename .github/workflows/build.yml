@@ -68,18 +68,6 @@ jobs:
       with:
         path: 'examples'
 
-  build-release-v4_4:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@release-v4.4
-      with:
-        path: 'examples'
-
   build-release-v3_3:
     runs-on: ubuntu-latest
     steps:
