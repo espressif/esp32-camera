@@ -59,10 +59,10 @@ static const uint8_t default_regs[][2] = {
     {COM8,          0xF0},
     {COM6,          0xC5},
     {COM9,          0x11},
-    {COM10,         COM10_VSYNC_NEG | COM10_PCLK_MASK}, //Invert VSYNC and MASK PCLK
+    {COM10,         COM10_VSYNC_NEG | COM10_PCLK_FREE}, //Invert VSYNC and MASK PCLK
     {BDBASE,        0x7F},
     {DBSTEP,        0x03},
-    {AEW,           0x96},
+    {AEW,           0x75},
     {AEB,           0x64},
     {VPT,           0xA1},
     {EXHCL,         0x00},
