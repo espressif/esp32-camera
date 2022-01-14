@@ -16,7 +16,7 @@ jobs:
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@latest
       with:
-        path: 'examples'
+        path: 'examples/basic'
 
   build-release-v4_0:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v4.0
       with:
-        path: 'examples'
+        path: 'examples/basic'
 
   build-release-v4_1:
     runs-on: ubuntu-latest
@@ -40,7 +40,7 @@ jobs:
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v4.1
       with:
-        path: 'examples'
+        path: 'examples/basic'
 
   build-release-v4_2:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v4.2
       with:
-        path: 'examples'
+        path: 'examples/basic'
 
   build-release-v4_3:
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v4.3
       with:
-        path: 'examples'
+        path: 'examples/basic'
 
   build-release-v3_3:
     runs-on: ubuntu-latest
@@ -76,4 +76,4 @@ jobs:
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v3.3
       with:
-        path: 'examples'
+        path: 'examples/basic'
