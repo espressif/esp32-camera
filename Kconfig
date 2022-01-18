@@ -74,6 +74,14 @@ menu "Camera configuration"
 
     endchoice
 
+    config SCCB_CLK_FREQ
+    int "SCCB clk frequency"
+    default 100000
+    range 100000 400000
+    help
+        Increasing this value can reduce the initialization time of the sensor.
+        Please refer to the relevant instructions of the sensor to adjust the value.
+    
     choice GC_SENSOR_WINDOW_MODE
         bool "GalaxyCore Sensor Window Mode"
         depends on (GC2145_SUPPORT || GC032A_SUPPORT || GC0308_SUPPORT)
