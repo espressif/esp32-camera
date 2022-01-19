@@ -113,6 +113,8 @@ typedef struct {
     int pin_pclk;                   /*!< GPIO pin for camera PCLK line */
 
     int xclk_freq_hz;               /*!< Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode */
+    int xclk_2nd_freq_hz;           /*!< Frequency of the XCLK can be changed after each image is taken, this will allow a pseudo clock-dither to
+                                         occur on the xclk signal, if not required then leave as 0 */
 
     ledc_timer_t ledc_timer;        /*!< LEDC timer to be used for generating XCLK  */
     ledc_channel_t ledc_channel;    /*!< LEDC channel to be used for generating XCLK  */
@@ -205,6 +207,8 @@ esp_err_t esp_camera_save_to_nvs(const char *key);
  * @param key   A unique nvs key name for the camera settings 
  */
 esp_err_t esp_camera_load_from_nvs(const char *key);
+
+esp_err_t esp_camera_change_xclk_speed(uint32_t clk_speed);
 
 #ifdef __cplusplus
 }

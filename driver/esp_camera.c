@@ -74,6 +74,9 @@ typedef struct {
 static const char *CAMERA_SENSOR_NVS_KEY = "sensor";
 static const char *CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
 static camera_state_t *s_state = NULL;
+static int xclk_freq_c = 0;
+static int xclk_freq_hz = 0;
+static int xclk_2nd_freq_hz = 0;
 
 #if CONFIG_IDF_TARGET_ESP32S3 // LCD_CAM module of ESP32-S3 will generate xclk
 #define CAMERA_ENABLE_OUT_CLOCK(v)
@@ -183,6 +186,13 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
 
     ESP_LOGI(TAG, "Detected camera at address=0x%02x", slv_addr);
     s_state->sensor.slv_addr = slv_addr;
+    xclk_freq_hz = config->xclk_freq_hz;
+    xclk_2nd_freq_hz = config->xclk_2nd_freq_hz;
+    xclk_freq_c = xclk_freq_hz;
+    if (xclk_2nd_freq_hz != 0)
+    {
+        ESP_LOGD(TAG, "2nd clock frequency on config, clock will 'dither' between %d and %d", xclk_freq_hz, xclk_2nd_freq_hz);
+    }
     s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
 
     /**
@@ -313,6 +323,20 @@ camera_fb_t *esp_camera_fb_get()
         fb->height = resolution[s_state->sensor.status.framesize].height;
         fb->format = s_state->sensor.pixformat;
     }
+
+    if (xclk_2nd_freq_hz != 0)
+    {
+        if (xclk_freq_c == xclk_freq_hz)
+        {
+            xclk_freq_c = xclk_2nd_freq_hz;
+        }
+        else
+        {
+            xclk_freq_c = xclk_freq_hz;
+        }
+        (void) camera_change_clock_freq(xclk_freq_c);
+    }
+
     return fb;
 }
 

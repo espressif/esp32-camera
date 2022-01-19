@@ -62,3 +62,8 @@ void camera_disable_out_clock()
 {
     ledc_stop(LEDC_LOW_SPEED_MODE, g_ledc_channel, 0);
 }
+
+esp_err_t camera_change_clock_freq(uint32_t clk_freq)
+{
+    return ledc_set_freq(LEDC_LOW_SPEED_MODE, g_ledc_channel, clk_freq);
+}
