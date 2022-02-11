@@ -233,7 +233,7 @@ static void IRAM_ATTR ll_cam_dma_isr(void *arg)
     //DBG_PIN_SET(0);
 }
 
-bool ll_cam_stop(cam_obj_t *cam)
+bool IRAM_ATTR ll_cam_stop(cam_obj_t *cam)
 {
     I2S0.conf.rx_start = 0;
     I2S_ISR_DISABLE(in_suc_eof);
