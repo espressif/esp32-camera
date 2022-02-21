@@ -70,7 +70,7 @@ static void IRAM_ATTR ll_cam_dma_isr(void *arg)
     }
 }
 
-bool ll_cam_stop(cam_obj_t *cam)
+bool IRAM_ATTR ll_cam_stop(cam_obj_t *cam)
 {
     I2S0.conf.rx_start = 0;
 
