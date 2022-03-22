@@ -132,5 +132,15 @@ menu "Camera configuration"
         help
             Maximum value of DMA buffer
             Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent
+    
+    config JPEG_FORMAT_EXTRA_BUFFER_SIZE
+        int "JPEG format extra buffer size"
+        range 0 9999999
+        default 0
+        help
+            When JPEG format is used, the default size of frame buffer is (wight*hight\5).
+            In some cases, the default frame buffer may not have enough space to hold all data.
+            This option could be used to increase the size of frame buffer to (wight*hight\5 + JPEG_FORMAT_EXTRA_BUFFER_SIZE).
+            It is recommended that you first use a large space to obtain the image, and then update the value according to the actual size of the image.
 
 endmenu

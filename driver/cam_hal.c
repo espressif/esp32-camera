@@ -365,7 +365,7 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
     cam_obj->height = resolution[frame_size].height;
 
     if(cam_obj->jpeg_mode){
-        cam_obj->recv_size = cam_obj->width * cam_obj->height / 5;
+        cam_obj->recv_size = cam_obj->width * cam_obj->height / 5 + CONFIG_JPEG_FORMAT_EXTRA_BUFFER_SIZE;
         cam_obj->fb_size = cam_obj->recv_size;
     } else {
         cam_obj->recv_size = cam_obj->width * cam_obj->height * cam_obj->in_bytes_per_pixel;
