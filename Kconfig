@@ -77,6 +77,13 @@ menu "Camera configuration"
             Enable this option if you want to use the BF20A6.
             Disable this option to save memory.
 
+    config SC030IOT_SUPPORT
+        bool "Support SC030IOT VGA"
+        default y
+        help
+            Enable this option if you want to use the SC030IOT.
+            Disable this option to save memory.
+
     choice SCCB_HARDWARE_I2C_PORT
         bool "I2C peripheral to use for SCCB"
         default SCCB_HARDWARE_I2C_PORT1
