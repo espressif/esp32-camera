@@ -24,8 +24,7 @@
 #include "cam_hal.h"
 
 #if (ESP_IDF_VERSION_MAJOR >= 5)
-#define gpio_matrix_in(a,b,c) gpio_iomux_in(a,b)
-#define gpio_matrix_out(a,b,c,d) gpio_iomux_out(a,b,c)
+#include "rom/gpio.h"
 #endif
 
 static const char *TAG = "s3 ll_cam";

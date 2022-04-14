@@ -24,7 +24,7 @@
 #if (ESP_IDF_VERSION_MAJOR >= 5)
 #define GPIO_PIN_INTR_POSEDGE GPIO_INTR_POSEDGE
 #define GPIO_PIN_INTR_NEGEDGE GPIO_INTR_NEGEDGE
-#define gpio_matrix_in(a,b,c) gpio_iomux_in(a,b)
+#include "rom/gpio.h"
 #endif
 
 static const char *TAG = "s2 ll_cam";
