@@ -63,5 +63,12 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
   set(COMPONENT_REQUIRES driver)
   set(COMPONENT_PRIV_REQUIRES freertos nvs_flash)
 
+  set(min_supported_idf_version "4.2")
+  set(idf_version "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}")
+  if (idf_version VERSION_GREATER_EQUAL min_supported_idf_version)
+    list(APPEND COMPONENT_PRIV_REQUIRES esp_timer)
+    message(WARNING "ESP-IDF version detected: '${idf_version}'.")
+  endif()
+
   register_component()
 endif()
