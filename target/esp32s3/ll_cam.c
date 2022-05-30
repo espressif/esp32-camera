@@ -22,10 +22,15 @@
 #include "soc/gdma_reg.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
+#include "esp_rom_gpio.h"
 
 #if (ESP_IDF_VERSION_MAJOR >= 5)
-#define gpio_matrix_in(a,b,c) gpio_iomux_in(a,b)
-#define gpio_matrix_out(a,b,c,d) gpio_iomux_out(a,b,c)
+#include "soc/gpio_sig_map.h"
+#include "soc/gpio_periph.h"
+#include "soc/io_mux_reg.h"
+#define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
+#define gpio_matrix_out(a,b,c,d) esp_rom_gpio_connect_out_signal(a,b,c,d)
+#define ets_delay_us(a) esp_rom_delay_us(a)
 #endif
 
 static const char *TAG = "s3 ll_cam";

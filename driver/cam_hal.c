@@ -21,6 +21,7 @@
 #if (ESP_IDF_VERSION_MAJOR == 3) && (ESP_IDF_VERSION_MINOR == 3)
 #include "rom/ets_sys.h"
 #else
+#include "esp_timer.h"
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp32/rom/ets_sys.h"  // will be removed in idf v5.0
 #elif CONFIG_IDF_TARGET_ESP32S2
