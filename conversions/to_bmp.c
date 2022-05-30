@@ -160,7 +160,7 @@ static bool _rgb565_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16
 }
 
 //input buffer
-static uint32_t _jpg_read(void * arg, size_t index, uint8_t *buf, size_t len)
+static unsigned int _jpg_read(void * arg, size_t index, uint8_t *buf, size_t len)
 {
     rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
     if(buf) {
