@@ -1,5 +1,5 @@
 /*
- * SC030IOT driver.
+ * SC101IOT driver.
  * 
  * Copyright 2020-2022 Espressif Systems (Shanghai) PTE LTD
  *
@@ -25,24 +25,24 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "sc030iot.h"
-#include "sc030iot_settings.h"
+#include "sc101iot.h"
+#include "sc101iot_settings.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #else
 #include "esp_log.h"
-static const char* TAG = "sc030";
+static const char* TAG = "sc101";
 #endif
 
-#define SC030_SENSOR_ID_HIGH_REG    0XF7
-#define SC030_SENSOR_ID_LOW_REG     0XF8
-#define SC030_MAX_FRAME_WIDTH       (640)
-#define SC030_MAX_FRAME_HIGH        (480)
+#define SC101_SENSOR_ID_HIGH_REG    0XF7
+#define SC101_SENSOR_ID_LOW_REG     0XF8
+#define SC101_MAX_FRAME_WIDTH       (1280)
+#define SC101_MAX_FRAME_HIGH        (720)
 
-// sc030 use "i2c paging mode", so the high byte of the register needs to be written to the 0xf0 reg.
+// sc101 use "i2c paging mode", so the high byte of the register needs to be written to the 0xf0 reg.
 // For more information please refer to the Technical Reference Manual.
-static int get_reg(sensor_t *sensor, int reg, int reg_value_mask)
+static int get_reg(sensor_t *sensor, int reg, int mask)
 {
     int ret = 0;
     uint8_t reg_high = (reg>>8) & 0xFF;
@@ -54,12 +54,12 @@ static int get_reg(sensor_t *sensor, int reg, int reg_value_mask)
 
     ret = SCCB_Read(sensor->slv_addr, reg_low);
     if(ret > 0){
-        ret &= reg_value_mask;
+        ret &= mask;
     }
     return ret;
 }
 
-// sc030 use "i2c paging mode", so the high byte of the register needs to be written to the 0xf0 reg.
+// sc101 use "i2c paging mode", so the high byte of the register needs to be written to the 0xf0 reg.
 // For more information please refer to the Technical Reference Manual.
 static int set_reg(sensor_t *sensor, int reg, int mask, int value)
 {
@@ -109,9 +109,9 @@ static int set_hmirror(sensor_t *sensor, int enable)
 {
     int ret = 0;
     if(enable) {
-        SET_REG_BITS_OR_RETURN(0x3221, 1, 2, 0x3); // mirror on
+        SET_REG_BITS_OR_RETURN(0x3221, 1, 2, 0x3); // enable mirror
     } else {
-        SET_REG_BITS_OR_RETURN(0x3221, 1, 2, 0x0); // mirror off
+        SET_REG_BITS_OR_RETURN(0x3221, 1, 2, 0x0); // disable mirror
     }
 
     return ret;
@@ -132,7 +132,14 @@ static int set_vflip(sensor_t *sensor, int enable)
 static int set_colorbar(sensor_t *sensor, int enable)
 {
     int ret = 0;
-    SET_REG_BITS_OR_RETURN(0x0100, 7, 1, enable & 0xff); // enable test pattern mode
+    SET_REG_BITS_OR_RETURN(0x0100, 7, 1, enable & 0xff); // enable colorbar mode
+    return ret;
+}
+
+static int set_raw_gma(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+    SET_REG_BITS_OR_RETURN(0x00f5, 1, 1, enable & 0xff); // enable gamma compensation
 
     return ret;
 }
@@ -196,7 +203,7 @@ static int set_contrast(sensor_t *sensor, int level)
 
 static int reset(sensor_t *sensor)
 {
-    int ret = set_regs(sensor, sc030iot_default_init_regs, sizeof(sc030iot_default_init_regs)/(sizeof(uint8_t) * 2));
+    int ret = set_regs(sensor, sc101iot_default_init_regs, sizeof(sc101iot_default_init_regs)/(sizeof(uint8_t) * 2));
     
     // Delay
     vTaskDelay(50 / portTICK_PERIOD_MS);
@@ -212,15 +219,15 @@ static int reset(sensor_t *sensor)
 static int set_window(sensor_t *sensor, int offset_x, int offset_y, int w, int h)
 {
     int ret = 0;
-    //sc:H_start={0x0172[1:0],0x0170},H_end={0x0172[5:4],0x0171},
+    //sc:H_start={0x0172[3:0],0x0170},H_end={0x0172[7:4],0x0171},
     WRITE_REG_OR_RETURN(0x0170, offset_x & 0xff);
     WRITE_REG_OR_RETURN(0x0171, (offset_x+w) & 0xff);
-    WRITE_REG_OR_RETURN(0x0172, ((offset_x>>8) & 0x03) | (((offset_x+w)>>4)&0x30));
+    WRITE_REG_OR_RETURN(0x0172, ((offset_x>>8) & 0x0f) | (((offset_x+w)>>4)&0xf0));
 
-    //sc:V_start={0x0175[1:0],0x0173},H_end={0x0175[5:4],0x0174},
+    //sc:V_start={0x0175[3:0],0x0173},H_end={0x0175[7:4],0x0174},
     WRITE_REG_OR_RETURN(0x0173, offset_y & 0xff);
     WRITE_REG_OR_RETURN(0x0174, (offset_y+h) & 0xff);
-    WRITE_REG_OR_RETURN(0x0175, ((offset_y>>8) & 0x03) | (((offset_y+h)>>4)&0x30));
+    WRITE_REG_OR_RETURN(0x0175, ((offset_y>>8) & 0x0f) | (((offset_y+h)>>4)&0xf0));
 
     vTaskDelay(10 / portTICK_PERIOD_MS);
 
@@ -231,12 +238,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     uint16_t w = resolution[framesize].width;
     uint16_t h = resolution[framesize].height;
-    if(w>SC030_MAX_FRAME_WIDTH || h > SC030_MAX_FRAME_HIGH) {
+    if(w>SC101_MAX_FRAME_WIDTH || h > SC101_MAX_FRAME_HIGH) {
         goto err; 
     }
 
-    uint16_t offset_x = (640-w) /2;   
-    uint16_t offset_y = (480-h) /2;
+    uint16_t offset_x = (SC101_MAX_FRAME_WIDTH-w) /2;   
+    uint16_t offset_y = (SC101_MAX_FRAME_HIGH-h) /2;
     
     if(set_window(sensor, offset_x, offset_y, w, h)) {
         goto err; 
@@ -260,10 +267,10 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     case PIXFORMAT_GRAYSCALE:
         ESP_LOGE(TAG, "Not support");
         break;
-    case PIXFORMAT_YUV422: // For now, sc030/sc031 sensor only support YUV422.
+    case PIXFORMAT_YUV422: // For now, sc101 sensor only support YUV422.
         break;
     default:
-        return -1;
+        ret = -1;
     }
 
     return ret;
@@ -284,13 +291,13 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
-int sc030iot_detect(int slv_addr, sensor_id_t *id)
+int sc101iot_detect(int slv_addr, sensor_id_t *id)
 {
-    if (SC030IOT_SCCB_ADDR == slv_addr) {
-        uint8_t MIDL = SCCB_Read(slv_addr, SC030_SENSOR_ID_LOW_REG);
-        uint8_t MIDH = SCCB_Read(slv_addr, SC030_SENSOR_ID_HIGH_REG);
+    if (SC101IOT_SCCB_ADDR == slv_addr) {
+        uint8_t MIDL = SCCB_Read(slv_addr, SC101_SENSOR_ID_LOW_REG);
+        uint8_t MIDH = SCCB_Read(slv_addr, SC101_SENSOR_ID_HIGH_REG);
         uint16_t PID = MIDH << 8 | MIDL;
-        if (SC030IOT_PID == PID) {
+        if (SC101IOT_PID == PID) {
             id->PID = PID;
             return PID;
         } else {
@@ -300,36 +307,36 @@ int sc030iot_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int sc030iot_init(sensor_t *sensor)
+int sc101iot_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;
     sensor->init_status = init_status;
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
-    
-    sensor->set_saturation= set_saturation;
-    sensor->set_colorbar = set_colorbar;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
+    sensor->set_colorbar = set_colorbar;
+    sensor->set_raw_gma = set_raw_gma;
     sensor->set_sharpness = set_sharpness;
     sensor->set_agc_gain = set_agc_gain;
     sensor->set_aec_value = set_aec_value;
     sensor->set_awb_gain = set_awb_gain;
+    sensor->set_saturation= set_saturation;
     sensor->set_contrast = set_contrast;
-    //not supported
+
     sensor->set_denoise = set_dummy;
     sensor->set_quality = set_dummy;
     sensor->set_special_effect = set_dummy;
     sensor->set_wb_mode = set_dummy;
     sensor->set_ae_level = set_dummy;
-    
+
 
     sensor->get_reg = get_reg;
     sensor->set_reg = set_reg;
     sensor->set_xclk = set_xclk;
     
-    ESP_LOGD(TAG, "sc030iot Attached");
+    ESP_LOGD(TAG, "sc101iot Attached");
 
     return 0;
 }
