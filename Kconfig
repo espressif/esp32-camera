@@ -77,6 +77,31 @@ menu "Camera configuration"
             Enable this option if you want to use the BF20A6.
             Disable this option to save memory.
 
+    config SC101IOT_SUPPORT
+        bool "Support SC101IOT HD"
+        default n
+        help
+            Enable this option if you want to use the SC101IOT.
+            Disable this option to save memory.
+
+    choice SC101_REGS_SELECT
+        prompt "SC101iot default regs"
+        default SC101IOT_720P_15FPS_ENABLED
+        depends on SC101IOT_SUPPORT
+        help
+            Currently SC010iot has several register sets available.
+            Select the one that matches your needs.
+
+        config SC101IOT_720P_15FPS_ENABLED
+            bool "xclk20M_720p_15fps"
+        help
+            Select this option means that when xclk is 20M, the frame rate is 15fps at 720p resolution.
+        config SC101IOT_VGA_25FPS_ENABLED
+            bool "xclk20M_VGA_25fps"
+        help
+            Select this option means that when xclk is 20M, the frame rate is 25fps at VGA resolution.
+    endchoice
+
     config SC030IOT_SUPPORT
         bool "Support SC030IOT VGA"
         default y
