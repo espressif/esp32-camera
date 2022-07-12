@@ -164,5 +164,24 @@ menu "Camera configuration"
         help
             Maximum value of DMA buffer
             Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent
+    
+    config CAMERA_CONVERTER_ENABLED
+        bool "Enable camera RGB/YUV converter"
+        depends on IDF_TARGET_ESP32S3
+        default n
+        help
+            Enable this option if you want to use RGB565/YUV422/YUV420/YUV411 format conversion.
 
+    choice CAMERA_CONV_PROTOCOL
+        bool "Camera converter protocol"
+        depends on CAMERA_CONVERTER_ENABLED
+        default LCD_CAM_CONV_BT601_ENABLED
+        help
+            Supports format conversion under both BT601 and BT709 standards.
+
+        config LCD_CAM_CONV_BT601_ENABLED
+            bool "BT601"
+        config LCD_CAM_CONV_BT709_ENABLED
+            bool "BT709"
+    endchoice
 endmenu
