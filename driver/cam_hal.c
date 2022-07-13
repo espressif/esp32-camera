@@ -296,7 +296,13 @@ static esp_err_t cam_dma_config(const camera_config_t *config)
         cam_obj->frames[x].fb_offset = 0;
         cam_obj->frames[x].en = 0;
         ESP_LOGI(TAG, "Allocating %d Byte frame buffer in %s", alloc_size, _caps & MALLOC_CAP_SPIRAM ? "PSRAM" : "OnBoard RAM");
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
+        // In IDF v4.2 and earlier, memory returned by heap_caps_aligned_alloc must be freed using heap_caps_aligned_free.
+        // And heap_caps_aligned_free is deprecated on v4.3.
+        cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_aligned_alloc(16, alloc_size, _caps);
+#else
         cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_malloc(alloc_size, _caps);
+#endif
         CAM_CHECK(cam_obj->frames[x].fb.buf != NULL, "frame buffer malloc failed", ESP_FAIL);
         if (cam_obj->psram_mode) {
             //align PSRAM buffer. TODO: save the offset so proper address can be freed later
