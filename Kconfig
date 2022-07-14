@@ -190,4 +190,16 @@ menu "Camera configuration"
         config LCD_CAM_CONV_BT709_ENABLED
             bool "BT709"
     endchoice
+
+    config LCD_CAM_CONV_FULL_RANGE_ENABLED
+        bool "Camera converter full range mode"
+        depends on CAMERA_CONVERTER_ENABLED
+        default y
+        help
+            Supports format conversion under both full color range mode and limited color range mode.
+            If full color range mode is selected, the color range of RGB or YUV is 0~255.
+            If limited color range mode is selected, the color range of RGB is 16~240, and the color range of YUV is Y[16~240], UV[16~235].
+            Full color range mode has a wider color range, so details in the image show more clearly.
+            Please confirm the color range mode of the current camera sensor, incorrect color range mode may cause color difference in the final converted image.
+            Full range mode is used by default. If this option is not selected, the format conversion function will be done using the limited range mode.
 endmenu
