@@ -142,6 +142,12 @@ menu "Camera configuration"
             bool "Subsample Mode"
     endchoice
 
+    config CAMERA_TASK_STACK_SIZE
+        int "CAM task stack size"
+        default 2048
+        help
+            Camera task stack size
+
     choice CAMERA_TASK_PINNED_TO_CORE
         bool "Camera task pinned to core"
         default CAMERA_CORE0
@@ -163,8 +169,8 @@ menu "Camera configuration"
         default 32768
         help
             Maximum value of DMA buffer
-            Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent
-    
+            Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent.
+
     config CAMERA_CONVERTER_ENABLED
         bool "Enable camera RGB/YUV converter"
         depends on IDF_TARGET_ESP32S3
