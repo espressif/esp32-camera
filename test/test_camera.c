@@ -9,6 +9,7 @@
 #include "driver/i2c.h"
 
 #include "esp_camera.h"
+#include "esp_img_timestamp.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32
 #define BOARD_WROVER_KIT 1
@@ -334,6 +335,28 @@ TEST_CASE("Camera driver take JPEG picture test", "[camera]")
         esp_camera_fb_return(pic);
     }
 
+    TEST_ESP_OK(esp_camera_deinit());
+    TEST_ASSERT_NOT_NULL(pic);
+}
+
+TEST_CASE("Embedded timestamp into YUV422 or RGB565 image test", "[camera]")
+{
+    // Note: It is recommended to use sntp to update the system time first.
+    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_YUV422, FRAMESIZE_QVGA, 2));
+    image_timestamp_config_t t_config = YUV422_IMAGE_TMSTAMP_CONFIG_DEFAULT();
+    t_config.image_width = resolution[FRAMESIZE_QVGA].width;
+    t_config.image_hight = resolution[FRAMESIZE_QVGA].height;
+    TEST_ESP_OK(esp_image_timestamp_init(&t_config));
+    vTaskDelay(500 / portTICK_RATE_MS);
+    ESP_LOGI(TAG, "Taking picture...");
+    camera_fb_t *pic = esp_camera_fb_get();
+    if (pic) {
+        ESP_LOGI(TAG, "picture: %d x %d, size: %u", pic->width, pic->height, pic->len);
+        TEST_ESP_OK(esp_set_image_timestamp(pic->buf));
+        esp_camera_fb_return(pic);
+    }
+
+    TEST_ESP_OK(esp_image_timestamp_deinit());
     TEST_ESP_OK(esp_camera_deinit());
     TEST_ASSERT_NOT_NULL(pic);
 }
