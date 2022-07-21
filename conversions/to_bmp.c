@@ -113,7 +113,7 @@ static bool _rgb_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t 
 
 static bool _rgb565_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data)
 {
-    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
+    rgb_jpg_decoder *const jpeg = (rgb_jpg_decoder *)arg;
     if(!data){
         if(x == 0 && y == 0){
             //write start
@@ -132,29 +132,29 @@ static bool _rgb565_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16
         return true;
     }
 
-    size_t jw = jpeg->width*3;
-    size_t jw2 = jpeg->width*2;
-    size_t t = y * jw;
-    size_t t2 = y * jw2;
-    size_t b = t + (h * jw);
-    size_t l = x * 2;
-    uint8_t *out = jpeg->output+jpeg->data_offset;
-    uint8_t *o = out;
-    size_t iy, iy2, ix, ix2;
+    const size_t y2step = jpeg->width * 2;  // RGB565: 2BPP
+    const size_t y2start = y * y2step;
+    const size_t y2end = y2start + (h * y2step);
+    const size_t x2 = x * 2;
+    const size_t w2 = w * 2;
+    uint8_t *const out = jpeg->output + jpeg->data_offset;
+    const uint8_t *rgbData = data;
 
-    w = w * 3;
-
-    for(iy=t, iy2=t2; iy<b; iy+=jw, iy2+=jw2) {
-        o = out+iy2+l;
-        for(ix2=ix=0; ix<w; ix+= 3, ix2 +=2) {
-            uint16_t r = data[ix];
-            uint16_t g = data[ix+1];
-            uint16_t b = data[ix+2];
-            uint16_t c = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-            o[ix2+1] = c>>8;
-            o[ix2] = c&0xff;
+    size_t iy2;
+    for (iy2 = y2start; iy2 < y2end; iy2 += y2step)
+    {
+        uint8_t *const o = out + iy2 + x2;
+        size_t ix2;
+        for (ix2 = 0; ix2 < w2; ix2 += 2)
+        {
+            const uint8_t r = rgbData[0];
+            const uint8_t g = rgbData[1];
+            const uint8_t b = rgbData[2];
+            const uint16_t c = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+            o[ix2] = c >> 8;
+            o[ix2 + 1] = c & 0xff;
+            rgbData += 3;
         }
-        data+=w;
     }
     return true;
 }
