@@ -312,7 +312,7 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     I2S0.clkm_conf.clkm_div_a = 0;
     I2S0.clkm_conf.clkm_div_b = 0;
     I2S0.clkm_conf.clkm_div_num = 2;
-    
+
     I2S0.fifo_conf.dscr_en = 1;
     I2S0.fifo_conf.rx_fifo_mod = sampling_mode;
     I2S0.fifo_conf.rx_fifo_mod_force_en = 1;
@@ -446,9 +446,12 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     }
     // Calculate DMA size
     dma_buffer_size =(dma_buffer_max / dma_half_buffer) * dma_half_buffer;
-    
-    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u, dma_half_buffer_min: %5u, dma_half_buffer: %5u, lines_per_half_buffer: %2u, dma_buffer_size: %5u, image_size: %u", 
-            node_size * cam->dma_bytes_per_item, nodes_per_line, lines_per_node, dma_half_buffer_min * cam->dma_bytes_per_item, dma_half_buffer * cam->dma_bytes_per_item, lines_per_half_buffer, dma_buffer_size * cam->dma_bytes_per_item, image_size);
+
+    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u, dma_half_buffer_min: %5u, dma_half_buffer: %5u,"
+            "lines_per_half_buffer: %2u, dma_buffer_size: %5u, image_size: %u",
+            (unsigned) (node_size * cam->dma_bytes_per_item), (unsigned) nodes_per_line, (unsigned) lines_per_node,
+            (unsigned) (dma_half_buffer_min * cam->dma_bytes_per_item), (unsigned) (dma_half_buffer * cam->dma_bytes_per_item),
+            (unsigned) (lines_per_half_buffer), (unsigned) (dma_buffer_size * cam->dma_bytes_per_item), (unsigned) image_size);
 
     cam->dma_buffer_size = dma_buffer_size * cam->dma_bytes_per_item;
     cam->dma_half_buffer_size = dma_half_buffer * cam->dma_bytes_per_item;

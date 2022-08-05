@@ -238,7 +238,7 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     }
 
     LCD_CAM.cam_ctrl.val = 0;
-    
+
     LCD_CAM.cam_ctrl.cam_clkm_div_b = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_a = 0;
     LCD_CAM.cam_ctrl.cam_clkm_div_num = 160000000 / config->xclk_freq_hz;
@@ -278,7 +278,7 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     LCD_CAM.cam_ctrl1.cam_start = 1;
 
     ret = ll_cam_dma_init(cam);
-    
+
     return ret;
 }
 
@@ -394,8 +394,8 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
         }
     }
 
-    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u", 
-            node_size * cam->dma_bytes_per_item, nodes_per_line, lines_per_node);
+    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u",
+            (unsigned) (node_size * cam->dma_bytes_per_item), (unsigned) nodes_per_line, (unsigned) lines_per_node);
 
     cam->dma_node_buffer_size = node_size * cam->dma_bytes_per_item;
 
@@ -427,9 +427,10 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     if (!cam->psram_mode) {
         dma_buffer_size =(dma_buffer_max / dma_half_buffer) * dma_half_buffer;
     }
-    
-    ESP_LOGI(TAG, "dma_half_buffer_min: %5u, dma_half_buffer: %5u, lines_per_half_buffer: %2u, dma_buffer_size: %5u", 
-            dma_half_buffer_min * cam->dma_bytes_per_item, dma_half_buffer * cam->dma_bytes_per_item, lines_per_half_buffer, dma_buffer_size * cam->dma_bytes_per_item);
+
+    ESP_LOGI(TAG, "dma_half_buffer_min: %5u, dma_half_buffer: %5u, lines_per_half_buffer: %2u, dma_buffer_size: %5u",
+            (unsigned) (dma_half_buffer_min * cam->dma_bytes_per_item), (unsigned) (dma_half_buffer * cam->dma_bytes_per_item),
+            (unsigned) lines_per_half_buffer, (unsigned) (dma_buffer_size * cam->dma_bytes_per_item));
 
     cam->dma_buffer_size = dma_buffer_size * cam->dma_bytes_per_item;
     cam->dma_half_buffer_size = dma_half_buffer * cam->dma_bytes_per_item;
@@ -438,7 +439,7 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
 }
 
 bool ll_cam_dma_sizes(cam_obj_t *cam)
-{    
+{
     cam->dma_bytes_per_item = 1;
     if (cam->jpeg_mode) {
         if (cam->psram_mode) {
@@ -473,7 +474,6 @@ size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, 
         }
         return len / 2;
     }
-    
 
     // just memcpy
     memcpy(out, in, len);
@@ -502,7 +502,7 @@ esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_
             cam->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
             break;
         }
-#else 
+#else
         cam->in_bytes_per_pixel = 2;       // for DMA receive
         cam->fb_bytes_per_pixel = 2;       // frame buffer stores YU/YV/RGB565
 #endif
