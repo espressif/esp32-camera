@@ -124,7 +124,7 @@ bool ll_cam_start(cam_obj_t *cam, int frame_pos)
     } else {
         I2S0.in_link.addr = ((uint32_t)&cam->frames[frame_pos].dma[0]) & 0xfffff;
     }
-    
+
     I2S0.in_link.start = 1;
     I2S0.conf.rx_start = 1;
     return true;
@@ -304,8 +304,8 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
         }
     }
 
-    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u", 
-            node_size * cam->dma_bytes_per_item, nodes_per_line, lines_per_node);
+    ESP_LOGI(TAG, "node_size: %4u, nodes_per_line: %u, lines_per_node: %u",
+            (unsigned) (node_size * cam->dma_bytes_per_item), nodes_per_line, lines_per_node);
 
     cam->dma_node_buffer_size = node_size * cam->dma_bytes_per_item;
 
@@ -337,9 +337,10 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
         size_t dma_buffer_max = 2 * dma_half_buffer_max;
         size_t dma_buffer_size = dma_buffer_max;
         dma_buffer_size =(dma_buffer_max / dma_half_buffer) * dma_half_buffer;
-        
-        ESP_LOGI(TAG, "dma_half_buffer_min: %5u, dma_half_buffer: %5u, lines_per_half_buffer: %2u, dma_buffer_size: %5u", 
-                dma_half_buffer_min * cam->dma_bytes_per_item, dma_half_buffer * cam->dma_bytes_per_item, lines_per_half_buffer, dma_buffer_size * cam->dma_bytes_per_item);
+
+        ESP_LOGI(TAG, "dma_half_buffer_min: %5u, dma_half_buffer: %5u, lines_per_half_buffer: %2u, dma_buffer_size: %5u",
+                (unsigned) (dma_half_buffer_min * cam->dma_bytes_per_item), (unsigned) (dma_half_buffer * cam->dma_bytes_per_item),
+                (unsigned) lines_per_half_buffer, (unsigned) (dma_buffer_size * cam->dma_bytes_per_item));
 
         cam->dma_buffer_size = dma_buffer_size * cam->dma_bytes_per_item;
         cam->dma_half_buffer_size = dma_half_buffer * cam->dma_bytes_per_item;
