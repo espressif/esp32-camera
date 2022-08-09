@@ -487,7 +487,7 @@ size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, 
 esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint16_t sensor_pid)
 {
     if (pix_format == PIXFORMAT_GRAYSCALE) {
-        if (sensor_pid == OV3660_PID || sensor_pid == OV5640_PID || sensor_pid == NT99141_PID) {
+        if (sensor_pid == OV3660_PID || sensor_pid == OV5640_PID || sensor_pid == NT99141_PID || sensor_pid == SC031GS_PID) {
             if (xclk_freq_hz > 10000000) {
                 sampling_mode = SM_0A00_0B00;
                 dma_filter = ll_cam_dma_filter_yuyv_highspeed;
