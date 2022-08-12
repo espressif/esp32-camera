@@ -323,11 +323,12 @@ esp_err_t ll_cam_set_pin(cam_obj_t *cam, const camera_config_t *config)
         gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
         gpio_matrix_in(data_pins[i], CAM_DATA_IN0_IDX + i, false);
     }
-
-    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config->pin_xclk], PIN_FUNC_GPIO);
-    gpio_set_direction(config->pin_xclk, GPIO_MODE_OUTPUT);
-    gpio_set_pull_mode(config->pin_xclk, GPIO_FLOATING);
-    gpio_matrix_out(config->pin_xclk, CAM_CLK_IDX, false, false);
+    if (config->pin_xclk >= 0) { 
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config->pin_xclk], PIN_FUNC_GPIO);
+        gpio_set_direction(config->pin_xclk, GPIO_MODE_OUTPUT);
+        gpio_set_pull_mode(config->pin_xclk, GPIO_FLOATING);
+        gpio_matrix_out(config->pin_xclk, CAM_CLK_IDX, false, false);
+    }
 
     return ESP_OK;
 }
