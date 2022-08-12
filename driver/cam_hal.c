@@ -32,6 +32,12 @@
 #endif // ESP_IDF_VERSION_MAJOR
 #define ESP_CAMERA_ETS_PRINTF ets_printf
 
+#if CONFIG_CAM_TASK_STACK_SIZE
+#define CAM_TASK_STACK             CONFIG_CAM_TASK_STACK_SIZE
+#else
+#define CAM_TASK_STACK             (2*1024)
+#endif
+
 static const char *TAG = "cam_hal";
 static cam_obj_t *cam_obj = NULL;
 
@@ -392,11 +398,11 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
 
 
 #if CONFIG_CAMERA_CORE0
-    xTaskCreatePinnedToCore(cam_task, "cam_task", 2048, NULL, configMAX_PRIORITIES - 2, &cam_obj->task_handle, 0);
+    xTaskCreatePinnedToCore(cam_task, "cam_task", CAM_TASK_STACK, NULL, configMAX_PRIORITIES - 2, &cam_obj->task_handle, 0);
 #elif CONFIG_CAMERA_CORE1
-    xTaskCreatePinnedToCore(cam_task, "cam_task", 2048, NULL, configMAX_PRIORITIES - 2, &cam_obj->task_handle, 1);
+    xTaskCreatePinnedToCore(cam_task, "cam_task", CAM_TASK_STACK, NULL, configMAX_PRIORITIES - 2, &cam_obj->task_handle, 1);
 #else
-    xTaskCreate(cam_task, "cam_task", 2048, NULL, configMAX_PRIORITIES - 2, &cam_obj->task_handle);
+    xTaskCreate(cam_task, "cam_task", CAM_TASK_STACK, NULL, configMAX_PRIORITIES - 2, &cam_obj->task_handle);
 #endif
 
     ESP_LOGI(TAG, "cam config ok");

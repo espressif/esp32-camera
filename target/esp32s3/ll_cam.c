@@ -218,8 +218,13 @@ static esp_err_t ll_cam_converter_config(cam_obj_t *cam, const camera_config_t *
 #else
     LCD_CAM.cam_rgb_yuv.cam_conv_protocol_mode = 0;
 #endif
+#if CONFIG_LCD_CAM_CONV_FULL_RANGE_ENABLED
+    LCD_CAM.cam_rgb_yuv.cam_conv_data_out_mode = 1;
+    LCD_CAM.cam_rgb_yuv.cam_conv_data_in_mode = 1;
+#else
     LCD_CAM.cam_rgb_yuv.cam_conv_data_out_mode = 0;
     LCD_CAM.cam_rgb_yuv.cam_conv_data_in_mode = 0;
+#endif
     LCD_CAM.cam_rgb_yuv.cam_conv_mode_8bits_on = 1;
     LCD_CAM.cam_rgb_yuv.cam_conv_bypass = 1;
     cam->conv_mode = config->conv_mode;
