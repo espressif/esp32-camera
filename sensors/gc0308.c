@@ -88,10 +88,10 @@ static int set_reg_bits(uint8_t slv_addr, uint16_t reg, uint8_t offset, uint8_t 
     return ret;
 }
 
-static int write_regs(uint8_t slv_addr, const uint16_t (*regs)[2])
+static int write_regs(uint8_t slv_addr, const uint8_t (*regs)[2], size_t regs_size)
 {
     int i = 0, ret = 0;
-    while (!ret && regs[i][0] != REGLIST_TAIL) {
+    while (!ret && (i < regs_size)) {
         if (regs[i][0] == REG_DLY) {
             vTaskDelay(regs[i][1] / portTICK_PERIOD_MS);
         } else {
@@ -132,11 +132,12 @@ static int reset(sensor_t *sensor)
         ESP_LOGE(TAG, "Software Reset FAILED!");
         return ret;
     }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    ret = write_regs(sensor->slv_addr, gc0308_sensor_default_regs);
+
+    vTaskDelay(80 / portTICK_PERIOD_MS);
+    ret = write_regs(sensor->slv_addr, gc0308_sensor_default_regs, sizeof(gc0308_sensor_default_regs)/(sizeof(uint8_t) * 2));
     if (ret == 0) {
         ESP_LOGD(TAG, "Camera defaults loaded");
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(80 / portTICK_PERIOD_MS);
         write_reg(sensor->slv_addr, 0xfe, 0x00);
 #ifdef CONFIG_IDF_TARGET_ESP32
         set_reg_bits(sensor->slv_addr, 0x28, 4, 0x07, 1);  //frequency division for esp32, ensure pclk <= 15MHz
@@ -184,6 +185,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize].height;
     uint16_t row_s = (resolution[FRAMESIZE_VGA].height - h) / 2;
     uint16_t col_s = (resolution[FRAMESIZE_VGA].width - w) / 2;
+    (void)row_s;
+    (void)col_s;
 
 #if CONFIG_GC_SENSOR_SUBSAMPLE_MODE
     struct subsample_cfg {
