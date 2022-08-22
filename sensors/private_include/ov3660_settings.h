@@ -289,7 +289,7 @@ static const DRAM_ATTR uint16_t sensor_fmt_yuv422[][2] = {
 
 static const DRAM_ATTR uint16_t sensor_fmt_rgb565[][2] = {
     {FORMAT_CTRL, 0x01}, // RGB
-    {FORMAT_CTRL00, 0x61}, // RGB565 (BGR)
+    {FORMAT_CTRL00, 0x61}, // RGB565 (RGB)
     {REGLIST_TAIL, 0x00}
 };
 
