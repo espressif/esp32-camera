@@ -39,6 +39,16 @@ namespace jpge
             // 2 = H2V1 subsampling (YCbCr 2x1x1, 4 blocks per MCU)
             // 3 = H2V2 subsampling (YCbCr 4x1x1, 6 blocks per MCU-- very common)
             subsampling_t m_subsampling;
+            
+            // Disables CbCr discrimination - only intended for testing.
+            // If true, the Y quantization table is also used for the CbCr channels.
+            bool m_no_chroma_discrim_flag;
+
+            bool m_two_pass_flag;
+
+            // By default we use the same quantization tables as mozjpeg's default. 
+            // Set to true to use the traditional tables from JPEG Annex K.
+            bool m_use_std_tables;
     };
     
     // Output stream abstract class - used by the jpeg_encoder class to write to the output stream.
@@ -46,7 +56,8 @@ namespace jpge
     class output_stream {
         public:
             virtual ~output_stream() { };
-            virtual bool put_buf(const void* Pbuf, int len) = 0;
+            virtual bool put_buf(const void* Pbuf, int len) = 0;		   
+            template<class T> inline bool put_obj(const T& obj) { return put_buf(&obj, sizeof(T)); };
             virtual uint get_size() const = 0;
     };
     
@@ -71,7 +82,10 @@ namespace jpge
             bool process_scanline(const void* pScanline);
 
             // Deinitializes the compressor, freeing any allocated memory. May be called at any time.
-            void deinit();
+            void deinit();            
+            uint get_total_passes() const { return m_params.m_two_pass_flag ? 2 : 1; }
+		    inline uint get_cur_pass() { return m_pass_num; }
+
 
         private:
             jpeg_encoder(const jpeg_encoder &);
@@ -103,6 +117,8 @@ namespace jpge
             uint8 m_pass_num;
             bool m_all_stream_writes_succeeded;
 
+		    void optimize_huffman_table(int table_num, int table_len);
+            
             bool jpg_open(int p_x_res, int p_y_res, int src_channels);
 
             void flush_output_buffer();
@@ -119,6 +135,9 @@ namespace jpge
             void emit_dhts();
             void emit_sos();
 
+            void adjust_quant_table(int32* dst, int32* src);
+            void first_pass_init();
+            bool second_pass_init();
             void compute_quant_table(int32 *dst, const int16 *src);
             void load_quantized_coefficients(int component_num);
 
@@ -127,10 +146,13 @@ namespace jpge
             void load_block_16_8(int x, int c);
             void load_block_16_8_8(int x, int c);
 
+		    void code_coefficients_pass_one(int component_num);
             void code_coefficients_pass_two(int component_num);
             void code_block(int component_num);
 
             void process_mcu_row();
+            bool terminate_pass_one();
+            bool terminate_pass_two();
             bool process_end_of_image();
             void load_mcu(const void* src);
             void clear();

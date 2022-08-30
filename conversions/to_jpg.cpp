@@ -107,6 +107,7 @@ bool convert_image(uint8_t *src, uint16_t width, uint16_t height, pixformat_t fo
     jpge::params comp_params = jpge::params();
     comp_params.m_subsampling = subsampling;
     comp_params.m_quality = quality;
+    comp_params.m_two_pass_flag = true;
 
     jpge::jpeg_encoder dst_image;
 
