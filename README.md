@@ -13,21 +13,21 @@ This repository hosts ESP32 series Soc compatible driver for image sensors. Addi
 
 ### Supported Sensor
 
-| model   | max resolution | color type | output format                                                | Len Size |
-| ------- | -------------- | ---------- | ------------------------------------------------------------ | -------- |
-| OV2640  | 1600 x 1200    | color      | YUV(422/420)/YCbCr422<br>RGB565/555<br>8-bit compressed data<br>8/10-bit Raw RGB data | 1/4"     |
-| OV3660  | 2048 x 1536    | color      | raw RGB data<br/>RGB565/555/444<br/>CCIR656<br/>YCbCr422<br/>compression | 1/5"     |
-| OV5640  | 2592 x 1944    | color      | RAW RGB<br/>RGB565/555/444<br/>CCIR656<br/>YUV422/420<br/>YCbCr422<br/>compression | 1/4"     |
-| OV7670  | 640 x 480      | color      | Raw Bayer RGB<br/>Processed Bayer RGB<br>YUV/YCbCr422<br>GRB422<br>RGB565/555 | 1/6"     |
-| OV7725  | 640 x 480      | color      | Raw RGB<br/>GRB 422<br/>RGB565/555/444<br/>YCbCr 422         | 1/4"     |
-| NT99141 | 1280 x 720     | color      | YCbCr 422<br/>RGB565/555/444<br/>Raw<br/>CCIR656<br/>JPEG compression | 1/4"     |
-| GC032A  | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                        | 1/10"    |
-| GC0308  | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                        | 1/6.5"   |
-| GC2145  | 1600 x 1200    | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                        | 1/5"     |
-| BF3005  | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                        | 1/4"     |
-| BF20A6  | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer                                   | 1/10"    |
-| SC101IOT| 1280 x 720     | color      | YUV/YCbCr422<br/>Raw RGB                                     | 1/4.2"   |
-| SC030IOT| 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer                                   | 1/6.5"   |
+| model    | max resolution | color type | output format                                                                         | Len Size |
+| -------- | -------------- | ---------- | ------------------------------------------------------------------------------------- | -------- |
+| OV2640   | 1600 x 1200    | color      | YUV(422/420)/YCbCr422<br>RGB565/555<br>8-bit compressed data<br>8/10-bit Raw RGB data | 1/4"     |
+| OV3660   | 2048 x 1536    | color      | raw RGB data<br/>RGB565/555/444<br/>CCIR656<br/>YCbCr422<br/>compression              | 1/5"     |
+| OV5640   | 2592 x 1944    | color      | RAW RGB<br/>RGB565/555/444<br/>CCIR656<br/>YUV422/420<br/>YCbCr422<br/>compression    | 1/4"     |
+| OV7670   | 640 x 480      | color      | Raw Bayer RGB<br/>Processed Bayer RGB<br>YUV/YCbCr422<br>GRB422<br>RGB565/555         | 1/6"     |
+| OV7725   | 640 x 480      | color      | Raw RGB<br/>GRB 422<br/>RGB565/555/444<br/>YCbCr 422                                  | 1/4"     |
+| NT99141  | 1280 x 720     | color      | YCbCr 422<br/>RGB565/555/444<br/>Raw<br/>CCIR656<br/>JPEG compression                 | 1/4"     |
+| GC032A   | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                                                 | 1/10"    |
+| GC0308   | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                                                 | 1/6.5"   |
+| GC2145   | 1600 x 1200    | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                                                 | 1/5"     |
+| BF3005   | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer<br/>RGB565                                                 | 1/4"     |
+| BF20A6   | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer                                                            | 1/10"    |
+| SC101IOT | 1280 x 720     | color      | YUV/YCbCr422<br/>Raw RGB                                                              | 1/4.2"   |
+| SC030IOT | 640 x 480      | color      | YUV/YCbCr422<br/>RAW Bayer                                                            | 1/6.5"   |
 
 ## Important to Remember
 
@@ -131,8 +131,8 @@ static camera_config_t camera_config = {
     .pin_pwdn  = CAM_PIN_PWDN,
     .pin_reset = CAM_PIN_RESET,
     .pin_xclk = CAM_PIN_XCLK,
-    .pin_sccb_sda = CAM_PIN_SIOD,
-    .pin_sccb_scl = CAM_PIN_SIOC,
+    .pin_sscb_sda = CAM_PIN_SIOD,
+    .pin_sscb_scl = CAM_PIN_SIOC,
 
     .pin_d7 = CAM_PIN_D7,
     .pin_d6 = CAM_PIN_D6,
@@ -155,7 +155,7 @@ static camera_config_t camera_config = {
 
     .jpeg_quality = 12, //0-63 lower number means higher quality
     .fb_count = 1, //if more than one, i2s runs in continuous mode. Use only with JPEG
-    .grab_mode = CAMERA_GRAB_WHEN_EMPTY//CAMERA_GRAB_LATEST. Sets when buffers should be filled
+    // .grab_mode = CAMERA_GRAB_WHEN_EMPTY//CAMERA_GRAB_LATEST. Sets when buffers should be filled
 };
 
 esp_err_t camera_init(){
