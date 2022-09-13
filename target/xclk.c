@@ -13,7 +13,8 @@
 static const char* TAG = "camera_xclk";
 #endif
 
-static ledc_channel_t g_ledc_channel = 0;
+#define NO_CAMERA_LEDC_CHANNEL 0xFF
+static ledc_channel_t g_ledc_channel = NO_CAMERA_LEDC_CHANNEL;
 
 esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz)
 {
@@ -60,5 +61,8 @@ esp_err_t camera_enable_out_clock(camera_config_t* config)
 
 void camera_disable_out_clock()
 {
-    ledc_stop(LEDC_LOW_SPEED_MODE, g_ledc_channel, 0);
+    if (g_ledc_channel != NO_CAMERA_LEDC_CHANNEL) {
+        ledc_stop(LEDC_LOW_SPEED_MODE, g_ledc_channel, 0);
+        g_ledc_channel = NO_CAMERA_LEDC_CHANNEL;
+    }
 }
