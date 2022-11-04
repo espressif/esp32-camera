@@ -7,6 +7,7 @@ set(COMPONENT_SRCS
   conversions/to_jpg.cpp
   conversions/to_bmp.c
   conversions/jpge.cpp
+  conversions/jpgd.c
   conversions/esp_jpg_decode.c
   )
 

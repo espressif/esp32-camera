@@ -14,9 +14,11 @@
 #include "esp_jpg_decode.h"
 
 #include "esp_system.h"
+
 #if ESP_IDF_VERSION_MAJOR >= 4 // IDF 4+
 #if CONFIG_IDF_TARGET_ESP32 // ESP32/PICO-D4
-#include "esp32/rom/tjpgd.h"
+//#include "esp32/rom/tjpgd.h"
+#include "jpgd.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
 #include "tjpgd.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
@@ -95,7 +97,7 @@ static unsigned int _jpg_read(JDEC *decoder, uint8_t *buf, unsigned int len)
 
 esp_err_t esp_jpg_decode(size_t len, jpg_scale_t scale, jpg_reader_cb reader, jpg_writer_cb writer, void * arg)
 {
-    static uint8_t work[3100];
+    static uint8_t work[3100]; // __attribute__((aligned(4)));
     JDEC decoder;
     esp_jpg_decoder_t jpeg;
 
@@ -106,7 +108,7 @@ esp_err_t esp_jpg_decode(size_t len, jpg_scale_t scale, jpg_reader_cb reader, jp
     jpeg.scale = scale;
     jpeg.index = 0;
 
-    JRESULT jres = jd_prepare(&decoder, _jpg_read, work, 3100, &jpeg);
+    JRESULT jres = jd_prepare(&decoder, _jpg_read, work, 3100, (void*)&jpeg);
     if(jres != JDR_OK){
         ESP_LOGE(TAG, "JPG Header Parse Failed! %s", jd_errors[jres]);
         return ESP_FAIL;

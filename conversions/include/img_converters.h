@@ -123,6 +123,8 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale);
 
+bool jpg2gray(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale);
+
 #ifdef __cplusplus
 }
 #endif
