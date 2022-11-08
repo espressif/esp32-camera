@@ -435,6 +435,9 @@ esp_err_t cam_deinit(void)
     if (cam_obj->frame_buffer_queue) {
         vQueueDelete(cam_obj->frame_buffer_queue);
     }
+
+    ll_cam_deinit(cam_obj);
+    
     if (cam_obj->dma) {
         free(cam_obj->dma);
     }
@@ -450,8 +453,6 @@ esp_err_t cam_deinit(void)
         }
         free(cam_obj->frames);
     }
-
-    ll_cam_deinit(cam_obj);
 
     free(cam_obj);
     cam_obj = NULL;
