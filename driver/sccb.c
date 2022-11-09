@@ -139,7 +139,7 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     return data;
 }
 
-uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
+int SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 {
     esp_err_t ret = ESP_FAIL;
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -184,7 +184,7 @@ uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
     return data;
 }
 
-uint8_t SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
+int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
 {
     static uint16_t i = 0;
     esp_err_t ret = ESP_FAIL;
@@ -236,7 +236,7 @@ uint16_t SCCB_Read_Addr16_Val16(uint8_t slv_addr, uint16_t reg)
     return data;
 }
 
-uint8_t SCCB_Write_Addr16_Val16(uint8_t slv_addr, uint16_t reg, uint16_t data)
+int SCCB_Write_Addr16_Val16(uint8_t slv_addr, uint16_t reg, uint16_t data)
 {
     esp_err_t ret = ESP_FAIL;
     uint16_t reg_htons = LITTLETOBIG(reg);
