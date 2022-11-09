@@ -18,7 +18,7 @@
 /  1: Enable
 */
 
-#define JD_TBLCLIP		0
+#define JD_TBLCLIP		1
 /* Use table conversion for saturation arithmetic. A bit faster, but increases 1 KB of code size.
 /  0: Disable
 /  1: Enable

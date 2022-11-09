@@ -123,7 +123,27 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale);
 
+/**
+ * @brief Convert image buffer to GRAY 8 bits
+ *
+ * @param src       Source buffer in JPEG
+ * @param src_len   Length in bytes of the source buffer
+ * @param out   Pointer to the output buffer (width * height)
+ *
+ * @return true on success
+ */
 bool jpg2gray(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale);
+
+/**
+ * @brief Convert image buffer to GRAY 8 bits while perform a horizontal line filtering at the same time
+ *
+ * @param src       Source buffer in JPEG
+ * @param src_len   Length in bytes of the source buffer
+ * @param out   Pointer to the output buffer (width * height)
+ *
+ * @return true on success
+ */
+bool jpg2gray_filtered(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale);
 
 #ifdef __cplusplus
 }

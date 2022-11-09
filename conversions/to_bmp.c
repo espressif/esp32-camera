@@ -151,6 +151,81 @@ static bool _gray_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t
     return true;
 }
 
+#ifndef median
+#define median median
+static inline int median(int a, int b, int c)
+{
+    return (b > a) == (a > c) ? a : (b > a) != (b > c) ? b : c;
+}
+#endif
+
+
+
+static bool _gray_write_filtered(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data)
+{
+    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
+    if(!data){
+        if(x == 0 && y == 0){
+            //write start
+            jpeg->width = w;
+            jpeg->height = h;
+            //if output is null, this is BMP
+            if(!jpeg->output){
+                jpeg->output = (uint8_t *)_malloc((w*h)+jpeg->data_offset);
+                if(!jpeg->output){
+                    return false;
+                }
+            }
+        } else {
+            //write end
+        }
+        return true;
+    }
+
+    size_t jw = jpeg->width;
+    size_t t = y * jw;
+    size_t b = t + (h * jw);
+    size_t l = x;
+    uint8_t *out = jpeg->output+jpeg->data_offset;
+    uint8_t *o = out;
+    size_t iy, ix;
+
+    // first line
+    iy=t;
+    o = out+iy+l;
+    ix = w;
+    do{
+        *(o++) = *(data++);
+    }while(--ix);
+    iy+=jw;
+
+    // filter other lines
+    for(; iy<b-jw; iy+=jw) { //iy=t+jw
+        o = out+iy+l;
+        ix = w;
+        
+        if(*data==255 || !(*data)){
+            do{
+                *(o++) = median(*data, *(data - jw), *(data + jw));
+                data++;
+            }while(--ix);
+        } else {
+            do{
+                *(o++) = *(data++);
+            }while(--ix);
+        }
+    }
+
+    // last line : iy=b-jw;
+    o = out+iy+l;
+    ix = w;
+    do{
+        *(o++) = *(data++);
+    }while(--ix);
+
+    return true;
+}
+
 static bool _rgb565_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data)
 {
     rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
@@ -239,6 +314,20 @@ bool jpg2gray(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t sca
     return true;
 }
 
+bool jpg2gray_filtered(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale)
+{
+    rgb_jpg_decoder jpeg;
+    jpeg.width = 0;
+    jpeg.height = 0;
+    jpeg.input = src;
+    jpeg.output = out;
+    jpeg.data_offset = 0;
+
+    if(esp_jpg_decode(src_len, scale, _jpg_read, _gray_write_filtered, (void*)&jpeg) != ESP_OK){
+        return false;
+    }
+    return true;
+}
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale)
 {
     rgb_jpg_decoder jpeg;
