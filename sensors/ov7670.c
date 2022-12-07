@@ -173,7 +173,7 @@ int ret = 0;
  */
 static int ov7670_frame_control(sensor_t *sensor, int hstart, int hstop, int vstart, int vstop)
 {
-struct regval_list frame[7];
+    struct regval_list frame[7];
 
     frame[0].reg_num = HSTART;
     frame[0].value = (hstart >> 3);
@@ -194,8 +194,8 @@ struct regval_list frame[7];
     frame[5].value = (((vstop & 0x02) << 2) | (vstart & 0x02));
 
     /* End mark */
-    frame[5].reg_num = 0xFF;
-    frame[5].value = 0xFF;
+    frame[6].reg_num = 0xFF;
+    frame[6].value = 0xFF;
 
     return ov7670_write_array(sensor, frame);
 }
