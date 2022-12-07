@@ -277,7 +277,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 	    case FRAMESIZE_QQVGA:
             if( (ret = ov7670_write_array(sensor, ov7670_qqvga)) == 0 ) {
                 /* These values from Omnivision */
-                ret = ov7670_frame_control(sensor, 158, 14, 10, 490);
+                ret = ov7670_frame_control(sensor, 158, 14, 12, 490);
             }
         break; 
 
