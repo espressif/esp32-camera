@@ -30,6 +30,20 @@
 #include "esp32s3/rom/ets_sys.h"
 #endif
 #endif // ESP_IDF_VERSION_MAJOR
+
+#if SOC_PSRAM_DMA_CAPABLE
+#include "rom/cache.h"
+
+#if (CONFIG_ESP32S2_DATA_CACHE_LINE_16B || CONFIG_ESP32S3_DATA_CACHE_LINE_16B)
+#define DCACHE_LINE_SIZE 16
+#elif (CONFIG_ESP32S2_DATA_CACHE_LINE_32B || CONFIG_ESP32S3_DATA_CACHE_LINE_32B)
+#define DCACHE_LINE_SIZE 32
+#elif CONFIG_ESP32S3_DATA_CACHE_LINE_64B
+#define DCACHE_LINE_SIZE 64
+#endif //(CONFIG_ESP32S2_DATA_CACHE_LINE_16B || CONFIG_ESP32S3_DATA_CACHE_LINE_16B)
+
+#endif //SOC_PSRAM_DMA_CAPABLE
+
 #define ESP_CAMERA_ETS_PRINTF ets_printf
 
 #if CONFIG_CAMERA_TASK_STACK_SIZE
@@ -95,6 +109,13 @@ static bool cam_get_next_frame(int * frame_pos)
 static bool cam_start_frame(int * frame_pos)
 {
     if (cam_get_next_frame(frame_pos)) {
+#if (CONFIG_SPIRAM && SOC_PSRAM_DMA_CAPABLE)
+        if (cam_obj->psram_mode) {
+            if (esp_ptr_external_ram(cam_obj->frames[*frame_pos].fb.buf)) {
+                Cache_Invalidate_Addr((uint32_t)cam_obj->frames[*frame_pos].fb.buf, cam_obj->dma_buffer_size);
+            }
+        }
+#endif
         if(ll_cam_start(cam_obj, *frame_pos)){
             // Vsync the frame manually
             ll_cam_do_vsync(cam_obj);
@@ -278,13 +299,32 @@ static esp_err_t cam_dma_config(const camera_config_t *config)
     size_t fb_size = cam_obj->fb_size;
     if (cam_obj->psram_mode) {
         dma_align = ll_cam_get_dma_align(cam_obj);
+#if (CONFIG_SPIRAM && SOC_PSRAM_DMA_CAPABLE)
+        if(CAMERA_FB_IN_PSRAM == config->fb_location){
+            uint8_t a, b;
+            if(dma_align < DCACHE_LINE_SIZE){
+                a = DCACHE_LINE_SIZE;
+                b = dma_align;
+            }else{
+                b = DCACHE_LINE_SIZE;
+                a = dma_align;
+            }
+            uint8_t c;
+            while (b != 0){
+                c = a % b;
+                a = b;
+                b = c;
+            }
+            dma_align *= DCACHE_LINE_SIZE / a;
+        }
+#endif
         if (cam_obj->fb_size < cam_obj->recv_size) {
             fb_size = cam_obj->recv_size;
         }
     }
 
     /* Allocate memory for frame buffer */
-    size_t alloc_size = fb_size * sizeof(uint8_t) + dma_align;
+    size_t alloc_size = fb_size * sizeof(uint8_t);
     uint32_t _caps = MALLOC_CAP_8BIT;
     if (CAMERA_FB_IN_DRAM == config->fb_location) {
         _caps |= MALLOC_CAP_INTERNAL;
@@ -293,22 +333,42 @@ static esp_err_t cam_dma_config(const camera_config_t *config)
     }
     for (int x = 0; x < cam_obj->frame_cnt; x++) {
         cam_obj->frames[x].dma = NULL;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(4, 3, 0)
         cam_obj->frames[x].fb_offset = 0;
+#endif
         cam_obj->frames[x].en = 0;
         ESP_LOGI(TAG, "Allocating %d Byte frame buffer in %s", alloc_size, _caps & MALLOC_CAP_SPIRAM ? "PSRAM" : "OnBoard RAM");
+        if(!cam_obj->psram_mode){
+            cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_malloc(alloc_size, _caps);
+        }else{
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
         // In IDF v4.2 and earlier, memory returned by heap_caps_aligned_alloc must be freed using heap_caps_aligned_free.
         // And heap_caps_aligned_free is deprecated on v4.3.
-        cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_aligned_alloc(16, alloc_size, _caps);
-#else
-        cam_obj->frames[x].fb.buf = (uint8_t *)heap_caps_malloc(alloc_size, _caps);
+
+#if (CONFIG_SPIRAM && SOC_PSRAM_DMA_CAPABLE)
+            if(CAMERA_FB_IN_PSRAM == config->fb_location){
+                alloc_size = (alloc_size + DCACHE_LINE_SIZE - 1) & (~(DCACHE_LINE_SIZE - 1));
+            }
 #endif
+            cam_obj->frames[x].fb.buf = (uint8_t*)heap_caps_aligned_alloc(dma_align, alloc_size, _caps);
+#else
+
+#if (CONFIG_SPIRAM && SOC_PSRAM_DMA_CAPABLE)
+            if (CAMERA_FB_IN_PSRAM == config->fb_location) {
+                alloc_size = (alloc_size + DCACHE_LINE_SIZE - 1) & (~(DCACHE_LINE_SIZE - 1));
+            }
+#endif
+            alloc_size += dma_align;
+            cam_obj->frames[x].fb.buf = (uint8_t*)heap_caps_malloc(alloc_size, _caps);
+            if (cam_obj->frames[x].fb.buf != NULL) {
+                cam_obj->frames[x].fb_offset = dma_align - ((uint32_t)cam_obj->frames[x].fb.buf & (dma_align - 1));
+                cam_obj->frames[x].fb.buf += cam_obj->frames[x].fb_offset;
+                ESP_LOGI(TAG, "Frame[%d]: Offset: %u, Addr: 0x%08X", x, cam_obj->frames[x].fb_offset, (unsigned)cam_obj->frames[x].fb.buf);
+            }
+#endif
+        }
         CAM_CHECK(cam_obj->frames[x].fb.buf != NULL, "frame buffer malloc failed", ESP_FAIL);
         if (cam_obj->psram_mode) {
-            //align PSRAM buffer. TODO: save the offset so proper address can be freed later
-            cam_obj->frames[x].fb_offset = dma_align - ((uint32_t)cam_obj->frames[x].fb.buf & (dma_align - 1));
-            cam_obj->frames[x].fb.buf += cam_obj->frames[x].fb_offset;
-            ESP_LOGI(TAG, "Frame[%d]: Offset: %u, Addr: 0x%08X", x, cam_obj->frames[x].fb_offset, (unsigned) cam_obj->frames[x].fb.buf);
             cam_obj->frames[x].dma = allocate_dma_descriptors(cam_obj->dma_node_cnt, cam_obj->dma_node_buffer_size, cam_obj->frames[x].fb.buf);
             CAM_CHECK(cam_obj->frames[x].dma != NULL, "frame dma malloc failed", ESP_FAIL);
         }
@@ -446,7 +506,11 @@ esp_err_t cam_deinit(void)
     }
     if (cam_obj->frames) {
         for (int x = 0; x < cam_obj->frame_cnt; x++) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
+            free(cam_obj->frames[x].fb.buf);
+#else
             free(cam_obj->frames[x].fb.buf - cam_obj->frames[x].fb_offset);
+#endif
             if (cam_obj->frames[x].dma) {
                 free(cam_obj->frames[x].dma);
             }

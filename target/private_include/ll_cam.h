@@ -79,7 +79,9 @@ typedef struct {
     uint8_t en;
     //for RGB/YUV modes
     lldesc_t *dma;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(4, 3, 0)
     size_t fb_offset;
+#endif
 } cam_frame_t;
 
 typedef struct {
