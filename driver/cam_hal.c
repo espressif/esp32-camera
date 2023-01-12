@@ -46,19 +46,14 @@ static const uint16_t JPEG_EOI_MARKER = 0xD9FF;  // written in little-endian for
 
 static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
 {
-    uint32_t sig = *((uint32_t *)inbuf) & 0xFFFFFF;
-    if(sig != JPEG_SOI_MARKER) {
-        for (uint32_t i = 0; i < length; i++) {
-            sig = *((uint32_t *)(&inbuf[i])) & 0xFFFFFF;
-            if (sig == JPEG_SOI_MARKER) {
-                ESP_LOGW(TAG, "SOI: %d", (int) i);
-                return i;
-            }
+    for (uint32_t i = 0; i < length; i++) {
+        if (memcmp(&inbuf[i], &JPEG_SOI_MARKER, 3) == 0) {
+            //ESP_LOGW(TAG, "SOI: %d", (int) i);
+            return i;
         }
-        ESP_LOGW(TAG, "NO-SOI");
-        return -1;
     }
-    return 0;
+    ESP_LOGW(TAG, "NO-SOI");
+    return -1;
 }
 
 static int cam_verify_jpeg_eoi(const uint8_t *inbuf, uint32_t length)
@@ -66,8 +61,7 @@ static int cam_verify_jpeg_eoi(const uint8_t *inbuf, uint32_t length)
     int offset = -1;
     uint8_t *dptr = (uint8_t *)inbuf + length - 2;
     while (dptr > inbuf) {
-        uint16_t sig = *((uint16_t *)dptr);
-        if (JPEG_EOI_MARKER == sig) {
+        if (memcmp(dptr, &JPEG_EOI_MARKER, 2) == 0) {
             offset = dptr - inbuf;
             //ESP_LOGW(TAG, "EOI: %d", length - (offset + 2));
             return offset;
