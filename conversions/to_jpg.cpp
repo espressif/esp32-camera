@@ -60,9 +60,9 @@ static IRAM_ATTR void convert_line_format(uint8_t * src, pixformat_t format, uin
         l = width * 2;
         src += l * line;
         for(i=0; i<l; i+=2) {
-            dst[o++] = src[i] & 0xF8;
-            dst[o++] = (src[i] & 0x07) << 5 | (src[i+1] & 0xE0) >> 3;
-            dst[o++] = (src[i+1] & 0x1F) << 3;
+            dst[o++] = src[i+1] & 0xF8;
+            dst[o++] = (src[i+1] & 0x07) << 5 | (src[i] & 0xE0) >> 3;
+            dst[o++] = (src[i] & 0x1F) << 3;
         }
     } else if(format == PIXFORMAT_YUV422) {
         uint8_t y0, y1, u, v;
