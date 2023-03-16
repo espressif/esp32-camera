@@ -231,6 +231,12 @@ esp_err_t esp_camera_save_to_nvs(const char *key);
  */
 esp_err_t esp_camera_load_from_nvs(const char *key);
 
+/**
+ * @brief Return all frame buffers to be reused again.
+ */
+void esp_camera_return_all(void);
+
+
 #ifdef __cplusplus
 }
 #endif
