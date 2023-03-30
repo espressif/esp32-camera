@@ -56,7 +56,7 @@ int SCCB_Init(int pin_sda, int pin_scl)
 
     sccb_i2c_port = SCCB_I2C_PORT_DEFAULT;
     sccb_owns_i2c_port = true;
-    ESP_LOGI(TAG, "sccb_i2c_port=%d\n", sccb_i2c_port);
+    ESP_LOGI(TAG, "sccb_i2c_port=%d", sccb_i2c_port);
 
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = pin_sda;
