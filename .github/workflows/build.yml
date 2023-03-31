@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        idf_target: ["esp32", "esp32s2", "esp32s3"]
+        idf_target: ["esp32", "esp32s2", "esp32s3", "esp32c2"]
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         idf_ver: ["release-v5.0"]
-        idf_target: ["esp32", "esp32s2", "esp32s3"]
+        idf_target: ["esp32", "esp32s2", "esp32s3", "esp32c2"]
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
