@@ -25,6 +25,8 @@
 #include "esp32c3/rom/tjpgd.h"
 #elif CONFIG_IDF_TARGET_ESP32H2
 #include "esp32h2/rom/tjpgd.h"
+#elif CONFIG_IDF_TARGET_ESP32C2
+#include "esp32c2/rom/tjpgd.h"
 #else
 #error Target CONFIG_IDF_TARGET is not supported
 #endif
