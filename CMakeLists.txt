@@ -61,7 +61,7 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND COMPONENT_SRCS
       target/xclk.c
       target/esp32s2/ll_cam.c
-      target/esp32s2/tjpgd.c
+      target/tjpgd.c
       )
 
     list(APPEND COMPONENT_PRIV_INCLUDEDIRS
@@ -82,6 +82,17 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND COMPONENT_PRIV_REQUIRES esp_timer)
   endif()
 
+endif()
+
+# CONFIG_ESP_ROM_HAS_JPEG_DECODE is available from IDF v4.4 but
+# previous IDF supported chips already support JPEG decoder, hence okay to use this
+if(idf_version VERSION_GREATER_EQUAL "4.4" AND NOT CONFIG_ESP_ROM_HAS_JPEG_DECODE)
+  list(APPEND COMPONENT_SRCS
+    target/tjpgd.c
+  )
+  list(APPEND COMPONENT_PRIV_INCLUDEDIRS
+    target/jpeg_include/
+  )
 endif()
 
 register_component()
