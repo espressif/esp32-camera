@@ -127,7 +127,7 @@ static camera_config_t camera_config = {
     .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
 };
 
-static esp_err_t init_camera()
+static esp_err_t init_camera(void)
 {
     //initialize the camera
     esp_err_t err = esp_camera_init(&camera_config);
@@ -140,7 +140,7 @@ static esp_err_t init_camera()
     return ESP_OK;
 }
 
-void app_main()
+void app_main(void)
 {
     if(ESP_OK != init_camera()) {
         return;

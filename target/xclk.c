@@ -34,7 +34,7 @@ esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz)
     return err;
 }
 
-esp_err_t camera_enable_out_clock(camera_config_t* config)
+esp_err_t camera_enable_out_clock(const camera_config_t* config)
 {
     esp_err_t err = xclk_timer_conf(config->ledc_timer, config->xclk_freq_hz);
     if (err != ESP_OK) {
