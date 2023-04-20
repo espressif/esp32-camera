@@ -506,3 +506,9 @@ void cam_give(camera_fb_t *dma_buffer)
         }
     }
 }
+
+void cam_give_all(void) {
+    for (int x = 0; x < cam_obj->frame_cnt; x++) {
+        cam_obj->frames[x].en = 1;
+    }
+}
