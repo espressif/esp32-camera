@@ -194,14 +194,14 @@ esp_err_t esp_camera_init(const camera_config_t* config);
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_STATE if the driver hasn't been initialized yet
  */
-esp_err_t esp_camera_deinit();
+esp_err_t esp_camera_deinit(void);
 
 /**
  * @brief Obtain pointer to a frame buffer.
  *
  * @return pointer to the frame buffer
  */
-camera_fb_t* esp_camera_fb_get();
+camera_fb_t* esp_camera_fb_get(void);
 
 /**
  * @brief Return the frame buffer to be reused again.
@@ -215,7 +215,7 @@ void esp_camera_fb_return(camera_fb_t * fb);
  *
  * @return pointer to the sensor
  */
-sensor_t * esp_camera_sensor_get();
+sensor_t * esp_camera_sensor_get(void);
 
 /**
  * @brief Save camera settings to non-volatile-storage (NVS)

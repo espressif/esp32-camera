@@ -383,7 +383,11 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
     ret = cam_dma_config(config);
     CAM_CHECK_GOTO(ret == ESP_OK, "cam_dma_config failed", err);
 
-    cam_obj->event_queue = xQueueCreate(cam_obj->dma_half_buffer_cnt - 1, sizeof(cam_event_t));
+    size_t queue_size = cam_obj->dma_half_buffer_cnt - 1;
+    if (queue_size == 0) {
+        queue_size = 1;
+    }
+    cam_obj->event_queue = xQueueCreate(queue_size, sizeof(cam_event_t));
     CAM_CHECK_GOTO(cam_obj->event_queue != NULL, "event_queue create failed", err);
 
     size_t frame_buffer_queue_len = cam_obj->frame_cnt;
