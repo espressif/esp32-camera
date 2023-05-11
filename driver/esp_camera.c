@@ -245,7 +245,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
 
     ESP_LOGD(TAG, "Doing SW reset of sensor");
     vTaskDelay(10 / portTICK_PERIOD_MS);
-    
+
     return s_state->sensor.reset(&s_state->sensor);
 err :
     CAMERA_DISABLE_OUT_CLOCK();
@@ -476,3 +476,11 @@ esp_err_t esp_camera_load_from_nvs(const char *key)
         return ret;
     }
 }
+
+void esp_camera_return_all(void) {
+    if (s_state == NULL) {
+        return;
+    }
+    cam_give_all();
+}
+

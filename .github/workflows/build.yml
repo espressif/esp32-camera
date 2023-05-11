@@ -6,92 +6,52 @@ on:
   pull_request:
 
 jobs:
-  build-master:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        idf_target: ["esp32", "esp32s2", "esp32s3"]
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@main
-      with:
-        target: ${{ matrix.idf_target }}
-        path: 'examples'
-
-  build-release-v5_0:
+  build-examples:
     name: Build for ${{ matrix.idf_target }} on ${{ matrix.idf_ver }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        idf_ver: ["release-v5.0"]
-        idf_target: ["esp32", "esp32s2", "esp32s3"]
+        idf_ver: ["release-v4.1", "release-v4.2", "release-v4.3"]
+        idf_target: ["esp32", "esp32s2"]
+        exclude:
+          - idf_ver: "release-v4.1"
+            idf_target: esp32s2 # ESP32S2 support started with version 4.2
+    container: espressif/idf:${{ matrix.idf_ver }}
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@main
-      with:
-        esp_idf_version: ${{ matrix.idf_ver }}
-        target: ${{ matrix.idf_target }}
-        path: 'examples'
-
-  build-release-v4_4:
+      - uses: actions/checkout@v1
+        with:
+          submodules: 'true'
+      - name: esp-idf build
+        env:
+          IDF_TARGET: ${{ matrix.idf_target }}
+        shell: bash
+        working-directory: examples
+        run: |
+          . ${IDF_PATH}/export.sh
+          idf.py build
+  build-examples-pedantic:
     name: Build for ${{ matrix.idf_target }} on ${{ matrix.idf_ver }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        idf_ver: ["v4.4"]
-        idf_target: ["esp32", "esp32s2", "esp32s3"]
+        idf_ver: ["release-v4.4", "release-v5.0", "release-v5.1", "latest"]
+        idf_target: ["esp32", "esp32s2", "esp32s3", "esp32c2", "esp32c3"]
+        exclude:
+          - idf_ver: "release-v4.4"
+            idf_target: esp32c2 # ESP32C2 support started with version 5.0
+    container: espressif/idf:${{ matrix.idf_ver }}
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@main
-      with:
-        esp_idf_version: ${{ matrix.idf_ver }}
-        target: ${{ matrix.idf_target }}
-        path: 'examples'
-
-  build-release-v4_1:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@release-v4.1
-      with:
-        path: 'examples'
-
-  build-release-v4_2:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@release-v4.2
-      with:
-        path: 'examples'
-
-  build-release-v4_3:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-    - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@release-v4.3
-      with:
-        path: 'examples'
+      - uses: actions/checkout@v1
+        with:
+          submodules: 'true'
+      - name: esp-idf build
+        env:
+          IDF_TARGET: ${{ matrix.idf_target }}
+        shell: bash
+        working-directory: examples
+        run: |
+          . ${IDF_PATH}/export.sh
+          export PEDANTIC_FLAGS="-DIDF_CI_BUILD -Werror -Werror=deprecated-declarations -Werror=unused-variable -Werror=unused-but-set-variable -Werror=unused-function"
+          export EXTRA_CFLAGS="${PEDANTIC_FLAGS} -Wstrict-prototypes"
+          export EXTRA_CXXFLAGS="${PEDANTIC_FLAGS}"
+          idf.py build
