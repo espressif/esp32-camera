@@ -44,7 +44,7 @@ static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
 #define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
 #endif
 
-#ifndef ets_delay_us
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2) 
 #define ets_delay_us esp_rom_delay_us
 #endif
 
