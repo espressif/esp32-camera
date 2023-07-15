@@ -27,6 +27,7 @@ esp_err_t xclk_timer_conf(int ledc_timer, int xclk_freq_hz)
     timer_conf.clk_cfg = LEDC_AUTO_CLK;
 #endif
     timer_conf.timer_num = (ledc_timer_t)ledc_timer;
+    timer_conf.deconfigure = false;
     esp_err_t err = ledc_timer_config(&timer_conf);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "ledc_timer_config failed for freq %d, rc=%x", xclk_freq_hz, err);
