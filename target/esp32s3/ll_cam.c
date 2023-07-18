@@ -33,6 +33,10 @@
 #define ets_delay_us(a) esp_rom_delay_us(a)
 #endif
 
+#if !defined(SOC_GDMA_PAIRS_PER_GROUP) && defined(SOC_GDMA_PAIRS_PER_GROUP_MAX)
+#define SOC_GDMA_PAIRS_PER_GROUP SOC_GDMA_PAIRS_PER_GROUP_MAX
+#endif
+
 static const char *TAG = "s3 ll_cam";
 
 static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
