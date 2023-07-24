@@ -91,6 +91,7 @@ typedef enum {
     FRAMESIZE_CIF,      // 400x296
     FRAMESIZE_HVGA,     // 480x320
     FRAMESIZE_VGA,      // 640x480
+    FRAMESIZE_800X480,  // 800x480
     FRAMESIZE_SVGA,     // 800x600
     FRAMESIZE_XGA,      // 1024x768
     FRAMESIZE_HD,       // 1280x720
