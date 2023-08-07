@@ -161,6 +161,12 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     case PIXFORMAT_RAW:
         set_reg_bits(sensor, 0x12, 0, 1, 0x1);
         break;
+    case PIXFORMAT_GRAYSCALE:
+        write_reg(sensor->slv_addr, 0x12, 0x23);
+        write_reg(sensor->slv_addr, 0x3a, 0x00);
+        write_reg(sensor->slv_addr, 0xe1, 0x92);
+        write_reg(sensor->slv_addr, 0xe3, 0x02);
+        break;
     default:
         ESP_LOGW(TAG, "set_pix unsupport format");
         ret = -1;
