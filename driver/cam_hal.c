@@ -435,7 +435,7 @@ esp_err_t cam_deinit(void)
     }
 
     ll_cam_deinit(cam_obj);
-    
+
     if (cam_obj->dma) {
         free(cam_obj->dma);
     }
@@ -484,7 +484,11 @@ camera_fb_t *cam_take(TickType_t timeout)
             } else {
                 ESP_LOGW(TAG, "NO-EOI");
                 cam_give(dma_buffer);
-                return cam_take(timeout - (xTaskGetTickCount() - start));//recurse!!!!
+                TickType_t ticks_spent = xTaskGetTickCount() - start;
+                if (ticks_spent >= timeout) {
+                    return NULL; /* We are out of time */
+                }
+                return cam_take(timeout - ticks_spent);//recurse!!!!
             }
         } else if(cam_obj->psram_mode && cam_obj->in_bytes_per_pixel != cam_obj->fb_bytes_per_pixel){
             //currently this is used only for YUV to GRAYSCALE
