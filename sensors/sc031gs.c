@@ -204,7 +204,7 @@ static int set_aec_value(sensor_t *sensor, int value)
 
 static int reset(sensor_t *sensor)
 {
-    int ret = write_regs(sensor->slv_addr, sc031gs_default_init_regs);
+    int ret = write_regs(sensor->slv_addr, sc031gs_reset_regs);
     if (ret) {
         ESP_LOGE(TAG, "reset fail");
     }
@@ -217,17 +217,11 @@ static int set_output_window(sensor_t *sensor, int offset_x, int offset_y, int w
 {
     int ret = 0;
     //sc:H_start={0x3212[1:0],0x3213},H_length={0x3208[1:0],0x3209},
-    // printf("%d, %d, %d, %d\r\n", ((offset_x>>8) & 0x03), offset_x & 0xff, ((w>>8) & 0x03), w & 0xff);
 
-    WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_START_X_H_REG, 0x0); // For now, we use x_start is 0x04
-    WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_START_X_L_REG, 0x04);
     WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_WIDTH_H_REG, ((w>>8) & 0x03));
     WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_WIDTH_L_REG, w & 0xff);
 
     //sc:V_start={0x3210[1:0],0x3211},V_length={0x320a[1:0],0x320b},
-    // printf("%d, %d, %d, %d\r\n", ((offset_y>>8) & 0x03), offset_y & 0xff, ((h>>8) & 0x03), h & 0xff);
-    WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_START_Y_H_REG, 0x0); // For now, we use y_start is 0x08
-    WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_START_Y_L_REG, 0x08);
     WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_HIGH_H_REG, ((h>>8) & 0x03));
     WRITE_REG_OR_RETURN(SC031GS_OUTPUT_WINDOW_HIGH_L_REG, h & 0xff);
 
@@ -240,17 +234,21 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     uint16_t w = resolution[framesize].width;
     uint16_t h = resolution[framesize].height;
-    if(w > SC031GS_MAX_FRAME_WIDTH || h > SC031GS_MAX_FRAME_HIGH) {
-        goto err; 
-    }
 
-    if(w != 200 || h != 200) {
-        ESP_LOGE(TAG, "Only support 200*200 for now, contact us if you want to use other resolutions");
+    struct sc031gs_regval const *framesize_regs = sc031gs_200x200_init_regs;
+    if(framesize > FRAMESIZE_VGA) {
         goto err; 
+    } else if(framesize > FRAMESIZE_QVGA) {
+        framesize_regs = sc031gs_640x480_50fps_init_regs;
     }
 
     uint16_t offset_x = (640-w) /2 + 4;   
     uint16_t offset_y = (480-h) /2 + 4;
+
+    int ret = write_regs(sensor->slv_addr, framesize_regs);
+    if (ret) {
+        ESP_LOGE(TAG, "reset fail");
+    }
     
     if(set_output_window(sensor, offset_x, offset_y, w, h)) {
         goto err; 
