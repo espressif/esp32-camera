@@ -253,8 +253,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     write_reg(sensor->slv_addr, 0xf7, col_s / 4);
     write_reg(sensor->slv_addr, 0xf8, row_s / 4);
-    write_reg(sensor->slv_addr, 0xf9, (col_s + h) / 4);
-    write_reg(sensor->slv_addr, 0xfa, (row_s + w) / 4);
+    write_reg(sensor->slv_addr, 0xf9, (col_s + w) / 4);
+    write_reg(sensor->slv_addr, 0xfa, (row_s + h) / 4);
 
     write_reg(sensor->slv_addr, 0x05, H8(row_s));
     write_reg(sensor->slv_addr, 0x06, L8(row_s));
