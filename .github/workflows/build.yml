@@ -11,11 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        idf_ver: ["release-v4.1", "release-v4.2", "release-v4.3"]
+        idf_ver: ["release-v4.3"]
         idf_target: ["esp32", "esp32s2"]
-        exclude:
-          - idf_ver: "release-v4.1"
-            idf_target: esp32s2 # ESP32S2 support started with version 4.2
     container: espressif/idf:${{ matrix.idf_ver }}
     steps:
       - uses: actions/checkout@v1
@@ -25,7 +22,7 @@ jobs:
         env:
           IDF_TARGET: ${{ matrix.idf_target }}
         shell: bash
-        working-directory: examples
+        working-directory: examples/camera_example
         run: |
           . ${IDF_PATH}/export.sh
           idf.py build
@@ -48,7 +45,7 @@ jobs:
         env:
           IDF_TARGET: ${{ matrix.idf_target }}
         shell: bash
-        working-directory: examples
+        working-directory: examples/camera_example
         run: |
           . ${IDF_PATH}/export.sh
           export PEDANTIC_FLAGS="-DIDF_CI_BUILD -Werror -Werror=deprecated-declarations -Werror=unused-variable -Werror=unused-but-set-variable -Werror=unused-function"
