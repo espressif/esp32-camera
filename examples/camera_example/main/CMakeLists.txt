@@ -1,3 +1,3 @@
-set(COMPONENT_SRCS take_picture.c)
-set(COMPONENT_ADD_INCLUDEDIRS .)
-register_component()
+idf_component_register(SRCS take_picture.c
+                        PRIV_INCLUDE_DIRS .
+                        PRIV_REQUIRES nvs_flash)
