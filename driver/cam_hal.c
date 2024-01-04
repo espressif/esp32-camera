@@ -94,7 +94,7 @@ static bool cam_start_frame(int * frame_pos)
             ll_cam_do_vsync(cam_obj);
             uint64_t us = (uint64_t)esp_timer_get_time();
             cam_obj->frames[*frame_pos].fb.timestamp.tv_sec = us / 1000000UL;
-            cam_obj->frames[*frame_pos].fb.timestamp.tv_usec = us % 1000000UL;
+            cam_obj->frames[*frame_pos].fb.timestamp.tv_usec = us;
             return true;
         }
     }
