@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdalign.h>
 #include "esp_heap_caps.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
@@ -265,7 +266,7 @@ static esp_err_t cam_dma_config(const camera_config_t *config)
     cam_obj->dma_buffer = NULL;
     cam_obj->dma = NULL;
 
-    cam_obj->frames = (cam_frame_t *)heap_caps_calloc(1, cam_obj->frame_cnt * sizeof(cam_frame_t), MALLOC_CAP_DEFAULT);
+    cam_obj->frames = (cam_frame_t *)heap_caps_aligned_calloc(alignof(cam_frame_t), 1, cam_obj->frame_cnt * sizeof(cam_frame_t), MALLOC_CAP_DEFAULT);
     CAM_CHECK(cam_obj->frames != NULL, "frames malloc failed", ESP_FAIL);
 
     uint8_t dma_align = 0;
