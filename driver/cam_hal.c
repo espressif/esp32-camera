@@ -475,6 +475,10 @@ camera_fb_t *cam_take(TickType_t timeout)
     TickType_t start = xTaskGetTickCount();
     xQueueReceive(cam_obj->frame_buffer_queue, (void *)&dma_buffer, timeout);
 #if CONFIG_IDF_TARGET_ESP32S3
+    // Currently (22.01.2024) there is a bug in ESP-IDF v5.2, that causes
+    // GDMA to fall into a strange state if it is running while WiFi STA is connecting.
+    // This code tries to reset GDMA if frame is not received, to try and help with
+    // this case. It is possible to have some side effects too, though none come to mind
     if (!dma_buffer) {
         ll_cam_dma_reset(cam_obj);
         xQueueReceive(cam_obj->frame_buffer_queue, (void *)&dma_buffer, timeout);
