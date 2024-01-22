@@ -142,6 +142,10 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam);
 bool ll_cam_dma_sizes(cam_obj_t *cam);
 size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len);
 esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint16_t sensor_pid);
+#if CONFIG_IDF_TARGET_ESP32S3
+void ll_cam_dma_print_state(cam_obj_t *cam);
+void ll_cam_dma_reset(cam_obj_t *cam);
+#endif
 
 // implemented in cam_hal
 void ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType_t * HPTaskAwoken);

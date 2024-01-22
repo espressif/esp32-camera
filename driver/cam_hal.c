@@ -474,6 +474,12 @@ camera_fb_t *cam_take(TickType_t timeout)
     camera_fb_t *dma_buffer = NULL;
     TickType_t start = xTaskGetTickCount();
     xQueueReceive(cam_obj->frame_buffer_queue, (void *)&dma_buffer, timeout);
+#if CONFIG_IDF_TARGET_ESP32S3
+    if (!dma_buffer) {
+        ll_cam_dma_reset(cam_obj);
+        xQueueReceive(cam_obj->frame_buffer_queue, (void *)&dma_buffer, timeout);
+    }
+#endif
     if (dma_buffer) {
         if(cam_obj->jpeg_mode){
             // find the end marker for JPEG. Data after that can be discarded
@@ -498,6 +504,9 @@ camera_fb_t *cam_take(TickType_t timeout)
         return dma_buffer;
     } else {
         ESP_LOGW(TAG, "Failed to get the frame on time!");
+// #if CONFIG_IDF_TARGET_ESP32S3
+//         ll_cam_dma_print_state(cam_obj);
+// #endif
     }
     return NULL;
 }

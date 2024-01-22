@@ -39,6 +39,54 @@
 
 static const char *TAG = "s3 ll_cam";
 
+void ll_cam_dma_print_state(cam_obj_t *cam)
+{
+    esp_rom_printf("dma_infifo_status[%u]  :\n", cam->dma_num);
+    esp_rom_printf("  infifo_full_l1       : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_full_l1);
+    esp_rom_printf("  infifo_empty_l1      : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_empty_l1);
+    esp_rom_printf("  infifo_full_l2       : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_full_l2);
+    esp_rom_printf("  infifo_empty_l2      : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_empty_l2);
+    esp_rom_printf("  infifo_full_l3       : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_full_l3);
+    esp_rom_printf("  infifo_empty_l3      : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_empty_l3);
+    esp_rom_printf("  infifo_cnt_l1        : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_cnt_l1);
+    esp_rom_printf("  infifo_cnt_l2        : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_cnt_l2);
+    esp_rom_printf("  infifo_cnt_l3        : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.infifo_cnt_l3);
+    esp_rom_printf("  in_remain_under_1b_l3: %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.in_remain_under_1b_l3);
+    esp_rom_printf("  in_remain_under_2b_l3: %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.in_remain_under_2b_l3);
+    esp_rom_printf("  in_remain_under_3b_l3: %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.in_remain_under_3b_l3);
+    esp_rom_printf("  in_remain_under_4b_l3: %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.in_remain_under_4b_l3);
+    esp_rom_printf("  in_buf_hungry        : %lu\n", GDMA.channel[cam->dma_num].in.infifo_status.in_buf_hungry);
+    esp_rom_printf("dma_state[%u]          :\n", cam->dma_num);
+    esp_rom_printf("  dscr_addr            : 0x%lx\n", GDMA.channel[cam->dma_num].in.state.dscr_addr);
+    esp_rom_printf("  in_dscr_state        : %lu\n", GDMA.channel[cam->dma_num].in.state.in_dscr_state);
+    esp_rom_printf("  in_state             : %lu\n", GDMA.channel[cam->dma_num].in.state.in_state);
+}
+
+void ll_cam_dma_reset(cam_obj_t *cam)
+{
+
+    GDMA.channel[cam->dma_num].in.int_clr.val = ~0;
+    GDMA.channel[cam->dma_num].in.int_ena.val = 0;
+
+    GDMA.channel[cam->dma_num].in.conf0.val = 0;
+    GDMA.channel[cam->dma_num].in.conf0.in_rst = 1;
+    GDMA.channel[cam->dma_num].in.conf0.in_rst = 0;
+
+    //internal SRAM only
+    if (!cam->psram_mode) {
+        GDMA.channel[cam->dma_num].in.conf0.indscr_burst_en = 1;
+        GDMA.channel[cam->dma_num].in.conf0.in_data_burst_en = 1;
+    }
+
+    GDMA.channel[cam->dma_num].in.conf1.in_check_owner = 0;
+    // GDMA.channel[cam->dma_num].in.conf1.in_ext_mem_bk_size = 2;
+
+    GDMA.channel[cam->dma_num].in.peri_sel.sel = 5;
+    //GDMA.channel[cam->dma_num].in.pri.rx_pri = 1;//rx prio 0-15
+    //GDMA.channel[cam->dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
+    //GDMA.channel[cam->dma_num].in.wight.rx_weight = 7;//The weight of Rx channel 0-15
+}
+
 static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
 {
     //DBG_PIN_SET(1);
@@ -164,27 +212,7 @@ static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
         REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
         REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
     }
-
-    GDMA.channel[cam->dma_num].in.int_clr.val = ~0;
-    GDMA.channel[cam->dma_num].in.int_ena.val = 0;
-
-    GDMA.channel[cam->dma_num].in.conf0.val = 0;
-    GDMA.channel[cam->dma_num].in.conf0.in_rst = 1;
-    GDMA.channel[cam->dma_num].in.conf0.in_rst = 0;
-
-    //internal SRAM only
-    if (!cam->psram_mode) {
-        GDMA.channel[cam->dma_num].in.conf0.indscr_burst_en = 1;
-        GDMA.channel[cam->dma_num].in.conf0.in_data_burst_en = 1;
-    }
-
-    GDMA.channel[cam->dma_num].in.conf1.in_check_owner = 0;
-    // GDMA.channel[cam->dma_num].in.conf1.in_ext_mem_bk_size = 2;
-
-    GDMA.channel[cam->dma_num].in.peri_sel.sel = 5;
-    //GDMA.channel[cam->dma_num].in.pri.rx_pri = 1;//rx prio 0-15
-    //GDMA.channel[cam->dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
-    //GDMA.channel[cam->dma_num].in.wight.rx_weight = 7;//The weight of Rx channel 0-15
+    ll_cam_dma_reset(cam);
     return ESP_OK;
 }
 
