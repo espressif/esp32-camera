@@ -20,6 +20,8 @@
 #include "soc/gdma_struct.h"
 #include "soc/gdma_periph.h"
 #include "soc/gdma_reg.h"
+#include "hal/clk_gate_ll.h"
+#include "esp_private/gdma.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
 #include "esp_rom_gpio.h"
@@ -141,25 +143,6 @@ bool IRAM_ATTR ll_cam_stop(cam_obj_t *cam)
     return true;
 }
 
-esp_err_t ll_cam_deinit(cam_obj_t *cam)
-{
-    if (cam->cam_intr_handle) {
-        esp_intr_free(cam->cam_intr_handle);
-        cam->cam_intr_handle = NULL;
-    }
-
-    if (cam->dma_intr_handle) {
-        esp_intr_free(cam->dma_intr_handle);
-        cam->dma_intr_handle = NULL;
-    }
-    GDMA.channel[cam->dma_num].in.link.addr = 0x0;
-
-    LCD_CAM.cam_ctrl1.cam_start = 0;
-    LCD_CAM.cam_ctrl1.cam_reset = 1;
-    LCD_CAM.cam_ctrl1.cam_reset = 0;
-    return ESP_OK;
-}
-
 bool ll_cam_start(cam_obj_t *cam, int frame_pos)
 {
     LCD_CAM.cam_ctrl1.cam_start = 0;
@@ -191,27 +174,72 @@ bool ll_cam_start(cam_obj_t *cam, int frame_pos)
     return true;
 }
 
-static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
+esp_err_t ll_cam_deinit(cam_obj_t *cam)
 {
-    for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--) {
-        if (GDMA.channel[x].in.link.addr == 0x0) {
-            cam->dma_num = x;
-            ESP_LOGI(TAG, "DMA Channel=%d", cam->dma_num);
-            break;
-        }
-        if (x == 0) {
-            cam_deinit();
-            ESP_LOGE(TAG, "Can't found available GDMA channel");
-			return ESP_FAIL;
-        }
+    if (cam->cam_intr_handle) {
+        esp_intr_free(cam->cam_intr_handle);
+        cam->cam_intr_handle = NULL;
     }
 
-    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) == 0) {
-        REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
-        REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
-        REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
-        REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
+    if (cam->dma_intr_handle) {
+        esp_intr_free(cam->dma_intr_handle);
+        cam->dma_intr_handle = NULL;
     }
+    gdma_disconnect(cam->dma_channel_handle);
+    gdma_del_channel(cam->dma_channel_handle);
+    cam->dma_channel_handle = NULL;
+    // GDMA.channel[cam->dma_num].in.link.addr = 0x0;
+
+    LCD_CAM.cam_ctrl1.cam_start = 0;
+    LCD_CAM.cam_ctrl1.cam_reset = 1;
+    LCD_CAM.cam_ctrl1.cam_reset = 0;
+    return ESP_OK;
+}
+
+static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
+{
+    //alloc rx gdma channel
+    gdma_channel_alloc_config_t rx_alloc_config = {
+        .direction = GDMA_CHANNEL_DIRECTION_RX,
+    };
+    esp_err_t ret = gdma_new_channel(&rx_alloc_config, &cam->dma_channel_handle);
+    if (ret != ESP_OK) {
+        cam_deinit();
+        ESP_LOGE(TAG, "Can't find available GDMA channel");
+        return ESP_FAIL;
+    }
+    int chan_id = -1;
+    ret = gdma_get_channel_id(cam->dma_channel_handle, &chan_id);
+    if (ret != ESP_OK) {
+        cam_deinit();
+        ESP_LOGE(TAG, "Can't get GDMA channel number");
+        return ESP_FAIL;
+    }
+    cam->dma_num = chan_id;
+    ESP_LOGI(TAG, "DMA Channel=%d", cam->dma_num);
+    // for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--) {
+    //     if (GDMA.channel[x].in.link.addr == 0x0) {
+    //         cam->dma_num = x;
+    //         ESP_LOGI(TAG, "DMA Channel=%d", cam->dma_num);
+    //         break;
+    //     }
+    //     if (x == 0) {
+    //         cam_deinit();
+    //         ESP_LOGE(TAG, "Can't found available GDMA channel");
+	// 		return ESP_FAIL;
+    //     }
+    // }
+
+    if (!periph_ll_periph_enabled(PERIPH_GDMA_MODULE)) {
+        periph_ll_disable_clk_set_rst(PERIPH_GDMA_MODULE);
+        periph_ll_enable_clk_clear_rst(PERIPH_GDMA_MODULE);
+    }
+    // if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) == 0) {
+    //     REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
+    //     REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
+    //     REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
+    //     REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
+    // }
     ll_cam_dma_reset(cam);
     return ESP_OK;
 }
@@ -267,12 +295,16 @@ static esp_err_t ll_cam_converter_config(cam_obj_t *cam, const camera_config_t *
 esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
 {
     esp_err_t ret = ESP_OK;
-    if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN) == 0) {
-        REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN);
-        REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN);
-        REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
-        REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
+    if (!periph_ll_periph_enabled(PERIPH_LCD_CAM_MODULE)) {
+        periph_ll_disable_clk_set_rst(PERIPH_LCD_CAM_MODULE);
+        periph_ll_enable_clk_clear_rst(PERIPH_LCD_CAM_MODULE);
     }
+    // if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN) == 0) {
+    //     REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN);
+    //     REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_LCD_CAM_CLK_EN);
+    //     REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
+    //     REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_LCD_CAM_RST);
+    // }
 
     LCD_CAM.cam_ctrl.val = 0;
 

@@ -38,6 +38,9 @@
 #if __has_include("esp_private/periph_ctrl.h")
 # include "esp_private/periph_ctrl.h"
 #endif
+#if __has_include("esp_private/gdma.h")
+# include "esp_private/gdma.h"
+#endif
 
 #define CAMERA_DBG_PIN_ENABLE 0
 #if CAMERA_DBG_PIN_ENABLE
@@ -104,6 +107,9 @@ typedef struct {
 
     uint8_t dma_num;//ESP32-S3
     intr_handle_t dma_intr_handle;//ESP32-S3
+#if SOC_GDMA_SUPPORTED
+    gdma_channel_handle_t dma_channel_handle;//ESP32-S3
+#endif
 
     uint8_t jpeg_mode;
     uint8_t vsync_pin;
