@@ -89,7 +89,7 @@ void ll_cam_dma_reset(cam_obj_t *cam)
     //GDMA.channel[cam->dma_num].in.wight.rx_weight = 7;//The weight of Rx channel 0-15
 }
 
-static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
+static void CAMERA_ISR_IRAM_ATTR ll_cam_vsync_isr(void *arg)
 {
     //DBG_PIN_SET(1);
     cam_obj_t *cam = (cam_obj_t *)arg;
@@ -112,7 +112,7 @@ static void IRAM_ATTR ll_cam_vsync_isr(void *arg)
     //DBG_PIN_SET(0);
 }
 
-static void IRAM_ATTR ll_cam_dma_isr(void *arg)
+static void CAMERA_ISR_IRAM_ATTR ll_cam_dma_isr(void *arg)
 {
     cam_obj_t *cam = (cam_obj_t *)arg;
     BaseType_t HPTaskAwoken = pdFALSE;
@@ -401,7 +401,7 @@ esp_err_t ll_cam_init_isr(cam_obj_t *cam)
 {
 	esp_err_t ret = ESP_OK;
     ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[cam->dma_num].rx_irq_id,
-                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | CAMERA_ISR_IRAM_FLAG,
                                      (uint32_t)&GDMA.channel[cam->dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
                                      ll_cam_dma_isr, cam, &cam->dma_intr_handle);
     if (ret != ESP_OK) {
@@ -410,7 +410,7 @@ esp_err_t ll_cam_init_isr(cam_obj_t *cam)
 	}
 
     ret = esp_intr_alloc_intrstatus(ETS_LCD_CAM_INTR_SOURCE,
-                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                                     ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | CAMERA_ISR_IRAM_FLAG,
                                      (uint32_t)&LCD_CAM.lc_dma_int_st.val, LCD_CAM_CAM_VSYNC_INT_ST_M,
                                      ll_cam_vsync_isr, cam, &cam->cam_intr_handle);
 	if (ret != ESP_OK) {
