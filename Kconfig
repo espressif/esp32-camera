@@ -210,4 +210,11 @@ menu "Camera configuration"
             Full color range mode has a wider color range, so details in the image show more clearly.
             Please confirm the color range mode of the current camera sensor, incorrect color range mode may cause color difference in the final converted image.
             Full range mode is used by default. If this option is not selected, the format conversion function will be done using the limited range mode.
+
+    config LCD_CAM_ISR_IRAM_SAFE
+        bool "Execute camera ISR from IRAM"
+        depends on (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
+        default n
+        help
+            If this option is enabled, camera ISR will execute from IRAM.
 endmenu
