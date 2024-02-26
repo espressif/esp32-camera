@@ -231,6 +231,8 @@ uint8_t SCCB_Read16_Validate(uint8_t slv_addr, uint16_t reg) {
   uint8_t* reg_u8    = (uint8_t*)&reg_htons;
   int i;
   for (i = 0; i < SCCB_RETRY_COUNT; i++) {
+    vTaskDelay(pdMS_TO_TICKS(SCCB_RETRY_DELAY_MS * i));
+
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
@@ -294,7 +296,6 @@ uint8_t SCCB_Read16_Validate(uint8_t slv_addr, uint16_t reg) {
         }
       }
     }
-    vTaskDelay(pdMS_TO_TICKS(SCCB_RETRY_DELAY_MS * i));
   }
   sccbUnlock();
   if ((ret != ESP_OK) || (i == 10)) {
@@ -315,6 +316,8 @@ int SCCB_Write16_Validate(uint8_t slv_addr, uint16_t reg, uint8_t data) {
   uint8_t* reg_u8    = (uint8_t*)&reg_htons;
   int i;
   for (i = 0; i < SCCB_RETRY_COUNT; i++) {
+    vTaskDelay(pdMS_TO_TICKS(SCCB_RETRY_DELAY_MS * i));
+
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
@@ -365,7 +368,6 @@ int SCCB_Write16_Validate(uint8_t slv_addr, uint16_t reg, uint8_t data) {
         }
       }
     }
-    vTaskDelay(pdMS_TO_TICKS(SCCB_RETRY_DELAY_MS * i));
   }
 
   if ((ret != ESP_OK) || (i == 10)) {
