@@ -27,7 +27,7 @@ static const char *TAG = "ov5640";
 //#define REG_DEBUG_ON
 
 static int read_reg(uint8_t slv_addr, const uint16_t reg){
-    int ret = SCCB_Read16(slv_addr, reg);
+  int ret = SCCB_Read16_Validate(slv_addr, reg);
 #ifdef REG_DEBUG_ON
     if (ret < 0) {
         ESP_LOGE(TAG, "READ REG 0x%04x FAILED: %d", reg, ret);
@@ -108,7 +108,7 @@ static int read_reg16(uint8_t slv_addr, const uint16_t reg){
 static int write_reg(uint8_t slv_addr, const uint16_t reg, uint8_t value){
     int ret = 0;
 #ifndef REG_DEBUG_ON
-    ret = SCCB_Write16(slv_addr, reg, value);
+    ret = SCCB_Write16_Validate(slv_addr, reg, value);
 #else
     int old_value = read_reg(slv_addr, reg);
     if (old_value < 0) {
