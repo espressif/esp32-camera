@@ -37,6 +37,10 @@ static const char* TAG = "sccb";
 #define ACK_CHECK_DIS           0x0                   /*!< I2C master will not check ack from slave */
 #define ACK_VAL                 0x0                   /*!< I2C ack value */
 #define NACK_VAL                0x1                   /*!< I2C nack value */
+
+#define SCCB_RETRY_COUNT    10
+#define SCCB_RETRY_DELAY_MS 20
+
 #if CONFIG_SCCB_HARDWARE_I2C_PORT1
 const int SCCB_I2C_PORT_DEFAULT = 1;
 #else
@@ -46,11 +50,21 @@ const int SCCB_I2C_PORT_DEFAULT = 0;
 static int sccb_i2c_port;
 static bool sccb_owns_i2c_port;
 
+static SemaphoreHandle_t _sccbLock = NULL;
+
+void sccbLock(void) { xSemaphoreTake(_sccbLock, portMAX_DELAY); }
+
+void sccbUnlock(void) { xSemaphoreGive(_sccbLock); }
+
 int SCCB_Init(int pin_sda, int pin_scl)
 {
     ESP_LOGI(TAG, "pin_sda %d pin_scl %d", pin_sda, pin_scl);
     i2c_config_t conf;
     esp_err_t ret;
+
+    if (_sccbLock == NULL) {
+      _sccbLock = xSemaphoreCreateMutex();
+    }
 
     memset(&conf, 0, sizeof(i2c_config_t));
 
@@ -73,6 +87,9 @@ int SCCB_Init(int pin_sda, int pin_scl)
 }
 
 int SCCB_Use_Port(int i2c_num) { // sccb use an already initialized I2C port
+  if (_sccbLock == NULL) {
+    _sccbLock = xSemaphoreCreateMutex();
+  }
     if (sccb_owns_i2c_port) {
         SCCB_Deinit();
     }
@@ -203,6 +220,162 @@ int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
         ESP_LOGE(TAG, "W [%04x]=%02x %d fail\n", reg, data, i++);
     }
     return ret == ESP_OK ? 0 : -1;
+}
+
+uint8_t SCCB_Read16_Validate(uint8_t slv_addr, uint16_t reg) {
+  sccbLock();
+  ESP_LOGD(TAG, "SCCB_Read16: %x", reg);
+  uint8_t data       = 0;
+  esp_err_t ret      = ESP_FAIL;
+  uint16_t reg_htons = LITTLETOBIG(reg);
+  uint8_t* reg_u8    = (uint8_t*)&reg_htons;
+  int i;
+  for (i = 0; i < SCCB_RETRY_COUNT; i++) {
+    vTaskDelay(pdMS_TO_TICKS(SCCB_RETRY_DELAY_MS * i));
+
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "i2c_master_cmd_begin FAIL: %d", i);
+      continue;
+    }
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (slv_addr << 1) | READ_BIT, ACK_CHECK_EN);
+    i2c_master_read_byte(cmd, &data, NACK_VAL);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "SCCB_Read16 [%04x]=%02x fail: %d", reg, data, i);
+    }
+    else {
+      // validate read by doing it again
+      uint8_t validate;
+      i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+      i2c_master_start(cmd);
+      i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
+      i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
+      i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
+      i2c_master_stop(cmd);
+      ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+      i2c_cmd_link_delete(cmd);
+      if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Validation i2c_master_cmd_begin FAIL %d", i);
+        continue;
+      }
+      cmd = i2c_cmd_link_create();
+      i2c_master_start(cmd);
+      i2c_master_write_byte(cmd, (slv_addr << 1) | READ_BIT, ACK_CHECK_EN);
+      i2c_master_read_byte(cmd, &validate, NACK_VAL);
+      i2c_master_stop(cmd);
+      ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+      i2c_cmd_link_delete(cmd);
+
+      if (ret == ESP_OK && validate == data) {
+        ESP_LOGD(TAG, "Validated reg read %x=%d", reg, data);
+        break;
+      }
+      else {
+        if (ret != ESP_OK) {
+          ESP_LOGE(TAG, "Validation transaction failed %d", i);
+        }
+        else {
+          ESP_LOGE(TAG,
+                   "Second read did not match. %x:%d != %d, i=%d",
+                   reg,
+                   data,
+                   validate,
+                   i);
+        }
+      }
+    }
+  }
+  sccbUnlock();
+  if ((ret != ESP_OK) || (i == 10)) {
+    ESP_LOGE(TAG, "SCCB_Read16 [%04x]=%02x fail. Giving up.", reg, data);
+    return 0;
+  }
+  else {
+    ESP_LOGD(TAG, "Exiting with return data %d", data);
+    return data;
+  }
+}
+
+int SCCB_Write16_Validate(uint8_t slv_addr, uint16_t reg, uint8_t data) {
+  sccbLock();
+  ESP_LOGD(TAG, "SCCB_Write16: %x=%d", reg, data);
+  esp_err_t ret      = ESP_FAIL;
+  uint16_t reg_htons = LITTLETOBIG(reg);
+  uint8_t* reg_u8    = (uint8_t*)&reg_htons;
+  int i;
+  for (i = 0; i < SCCB_RETRY_COUNT; i++) {
+    vTaskDelay(pdMS_TO_TICKS(SCCB_RETRY_DELAY_MS * i));
+
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "SCCB_Write16 [%04x]=%02x fail: %d", reg, data, i);
+    }
+    else {
+      // Validate write by doing a read back
+      uint8_t validate;
+      i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+      i2c_master_start(cmd);
+      i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
+      i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
+      i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
+      i2c_master_stop(cmd);
+      ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+      i2c_cmd_link_delete(cmd);
+      if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Validation i2c_master_cmd_begin FAIL: %d", i);
+        continue;
+      }
+      cmd = i2c_cmd_link_create();
+      i2c_master_start(cmd);
+      i2c_master_write_byte(cmd, (slv_addr << 1) | READ_BIT, ACK_CHECK_EN);
+      i2c_master_read_byte(cmd, &validate, NACK_VAL);
+      i2c_master_stop(cmd);
+      ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+      i2c_cmd_link_delete(cmd);
+
+      if (ret == ESP_OK && validate == data) {
+        ESP_LOGD(TAG, "Validated reg write %x:%d, ret=%d", reg, data, ret);
+        break;
+      }
+      else {
+        if (ret != ESP_OK) {
+          ESP_LOGE(TAG, "Validation transaction failed: %d", i);
+        }
+        else {
+          ESP_LOGE(
+            TAG, "Readback failed %x:%d != %d, i=%d", reg, data, validate, i);
+        }
+      }
+    }
+  }
+
+  if ((ret != ESP_OK) || (i == 10)) {
+    ESP_LOGE(TAG, "SCCB_Write16 [%04x]=%02xfail. Giving up.", reg, data);
+  }
+
+  sccbUnlock();
+  return ret == ESP_OK ? 0 : -1;
 }
 
 uint16_t SCCB_Read_Addr16_Val16(uint8_t slv_addr, uint16_t reg)
