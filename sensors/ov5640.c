@@ -108,7 +108,14 @@ static int read_reg16(uint8_t slv_addr, const uint16_t reg){
 static int write_reg(uint8_t slv_addr, const uint16_t reg, uint8_t value){
     int ret = 0;
 #ifndef REG_DEBUG_ON
-    ret = SCCB_Write16_Validate(slv_addr, reg, value);
+    // If this is a software reset don't bother validating the
+    //  register write because it will always fail readback.
+    if (reg == SYSTEM_CTROL0 && (value | 0x80)) {
+      ret = SCCB_Write16(slv_addr, reg, value);
+    }
+    else {
+      ret = SCCB_Write16_Validate(slv_addr, reg, value);
+    }
 #else
     int old_value = read_reg(slv_addr, reg);
     if (old_value < 0) {
