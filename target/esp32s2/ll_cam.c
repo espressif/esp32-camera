@@ -178,8 +178,6 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     I2S0.sample_rate_conf.rx_bck_div_num = 1;
     I2S0.sample_rate_conf.rx_bits_mod = 8;
 
-    I2S0.conf1.rx_pcm_bypass = 1;
-
     I2S0.conf2.i_v_sync_filter_en = 1;
     I2S0.conf2.i_v_sync_filter_thres = 4;
     I2S0.conf2.cam_sync_fifo_reset = 1;
