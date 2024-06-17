@@ -95,7 +95,6 @@ esp_err_t ll_cam_deinit(cam_obj_t *cam)
         esp_intr_free(cam->cam_intr_handle);
         cam->cam_intr_handle = NULL;
     }
-    gpio_uninstall_isr_service();
     return ESP_OK;
 }
 
