@@ -179,6 +179,33 @@ menu "Camera configuration"
             Maximum value of DMA buffer
             Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent.
 
+    choice CAMERA_JPEG_MODE_FRAME_SIZE_OPTION
+        prompt "JPEG mode frame size option"
+        default CAMERA_JPEG_MODE_FRAME_SIZE_AUTO
+        help
+            Select whether to use automatic calculation for JPEG mode frame size or specify a custom value.
+
+        config CAMERA_JPEG_MODE_FRAME_SIZE_AUTO
+            bool "Use automatic calculation (width * height / 5)"
+            help
+                Use the default calculation for JPEG mode frame size.
+                Note: In very low resolutions like QQVGA, the default calculation tends to result in insufficient buffer size.
+
+        config CAMERA_JPEG_MODE_FRAME_SIZE_CUSTOM
+            bool "Specify custom frame size"
+            help
+                Specify a custom frame size in bytes for JPEG mode.
+
+    endchoice
+
+    config CAMERA_JPEG_MODE_FRAME_SIZE
+        int "Custom JPEG mode frame size (bytes)"
+        default 8192
+        depends on CAMERA_JPEG_MODE_FRAME_SIZE_CUSTOM
+        help
+            This option sets the custom frame size in JPEG mode.
+            Specify the desired buffer size in bytes.
+
     config CAMERA_CONVERTER_ENABLED
         bool "Enable camera RGB/YUV converter"
         depends on IDF_TARGET_ESP32S3
