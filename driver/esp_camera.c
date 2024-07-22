@@ -146,6 +146,9 @@ static const sensor_func_t g_sensors[] = {
 #if CONFIG_SC031GS_SUPPORT
     {sc031gs_detect, sc031gs_init},
 #endif
+#if CONFIG_GC0328_SUPPORT
+    {gc0328_detect, gc0328_init},
+#endif
 };
 
 static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out_camera_model)
