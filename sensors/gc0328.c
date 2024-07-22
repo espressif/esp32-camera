@@ -539,6 +539,8 @@ int gc0328_init(sensor_t *sensor)
     sensor->set_pll = NULL;
     sensor->set_xclk = NULL;
 
+    // 50Hz debanding in default
+    gc0328_antiflicker(sensor,0);
     ESP_LOGD(TAG, "GC0328 Attached");
 
     return 0;
@@ -550,8 +552,6 @@ int gc0328_get_aec_value(sensor_t *sensor){
     // int ret = 0;
     return ((read_reg(sensor->slv_addr,0x03)<<8)|read_reg(sensor->slv_addr,0x04))&0xFFF;
 }
-
-// int gc0328_aec_win(sensor_t* sensor,) 
 
 
 void gc0328_antiflicker(sensor_t* sensor, int mode){
@@ -574,7 +574,7 @@ void gc0328_antiflicker(sensor_t* sensor, int mode){
 		write_reg(sensor->slv_addr,0x32,0x40);
 		write_reg(sensor->slv_addr,0xfe,0x00);
     }
-    else{   //60hz
+    else if(mode==1){   //60hz
         write_reg(sensor->slv_addr,0xfe,0x00);
 		write_reg(sensor->slv_addr,0x05,0x02);
 		write_reg(sensor->slv_addr,0x06,0x4c);
