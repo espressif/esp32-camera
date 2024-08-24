@@ -229,20 +229,19 @@ int SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 
 uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
 {
-    uint8_t rx_buffer[2];
+    uint8_t rx_buffer[1];
 
     uint16_t reg_htons = LITTLETOBIG(reg);
     uint8_t *reg_u8 = (uint8_t *)&reg_htons;
 
-    esp_err_t ret = i2c_master_transmit_receive(dev_handle, reg_u8, 2, rx_buffer, 2, TIMEOUT_MS);
-    uint16_t data  = ((uint16_t)rx_buffer[0] << 8) | (uint16_t)rx_buffer[1];
+    esp_err_t ret = i2c_master_transmit_receive(dev_handle, reg_u8, 2, rx_buffer, 1, TIMEOUT_MS);
 
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "W [%04x]=%02x fail\n", reg, data);
+        ESP_LOGE(TAG, "W [%04x]=%02x fail\n", reg, rx_buffer[0]);
     }
 
-    return data;
+    return rx_buffer[0];
 }
 
 int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
@@ -265,59 +264,38 @@ int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
 
 uint16_t SCCB_Read_Addr16_Val16(uint8_t slv_addr, uint16_t reg)
 {
-    // uint16_t data = 0;
-    // uint8_t *data_u8 = (uint8_t *)&data;
-    // esp_err_t ret = ESP_FAIL;
-    // uint16_t reg_htons = LITTLETOBIG(reg);
-    // uint8_t *reg_u8 = (uint8_t *)&reg_htons;
-    // i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // i2c_master_start(cmd);
-    // i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-    // i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
-    // i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
-    // i2c_master_stop(cmd);
-    // ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
-    // i2c_cmd_link_delete(cmd);
-    // if (ret != ESP_OK)
-    //     return -1;
+    uint8_t rx_buffer[2];
 
-    // cmd = i2c_cmd_link_create();
-    // i2c_master_start(cmd);
-    // i2c_master_write_byte(cmd, (slv_addr << 1) | READ_BIT, ACK_CHECK_EN);
-    // i2c_master_read_byte(cmd, &data_u8[1], ACK_VAL);
-    // i2c_master_read_byte(cmd, &data_u8[0], NACK_VAL);
-    // i2c_master_stop(cmd);
-    // ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
-    // i2c_cmd_link_delete(cmd);
-    // if (ret != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "W [%04x]=%04x fail\n", reg, data);
-    // }
-    // return data;
-    return 0;
+    uint16_t reg_htons = LITTLETOBIG(reg);
+    uint8_t *reg_u8 = (uint8_t *)&reg_htons;
+
+    esp_err_t ret = i2c_master_transmit_receive(dev_handle, reg_u8, 2, rx_buffer, 2, TIMEOUT_MS);
+    uint16_t data  = ((uint16_t)rx_buffer[0] << 8) | (uint16_t)rx_buffer[1];
+
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "W [%04x]=%02x fail\n", reg, data);
+    }
+
+    return data;
 }
 
 int SCCB_Write_Addr16_Val16(uint8_t slv_addr, uint16_t reg, uint16_t data)
 {
-    // esp_err_t ret = ESP_FAIL;
-    // uint16_t reg_htons = LITTLETOBIG(reg);
-    // uint8_t *reg_u8 = (uint8_t *)&reg_htons;
-    // uint16_t data_htons = LITTLETOBIG(data);
-    // uint8_t *data_u8 = (uint8_t *)&data_htons;
-    // i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // i2c_master_start(cmd);
-    // i2c_master_write_byte(cmd, (slv_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-    // i2c_master_write_byte(cmd, reg_u8[0], ACK_CHECK_EN);
-    // i2c_master_write_byte(cmd, reg_u8[1], ACK_CHECK_EN);
-    // i2c_master_write_byte(cmd, data_u8[0], ACK_CHECK_EN);
-    // i2c_master_write_byte(cmd, data_u8[1], ACK_CHECK_EN);
-    // i2c_master_stop(cmd);
-    // ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
-    // i2c_cmd_link_delete(cmd);
-    // if (ret != ESP_OK)
-    // {
-    //     ESP_LOGE(TAG, "W [%04x]=%04x fail\n", reg, data);
-    // }
-    // return ret == ESP_OK ? 0 : -1;
+    uint16_t reg_htons = LITTLETOBIG(reg);
+
+    uint8_t tx_buffer[4];
+    tx_buffer[0] = reg_htons >> 8;
+    tx_buffer[1] = reg_htons & 0x00ff;
+    tx_buffer[2] = data >> 8;
+    tx_buffer[3] = data & 0x00ff;
+
+    esp_err_t ret = i2c_master_transmit(dev_handle, tx_buffer, 4, TIMEOUT_MS);
+
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "W [%04x]=%02x fail\n", reg, data);
+    }
+    return ret == ESP_OK ? 0 : -1;
     return 0;
 }
