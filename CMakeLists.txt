@@ -26,7 +26,6 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
   list(APPEND srcs
     driver/esp_camera.c
     driver/cam_hal.c
-    driver/sccb.c
     driver/sensor.c
     sensors/ov2640.c
     sensors/ov3660.c
@@ -80,6 +79,15 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
   set(min_version_for_esp_timer "4.2")
   if (idf_version VERSION_GREATER_EQUAL min_version_for_esp_timer)
     list(APPEND priv_requires esp_timer)
+  endif()
+
+  # include the SCCB I2C driver
+  # this uses either the legacy I2C API or the newwer version from IDF v5.4
+  # as this features a method to obtain the I2C driver from a port number
+  if (idf_version VERSION_GREATER_EQUAL "5.4")
+    list(APPEND srcs driver/sccb-ng.c)
+  else()
+    list(APPEND srcs driver/sccb.c)
   endif()
 
 endif()
