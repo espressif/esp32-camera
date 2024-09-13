@@ -6,6 +6,7 @@
  * SCCB (I2C like) driver.
  *
  */
+
 #include <stdbool.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
