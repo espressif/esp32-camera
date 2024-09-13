@@ -7,8 +7,6 @@
  *
  */
 
-#warning "legacy I2C API is deprecated, please use sccb-ng.c instead"
-
 #include <stdbool.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
