@@ -11,7 +11,7 @@ jobs:
         with:
           submodules: "recursive"
       - name: Upload component to the component registry
-        uses: espressif/github-actions/upload_components@master
+        uses: espressif/upload-components-ci-action@v1
         with:
           name: "esp32-camera"
           namespace: "espressif"
