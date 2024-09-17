@@ -153,7 +153,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         return ESP_ERR_INVALID_STATE;
     }
 
-    s_state = (camera_state_t *) calloc(sizeof(camera_state_t), 1);
+    s_state = (camera_state_t *) calloc(1, sizeof(camera_state_t));
     if (!s_state) {
         return ESP_ERR_NO_MEM;
     }
