@@ -34,12 +34,6 @@ static const char *TAG = "sccb-ng";
 
 #define TIMEOUT_MS 1000                /*!< I2C timeout duration */
 #define SCCB_FREQ CONFIG_SCCB_CLK_FREQ /*!< I2C master frequency */
-#define WRITE_BIT I2C_MASTER_WRITE     /*!< I2C master write */
-#define READ_BIT I2C_MASTER_READ       /*!< I2C master read */
-#define ACK_CHECK_EN 0x1               /*!< I2C master will check ack from slave */
-#define ACK_CHECK_DIS 0x0              /*!< I2C master will not check ack from slave */
-#define ACK_VAL 0x0                    /*!< I2C ack value */
-#define NACK_VAL 0x1                   /*!< I2C nack value */
 #if CONFIG_SCCB_HARDWARE_I2C_PORT1
 const int SCCB_I2C_PORT_DEFAULT = 1;
 #else
@@ -299,11 +293,9 @@ int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
 {
     i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
 
-    uint16_t reg_htons = LITTLETOBIG(reg);
-
     uint8_t tx_buffer[3];
-    tx_buffer[0] = reg_htons >> 8;
-    tx_buffer[1] = reg_htons & 0x00ff;
+    tx_buffer[0] = reg >> 8;
+    tx_buffer[1] = reg & 0x00ff;
     tx_buffer[2] = data;
 
     esp_err_t ret = i2c_master_transmit(dev_handle, tx_buffer, 3, TIMEOUT_MS);
@@ -339,11 +331,9 @@ int SCCB_Write_Addr16_Val16(uint8_t slv_addr, uint16_t reg, uint16_t data)
 {
     i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
 
-    uint16_t reg_htons = LITTLETOBIG(reg);
-
     uint8_t tx_buffer[4];
-    tx_buffer[0] = reg_htons >> 8;
-    tx_buffer[1] = reg_htons & 0x00ff;
+    tx_buffer[0] = reg >> 8;
+    tx_buffer[1] = reg & 0x00ff;
     tx_buffer[2] = data >> 8;
     tx_buffer[3] = data & 0x00ff;
 
@@ -354,5 +344,4 @@ int SCCB_Write_Addr16_Val16(uint8_t slv_addr, uint16_t reg, uint16_t data)
         ESP_LOGE(TAG, "W [%04x]=%02x fail\n", reg, data);
     }
     return ret == ESP_OK ? 0 : -1;
-    return 0;
 }
