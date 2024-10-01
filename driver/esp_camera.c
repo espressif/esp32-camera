@@ -54,6 +54,9 @@
 #if CONFIG_GC0308_SUPPORT
 #include "gc0308.h"
 #endif
+#if CONFIG_GC0328_SUPPORT
+#include "gc0328.h"
+#endif
 #if CONFIG_BF3005_SUPPORT
 #include "bf3005.h"
 #endif
@@ -142,6 +145,9 @@ static const sensor_func_t g_sensors[] = {
 #endif
 #if CONFIG_SC031GS_SUPPORT
     {sc031gs_detect, sc031gs_init},
+#endif
+#if CONFIG_GC0328_SUPPORT
+    {gc0328_detect, gc0328_init},
 #endif
 };
 
