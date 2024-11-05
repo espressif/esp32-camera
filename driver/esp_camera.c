@@ -75,6 +75,9 @@
 #if CONFIG_HM1055_SUPPORT
 #include "hm1055.h"
 #endif
+#if CONFIG_HM0360_SUPPORT
+#include "hm0360.h"
+#endif
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -154,6 +157,9 @@ static const sensor_func_t g_sensors[] = {
 #endif
 #if CONFIG_HM1055_SUPPORT
     {hm1055_detect, hm1055_init},
+#endif
+#if CONFIG_HM0360_SUPPORT
+    {hm0360_detect, hm0360_init},
 #endif
 };
 

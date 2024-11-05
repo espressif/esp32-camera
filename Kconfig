@@ -123,6 +123,13 @@ menu "Camera configuration"
         help
             Enable this option if you want to use the HM1055.
             Disable this option to save memory.
+    
+    config HM0360_SUPPORT
+        bool "Support HM0360 VGA"
+        default y
+        help
+            Enable this option if you want to use the HM0360.
+            Disable this option to save memory.
             
     config SCCB_I2C_PORT
 

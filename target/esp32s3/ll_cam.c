@@ -557,7 +557,7 @@ size_t IRAM_ATTR ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, 
 esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint16_t sensor_pid)
 {
     if (pix_format == PIXFORMAT_GRAYSCALE) {
-        if (sensor_pid == OV3660_PID || sensor_pid == OV5640_PID || sensor_pid == NT99141_PID || sensor_pid == SC031GS_PID || sensor_pid == BF20A6_PID || sensor_pid == GC0308_PID) {
+        if (sensor_pid == OV3660_PID || sensor_pid == OV5640_PID || sensor_pid == NT99141_PID || sensor_pid == SC031GS_PID || sensor_pid == BF20A6_PID || sensor_pid == GC0308_PID || sensor_pid == HM0360_PID) {
             cam->in_bytes_per_pixel = 1;       // camera sends Y8
         } else {
             cam->in_bytes_per_pixel = 2;       // camera sends YU/YV
