@@ -31,6 +31,7 @@ typedef enum {
     SC101IOT_PID = 0xda4a,
     SC030IOT_PID = 0x9a46,
     SC031GS_PID = 0x0031,
+    MEGA_CCM_PID =0x039E, 
 } camera_pid_t;
 
 typedef enum {
@@ -48,6 +49,7 @@ typedef enum {
     CAMERA_SC101IOT,
     CAMERA_SC030IOT,
     CAMERA_SC031GS,
+    CAMERA_MEGA_CCM,
     CAMERA_MODEL_MAX,
     CAMERA_NONE,
 } camera_model_t;
@@ -67,6 +69,7 @@ typedef enum {
     SC101IOT_SCCB_ADDR = 0x68,// 0xd0 >> 1
     SC030IOT_SCCB_ADDR = 0x68,// 0xd0 >> 1
     SC031GS_SCCB_ADDR  = 0x30,
+    MEGA_CCM_SCCB_ADDR = 0x1F, // 0x3E >> 1
 } camera_sccb_addr_t;
 
 typedef enum {
@@ -84,10 +87,12 @@ typedef enum {
 typedef enum {
     FRAMESIZE_96X96,    // 96x96
     FRAMESIZE_QQVGA,    // 160x120
+    FRAMESIZE_128X128,    // 128x128
     FRAMESIZE_QCIF,     // 176x144
     FRAMESIZE_HQVGA,    // 240x176
     FRAMESIZE_240X240,  // 240x240
     FRAMESIZE_QVGA,     // 320x240
+    FRAMESIZE_320X320,  // 320x320
     FRAMESIZE_CIF,      // 400x296
     FRAMESIZE_HVGA,     // 480x320
     FRAMESIZE_VGA,      // 640x480
@@ -106,6 +111,7 @@ typedef enum {
     FRAMESIZE_WQXGA,    // 2560x1600
     FRAMESIZE_P_FHD,    // 1080x1920
     FRAMESIZE_QSXGA,    // 2560x1920
+    FRAMESIZE_5MP,      // 2592x1944
     FRAMESIZE_INVALID
 } framesize_t;
 

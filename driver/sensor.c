@@ -17,15 +17,18 @@ const camera_sensor_info_t camera_sensor[CAMERA_MODEL_MAX] = {
     {CAMERA_SC101IOT, "SC101IOT", SC101IOT_SCCB_ADDR, SC101IOT_PID, FRAMESIZE_HD, false},
     {CAMERA_SC030IOT, "SC030IOT", SC030IOT_SCCB_ADDR, SC030IOT_PID, FRAMESIZE_VGA, false},
     {CAMERA_SC031GS, "SC031GS", SC031GS_SCCB_ADDR, SC031GS_PID, FRAMESIZE_VGA, false},
+    {CAMERA_MEGA_CCM, "MEGA_CCM", MEGA_CCM_SCCB_ADDR, MEGA_CCM_PID, FRAMESIZE_5MP, true},
 };
 
 const resolution_info_t resolution[FRAMESIZE_INVALID] = {
     {   96,   96, ASPECT_RATIO_1X1   }, /* 96x96 */
+    {   128,  128, ASPECT_RATIO_1X1   }, /* 128x128 */
     {  160,  120, ASPECT_RATIO_4X3   }, /* QQVGA */
     {  176,  144, ASPECT_RATIO_5X4   }, /* QCIF  */
     {  240,  176, ASPECT_RATIO_4X3   }, /* HQVGA */
     {  240,  240, ASPECT_RATIO_1X1   }, /* 240x240 */
     {  320,  240, ASPECT_RATIO_4X3   }, /* QVGA  */
+    {  320,  320, ASPECT_RATIO_1X1   }, /* 320x320 */
     {  400,  296, ASPECT_RATIO_4X3   }, /* CIF   */
     {  480,  320, ASPECT_RATIO_3X2   }, /* HVGA  */
     {  640,  480, ASPECT_RATIO_4X3   }, /* VGA   */
@@ -44,6 +47,7 @@ const resolution_info_t resolution[FRAMESIZE_INVALID] = {
     { 2560, 1600, ASPECT_RATIO_16X10 }, /* WQXGA  */
     { 1088, 1920, ASPECT_RATIO_9X16  }, /* Portrait FHD   */
     { 2560, 1920, ASPECT_RATIO_4X3   }, /* QSXGA  */
+    { 2592, 1944, ASPECT_RATIO_4X3   }, /* 5MP */
 };
 
 camera_sensor_info_t *esp_camera_sensor_get_info(sensor_id_t *id)
