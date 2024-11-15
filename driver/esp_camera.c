@@ -69,6 +69,9 @@
 #if CONFIG_SC031GS_SUPPORT
 #include "sc031gs.h"
 #endif
+#if CONFIG_MEGA_CCM_SUPPORT
+#include "mega_ccm.h"
+#endif
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -142,6 +145,9 @@ static const sensor_func_t g_sensors[] = {
 #endif
 #if CONFIG_SC031GS_SUPPORT
     {sc031gs_detect, sc031gs_init},
+#endif
+#if CONFIG_MEGA_CCM_SUPPORT
+    {mega_ccm_detect, mega_ccm_init},
 #endif
 };
 
