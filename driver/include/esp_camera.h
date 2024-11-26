@@ -178,8 +178,6 @@ typedef struct {
 /**
  * @brief Initialize the camera driver
  *
- * @note call camera_probe before calling this function
- *
  * This function detects and configures camera over I2C interface,
  * allocates framebuffer and DMA buffers,
  * initializes parallel I2S input, and sets up DMA descriptors.
