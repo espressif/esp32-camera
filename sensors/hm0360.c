@@ -144,8 +144,6 @@ static int write_addr_reg(uint8_t slv_addr, const uint16_t reg, uint16_t x_value
 
 #define write_reg_bits(slv_addr, reg, mask, enable) set_reg_bits(slv_addr, reg, 0, mask, (enable) ? (mask) : 0)
 
-static int set_ae_level(sensor_t *sensor, int level);
-
 static int reset(sensor_t *sensor)
 {
     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -163,7 +161,6 @@ static int reset(sensor_t *sensor)
     {
         ESP_LOGD(TAG, "Camera defaults loaded");
         vTaskDelay(100 / portTICK_PERIOD_MS);
-        set_ae_level(sensor, 0);
     }
     return ret;
 }
@@ -171,6 +168,16 @@ static int reset(sensor_t *sensor)
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     int ret = 0;
+    sensor->pixformat = pixformat;
+
+    switch (pixformat) {
+        case PIXFORMAT_GRAYSCALE:
+            break;
+        default:
+            ESP_LOGE(TAG, "Only support GRAYSCALE");
+            return -1;
+    }
+
     return ret;
 }
 
@@ -178,65 +185,107 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret = 0;
 
+    sensor->status.framesize = framesize;
+    ret = write_regs(sensor->slv_addr, sensor_default_regs);
+
+    if (framesize == FRAMESIZE_QQVGA)
+    {
+        ESP_LOGI(TAG, "Set FRAMESIZE_QQVGA");
+        ret |= write_regs(sensor->slv_addr, sensor_framesize_QQVGA);
+        ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 1);
+    }
+    else if (framesize == FRAMESIZE_QVGA)
+    {
+        ESP_LOGI(TAG, "Set FRAMESIZE_QVGA");
+        ret |= write_regs(sensor->slv_addr, sensor_framesize_QVGA);
+        ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 1);
+    }
+    else if (framesize == FRAMESIZE_VGA)
+    {
+        ESP_LOGI(TAG, "Set FRAMESIZE_VGA");
+        ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 0);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Dont suppost this size, Set FRAMESIZE_VGA");
+        ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 0);
+    }
+
+    if (ret == 0)
+    {
+        _set_pll(sensor, 0, 0, 0, 0, 0, 0, 0, 0);
+        ret |= write_reg(sensor->slv_addr, 0x0104, 0x01);
+    }
+
     return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
 {
-    int ret = 0;
-    return ret;
+    if (set_reg_bits(sensor->slv_addr, 0x0101, 0, 0x01, enable)) {
+        return -1;
+    }
+
+    ESP_LOGD(TAG, "Set h-mirror to: %d", enable);
+
+    return 0;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
-    int ret = 0;
-    return ret;
-}
+    if (set_reg_bits(sensor->slv_addr, 0x0101, 1, 0x01, enable)) {
+        return -1;
+    }
 
-static int set_quality(sensor_t *sensor, int qs)
-{
+    ESP_LOGD(TAG, "Set v-flip to: %d", enable);
+
     return 0;
 }
 
 static int set_colorbar(sensor_t *sensor, int enable)
 {
-    return 0;
-}
+    if (set_reg_bits(sensor->slv_addr, 0x0601, 0, 0x01, enable)) {
+        return -1;
+    }
 
-static int set_gain_ctrl(sensor_t *sensor, int enable)
-{
+    ESP_LOGD(TAG, "Set color-bar to: %d", enable);
+
     return 0;
 }
 
 static int set_exposure_ctrl(sensor_t *sensor, int enable)
 {
-    int ret = 0;
+    if (set_reg_bits(sensor->slv_addr, 0x2000, 0, 0x01, enable)) {
+        return -1;
+    }
 
-    return ret;
-}
+    ESP_LOGD(TAG, "Set exposure to: %d", enable);
 
-// real gain
-static int set_agc_gain(sensor_t *sensor, int gain)
-{
-    int ret = 0;
-    return ret;
-}
-static int set_aec_value(sensor_t *sensor, int value)
-{
-    int ret = 0;
-    return ret;
-}
-
-static int set_ae_level(sensor_t *sensor, int level)
-{
-    int ret = 0;
-    return ret;
+    return 0;
 }
 
 static int set_brightness(sensor_t *sensor, int level)
 {
-    int ret = 0;
-    return ret;
+    uint8_t ae_mean;
+
+    switch (level) {
+        case 0:
+            ae_mean = 60;
+            break;
+        case 1:
+            ae_mean = 80;
+            break;
+        case 2:
+            ae_mean = 100;
+            break;
+        case 3:
+            ae_mean = 127;
+            break;
+        default:
+            ae_mean = 80;
+    }
+
+    return write_reg(sensor->slv_addr, AE_TARGET_MEAN, ae_mean);
 }
 
 static int get_reg(sensor_t *sensor, int reg, int mask)
@@ -316,10 +365,6 @@ static int set_reg(sensor_t *sensor, int reg, int mask, int value)
     return ret;
 }
 
-static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning)
-{
-    return 0;
-}
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
     int ret = 0;
@@ -332,20 +377,40 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
+static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div)
+{
+    uint8_t value = 0;
+    uint8_t pll_cfg = 0;
+
+    if (sensor->xclk_freq_hz <= 6000000)
+    {
+        value = 0x03;
+    }
+    else if (sensor->xclk_freq_hz <= 12000000)
+    {
+        value = 0x02;
+    }
+    else if (sensor->xclk_freq_hz <= 18000000)
+    {
+        value = 0x01;
+    }
+    else
+    { // max is 48000000
+        value = 0x00;
+    }
+
+    pll_cfg = read_reg(sensor->slv_addr, PLL1CFG);
+    return write_reg(sensor->slv_addr, PLL1CFG, (pll_cfg & 0xFC) | value);
+}
+
+static int set_dummy(sensor_t *sensor, int val)
+{
+    ESP_LOGW(TAG, "Unsupported");
+    return -1;
+}
+
 static int init_status(sensor_t *sensor)
 {
-    sensor->status.brightness = 0;
-    sensor->status.contrast = 0;
-    sensor->status.saturation = 0;
-    // sensor->status.awb = check_reg_mask(sensor->slv_addr, AEWBCFG, 0x02);
-    sensor->status.agc = true;
-    // sensor->status.aec = check_reg_mask(sensor->slv_addr, AEWBCFG, 0x04);
-    // sensor->status.hmirror = check_reg_mask(sensor->slv_addr, RDCFG, 0x02);
-    // sensor->status.vflip = check_reg_mask(sensor->slv_addr, RDCFG, 0x01);
-    // sensor->status.lenc = check_reg_mask(sensor->slv_addr, ISPCTRL3, 0x40);
-    // sensor->status.awb_gain = read_reg(sensor->slv_addr, DGAIN);
-    // sensor->status.agc_gain = read_reg(sensor->slv_addr, AGAIN);
-    // sensor->status.aec_value = read_reg(sensor->slv_addr, AETARGM);
     return 0;
 }
 
@@ -375,36 +440,36 @@ int hm0360_init(sensor_t *sensor)
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
-    sensor->set_contrast = NULL;
+    sensor->set_contrast = set_dummy;
     sensor->set_brightness = set_brightness;
-    sensor->set_saturation = NULL;
-    sensor->set_sharpness = NULL;
-    sensor->set_gainceiling = NULL;
-    sensor->set_quality = set_quality;
+    sensor->set_saturation = set_dummy;
+    sensor->set_sharpness = set_dummy;
+    sensor->set_gainceiling = set_dummy;
+    sensor->set_quality = set_dummy;
     sensor->set_colorbar = set_colorbar;
-    sensor->set_gain_ctrl = set_gain_ctrl;
+    sensor->set_gain_ctrl = set_dummy;
     sensor->set_exposure_ctrl = set_exposure_ctrl;
-    sensor->set_whitebal = NULL;
+    sensor->set_whitebal = set_dummy;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
     sensor->init_status = init_status;
-    sensor->set_aec2 = NULL;
-    sensor->set_aec_value = set_aec_value;
-    sensor->set_special_effect = NULL;
-    sensor->set_wb_mode = NULL;
-    sensor->set_ae_level = set_ae_level;
-    sensor->set_dcw = NULL;
-    sensor->set_bpc = NULL;
-    sensor->set_wpc = NULL;
-    sensor->set_agc_gain = set_agc_gain;
-    sensor->set_raw_gma = NULL;
-    sensor->set_lenc = NULL;
-    sensor->set_denoise = NULL;
+    sensor->set_aec2 = set_dummy;
+    sensor->set_aec_value = set_dummy;
+    sensor->set_special_effect = set_dummy;
+    sensor->set_wb_mode = set_dummy;
+    sensor->set_ae_level = set_dummy;
+    sensor->set_dcw = set_dummy;
+    sensor->set_bpc = set_dummy;
+    sensor->set_wpc = set_dummy;
+    sensor->set_agc_gain = set_dummy;
+    sensor->set_raw_gma = set_dummy;
+    sensor->set_lenc = set_dummy;
+    sensor->set_denoise = set_dummy;
 
     sensor->get_reg = get_reg;
     sensor->set_reg = set_reg;
-    sensor->set_res_raw = set_res_raw;
-    sensor->set_pll = NULL;
+    sensor->set_res_raw = NULL;
+    sensor->set_pll = _set_pll;
     sensor->set_xclk = set_xclk;
     return 0;
 }
