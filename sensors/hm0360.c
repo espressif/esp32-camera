@@ -29,8 +29,7 @@ static int read_reg(uint8_t slv_addr, const uint16_t reg)
 {
     int ret = SCCB_Read16(slv_addr, reg);
 #ifdef REG_DEBUG_ON
-    if (ret < 0)
-    {
+    if (ret < 0) {
         ESP_LOGE(TAG, "READ REG 0x%04x FAILED: %d", reg, ret);
     }
 #endif
@@ -45,20 +44,18 @@ static int check_reg_mask(uint8_t slv_addr, uint16_t reg, uint8_t mask)
 static int read_reg16(uint8_t slv_addr, const uint16_t reg)
 {
     int ret = 0, ret2 = 0;
+
     ret = read_reg(slv_addr, reg);
-    if (ret >= 0)
-    {
+    if (ret >= 0) {
         ret = (ret & 0xFF) << 8;
         ret2 = read_reg(slv_addr, reg + 1);
-        if (ret2 < 0)
-        {
+        if (ret2 < 0) {
             ret = ret2;
-        }
-        else
-        {
+        } else {
             ret |= ret2 & 0xFF;
         }
     }
+
     return ret;
 }
 
@@ -69,22 +66,18 @@ static int write_reg(uint8_t slv_addr, const uint16_t reg, uint8_t value)
     ret = SCCB_Write16(slv_addr, reg, value);
 #else
     int old_value = read_reg(slv_addr, reg);
-    if (old_value < 0)
-    {
+    if (old_value < 0) {
         return old_value;
     }
-    if ((uint8_t)old_value != value)
-    {
+
+    if ((uint8_t)old_value != value) {
         ESP_LOGD(TAG, "NEW REG 0x%04x: 0x%02x to 0x%02x", reg, (uint8_t)old_value, value);
         ret = SCCB_Write16(slv_addr, reg, value);
-    }
-    else
-    {
+    } else {
         ESP_LOGD(TAG, "OLD REG 0x%04x: 0x%02x", reg, (uint8_t)old_value);
         ret = SCCB_Write16(slv_addr, reg, value); // maybe not?
     }
-    if (ret < 0)
-    {
+    if (ret < 0) {
         ESP_LOGE(TAG, "WRITE REG 0x%04x FAILED: %d", reg, ret);
     }
 #endif
@@ -95,11 +88,12 @@ static int set_reg_bits(uint8_t slv_addr, uint16_t reg, uint8_t offset, uint8_t 
 {
     int ret = 0;
     uint8_t c_value, new_value;
+
     ret = read_reg(slv_addr, reg);
-    if (ret < 0)
-    {
+    if (ret < 0) {
         return ret;
     }
+
     c_value = ret;
     new_value = (c_value & ~(mask << offset)) | ((value & mask) << offset);
     ret = write_reg(slv_addr, reg, new_value);
@@ -109,25 +103,22 @@ static int set_reg_bits(uint8_t slv_addr, uint16_t reg, uint8_t offset, uint8_t 
 static int write_regs(uint8_t slv_addr, const uint16_t (*regs)[2])
 {
     int i = 0, ret = 0;
-    while (!ret && regs[i][0] != REGLIST_TAIL)
-    {
-        if (regs[i][0] == REG_DLY)
-        {
+
+    while (!ret && regs[i][0] != REGLIST_TAIL) {
+        if (regs[i][0] == REG_DLY) {
             vTaskDelay(regs[i][1] / portTICK_PERIOD_MS);
-        }
-        else
-        {
+        } else {
             ret = write_reg(slv_addr, regs[i][0], regs[i][1]);
         }
         i++;
     }
+
     return ret;
 }
 
 static int write_reg16(uint8_t slv_addr, const uint16_t reg, uint16_t value)
 {
-    if (write_reg(slv_addr, reg, value >> 8) || write_reg(slv_addr, reg + 1, value))
-    {
+    if (write_reg(slv_addr, reg, value >> 8) || write_reg(slv_addr, reg + 1, value)) {
         return -1;
     }
     return 0;
@@ -135,8 +126,7 @@ static int write_reg16(uint8_t slv_addr, const uint16_t reg, uint16_t value)
 
 static int write_addr_reg(uint8_t slv_addr, const uint16_t reg, uint16_t x_value, uint16_t y_value)
 {
-    if (write_reg16(slv_addr, reg, x_value) || write_reg16(slv_addr, reg + 2, y_value))
-    {
+    if (write_reg16(slv_addr, reg, x_value) || write_reg16(slv_addr, reg + 2, y_value)) {
         return -1;
     }
     return 0;
@@ -148,20 +138,21 @@ static int reset(sensor_t *sensor)
 {
     vTaskDelay(100 / portTICK_PERIOD_MS);
     int ret = 0;
+
     // Software Reset: clear all registers and reset them to their default values
     ret = write_reg(sensor->slv_addr, SW_RESET, 0x00);
-    if (ret)
-    {
+    if (ret) {
         ESP_LOGE(TAG, "Software Reset FAILED!");
         return ret;
     }
+
     vTaskDelay(100 / portTICK_PERIOD_MS);
     ret = write_regs(sensor->slv_addr, sensor_default_regs);
-    if (ret == 0)
-    {
+    if (ret == 0) {
         ESP_LOGD(TAG, "Camera defaults loaded");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
+
     return ret;
 }
 
@@ -188,31 +179,23 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     sensor->status.framesize = framesize;
     ret = write_regs(sensor->slv_addr, sensor_default_regs);
 
-    if (framesize == FRAMESIZE_QQVGA)
-    {
+    if (framesize == FRAMESIZE_QQVGA) {
         ESP_LOGI(TAG, "Set FRAMESIZE_QQVGA");
         ret |= write_regs(sensor->slv_addr, sensor_framesize_QQVGA);
         ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 1);
-    }
-    else if (framesize == FRAMESIZE_QVGA)
-    {
+    } else if (framesize == FRAMESIZE_QVGA) {
         ESP_LOGI(TAG, "Set FRAMESIZE_QVGA");
         ret |= write_regs(sensor->slv_addr, sensor_framesize_QVGA);
         ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 1);
-    }
-    else if (framesize == FRAMESIZE_VGA)
-    {
+    } else if (framesize == FRAMESIZE_VGA) {
         ESP_LOGI(TAG, "Set FRAMESIZE_VGA");
         ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 0);
-    }
-    else
-    {
+    } else {
         ESP_LOGI(TAG, "Dont suppost this size, Set FRAMESIZE_VGA");
         ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 0);
     }
 
-    if (ret == 0)
-    {
+    if (ret == 0) {
         _set_pll(sensor, 0, 0, 0, 0, 0, 0, 0, 0);
         ret |= write_reg(sensor->slv_addr, 0x0104, 0x01);
     }
@@ -291,28 +274,22 @@ static int set_brightness(sensor_t *sensor, int level)
 static int get_reg(sensor_t *sensor, int reg, int mask)
 {
     int ret = 0, ret2 = 0;
-    if (mask > 0xFF)
-    {
+
+    if (mask > 0xFF) {
         ret = read_reg16(sensor->slv_addr, reg);
-        if (ret >= 0 && mask > 0xFFFF)
-        {
+        if (ret >= 0 && mask > 0xFFFF) {
             ret2 = read_reg(sensor->slv_addr, reg + 2);
-            if (ret2 >= 0)
-            {
+            if (ret2 >= 0) {
                 ret = (ret << 8) | ret2;
-            }
-            else
-            {
+            } else {
                 ret = ret2;
             }
         }
-    }
-    else
-    {
+    } else {
         ret = read_reg(sensor->slv_addr, reg);
     }
-    if (ret > 0)
-    {
+
+    if (ret > 0) {
         ret &= mask;
     }
     return ret;
@@ -321,47 +298,37 @@ static int get_reg(sensor_t *sensor, int reg, int mask)
 static int set_reg(sensor_t *sensor, int reg, int mask, int value)
 {
     int ret = 0, ret2 = 0;
-    if (mask > 0xFF)
-    {
+
+    if (mask > 0xFF) {
         ret = read_reg16(sensor->slv_addr, reg);
-        if (ret >= 0 && mask > 0xFFFF)
-        {
+        if (ret >= 0 && mask > 0xFFFF) {
             ret2 = read_reg(sensor->slv_addr, reg + 2);
-            if (ret2 >= 0)
-            {
+            if (ret2 >= 0) {
                 ret = (ret << 8) | ret2;
-            }
-            else
-            {
+            } else {
                 ret = ret2;
             }
         }
-    }
-    else
-    {
+    } else {
         ret = read_reg(sensor->slv_addr, reg);
     }
-    if (ret < 0)
-    {
+
+    if (ret < 0) {
         return ret;
     }
+
     value = (ret & ~mask) | (value & mask);
-    if (mask > 0xFFFF)
-    {
+    if (mask > 0xFFFF) {
         ret = write_reg16(sensor->slv_addr, reg, value >> 8);
-        if (ret >= 0)
-        {
+        if (ret >= 0) {
             ret = write_reg(sensor->slv_addr, reg + 2, value & 0xFF);
         }
-    }
-    else if (mask > 0xFF)
-    {
+    } else if (mask > 0xFF) {
         ret = write_reg16(sensor->slv_addr, reg, value);
-    }
-    else
-    {
+    } else {
         ret = write_reg(sensor->slv_addr, reg, value);
     }
+
     return ret;
 }
 
@@ -370,8 +337,7 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     int ret = 0;
     sensor->xclk_freq_hz = xclk * 1000000U;
     ret = xclk_timer_conf(timer, sensor->xclk_freq_hz);
-    if (ret == 0)
-    {
+    if (ret == 0) {
         ESP_LOGD(TAG, "Set xclk to %d", xclk);
     }
     return ret;
@@ -382,20 +348,13 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
     uint8_t value = 0;
     uint8_t pll_cfg = 0;
 
-    if (sensor->xclk_freq_hz <= 6000000)
-    {
+    if (sensor->xclk_freq_hz <= 6000000) {
         value = 0x03;
-    }
-    else if (sensor->xclk_freq_hz <= 12000000)
-    {
+    } else if (sensor->xclk_freq_hz <= 12000000) {
         value = 0x02;
-    }
-    else if (sensor->xclk_freq_hz <= 18000000)
-    {
+    } else if (sensor->xclk_freq_hz <= 18000000) {
         value = 0x01;
-    }
-    else
-    { // max is 48000000
+    } else { // max is 48000000
         value = 0x00;
     }
 
@@ -416,19 +375,15 @@ static int init_status(sensor_t *sensor)
 
 int hm0360_detect(int slv_addr, sensor_id_t *id)
 {
-    if (HM1055_SCCB_ADDR == slv_addr)
-    {
+    if (HM1055_SCCB_ADDR == slv_addr) {
         uint8_t h = SCCB_Read16(slv_addr, MODEL_ID_H);
         uint8_t l = SCCB_Read16(slv_addr, MODEL_ID_L);
         uint16_t PID = (h << 8) | l;
-        if (HM0360_PID == PID)
-        {
+        if (HM0360_PID == PID) {
             id->PID = PID;
             id->VER = SCCB_Read16(slv_addr, SILICON_REV); 
             return PID;
-        }
-        else
-        {
+        } else {
             ESP_LOGD(TAG, "Mismatch PID=0x%x", PID);
         }
     }
