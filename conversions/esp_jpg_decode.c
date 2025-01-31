@@ -114,11 +114,17 @@ esp_err_t esp_jpg_decode(size_t len, jpg_scale_t scale, jpg_reader_cb reader, jp
     uint16_t output_height = decoder.height / (1 << (uint8_t)(jpeg.scale));
 
     //output start
-    writer(arg, 0, 0, output_width, output_height, NULL);
+    if (!writer(arg, 0, 0, output_width, output_height, NULL)) {
+        ESP_LOGE(TAG, "JPG Writer Start Failed!");
+        return ESP_FAIL;
+    }
     //output write
     jres = jd_decomp(&decoder, _jpg_write, (uint8_t)jpeg.scale);
     //output end
-    writer(arg, output_width, output_height, output_width, output_height, NULL);
+    if (!writer(arg, output_width, output_height, output_width, output_height, NULL)) {
+        ESP_LOGE(TAG, "JPG Writer End Failed!");
+        return ESP_FAIL;
+    }
 
     if (jres != JDR_OK) {
         ESP_LOGE(TAG, "JPG Decompression Failed! %s", jd_errors[jres]);

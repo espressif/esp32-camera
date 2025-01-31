@@ -78,8 +78,10 @@ static bool _rgb_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t 
             jpeg->height = h;
             //if output is null, this is BMP
             if(!jpeg->output){
-                jpeg->output = (uint8_t *)_malloc((w*h*3)+jpeg->data_offset);
+                size_t out_size = (w*h*3)+jpeg->data_offset;
+                jpeg->output = (uint8_t *)_malloc(out_size);
                 if(!jpeg->output){
+                    ESP_LOGE(TAG, "_malloc failed! %zu", out_size);
                     return false;
                 }
             }
@@ -121,8 +123,10 @@ static bool _rgb565_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16
             jpeg->height = h;
             //if output is null, this is BMP
             if(!jpeg->output){
-                jpeg->output = (uint8_t *)_malloc((w*h*3)+jpeg->data_offset);
+                size_t out_size = (w*h*3)+jpeg->data_offset;
+                jpeg->output = (uint8_t *)_malloc(out_size);
                 if(!jpeg->output){
+                    ESP_LOGE(TAG, "_malloc failed! %zu", out_size);
                     return false;
                 }
             }
