@@ -490,3 +490,10 @@ void esp_camera_return_all(void) {
     cam_give_all();
 }
 
+bool esp_camera_available_frames(void)
+{
+    if (s_state == NULL) {
+        return false;
+    }
+    return cam_get_available_frames();
+}

@@ -535,3 +535,8 @@ void cam_give_all(void) {
         cam_obj->frames[x].en = 1;
     }
 }
+
+bool cam_get_available_frames(void)
+{
+    return 0 < uxQueueMessagesWaiting(cam_obj->frame_buffer_queue);
+}
