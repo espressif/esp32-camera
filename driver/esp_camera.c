@@ -327,6 +327,14 @@ esp_err_t esp_camera_init(const camera_config_t *config)
         frame_size = camera_sensor[camera_model].max_size;
     }
 
+    s_state->sensor.pixformat = pix_format;
+    ESP_LOGD(TAG, "Setting pixel format to %d", pix_format);
+    if (s_state->sensor.set_pixformat(&s_state->sensor, pix_format)) {
+        ESP_LOGE(TAG, "Failed to set pixel format");
+        err = ESP_ERR_CAMERA_FAILED_TO_SET_PIXEL_FORMAT;
+        goto fail;
+    }
+
     err = cam_config(config, frame_size, s_state->sensor.id.PID);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera config failed with error 0x%x", err);
@@ -334,15 +342,13 @@ esp_err_t esp_camera_init(const camera_config_t *config)
     }
 
     s_state->sensor.status.framesize = frame_size;
-    s_state->sensor.pixformat = pix_format;
-
     ESP_LOGD(TAG, "Setting frame size to %dx%d", resolution[frame_size].width, resolution[frame_size].height);
     if (s_state->sensor.set_framesize(&s_state->sensor, frame_size) != 0) {
         ESP_LOGE(TAG, "Failed to set frame size");
         err = ESP_ERR_CAMERA_FAILED_TO_SET_FRAME_SIZE;
         goto fail;
     }
-    s_state->sensor.set_pixformat(&s_state->sensor, pix_format);
+
 #if CONFIG_CAMERA_CONVERTER_ENABLED
     if(config->conv_mode) {
         s_state->sensor.pixformat = get_output_data_format(config->conv_mode); // If conversion enabled, change the out data format by conversion mode
