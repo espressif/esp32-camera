@@ -1,4 +1,4 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2015-2025 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include "esp_heap_caps.h"
 #include "yuv.h"
 #include "sdkconfig.h"
-#include "esp_jpg_decode.h"
+#include "jpeg_decoder.h"
 
 #include "esp_system.h"
 
@@ -31,6 +31,7 @@ static const char* TAG = "to_bmp";
 #endif
 
 static const int BMP_HEADER_LEN = 54;
+static uint8_t work[3100]; // 3.1kB for JPEG decoder, static for legacy reasons
 
 typedef struct {
     uint32_t filesize;
@@ -49,14 +50,6 @@ typedef struct {
     uint32_t mostimpcolor;
 } bmp_header_t;
 
-typedef struct {
-        uint16_t width;
-        uint16_t height;
-        uint16_t data_offset;
-        const uint8_t *input;
-        uint8_t *output;
-} rgb_jpg_decoder;
-
 static void *_malloc(size_t size)
 {
     // check if SPIRAM is enabled and allocate on SPIRAM if allocatable
@@ -67,137 +60,44 @@ static void *_malloc(size_t size)
     return malloc(size);
 }
 
-//output buffer and image width
-static bool _rgb_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data)
+static bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale)
 {
-    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
-    if(!data){
-        if(x == 0 && y == 0){
-            //write start
-            jpeg->width = w;
-            jpeg->height = h;
-            //if output is null, this is BMP
-            if(!jpeg->output){
-                size_t out_size = (w*h*3)+jpeg->data_offset;
-                jpeg->output = (uint8_t *)_malloc(out_size);
-                if(!jpeg->output){
-                    ESP_LOGE(TAG, "_malloc failed! %zu", out_size);
-                    return false;
-                }
-            }
-        } else {
-            //write end
-        }
-        return true;
-    }
+    esp_jpeg_image_cfg_t jpeg_cfg = {
+        .indata = (uint8_t *)src,
+        .indata_size = src_len,
+        .outbuf = out,
+        .outbuf_size = UINT32_MAX, // @todo: this is very bold assumption, keeping this like this for now, not to break existing code
+        .out_format = JPEG_IMAGE_FORMAT_RGB888,
+        .out_scale = scale,
+        .flags.swap_color_bytes = 0,
+        .advanced.working_buffer = work,
+        .advanced.working_buffer_size = sizeof(work),
+    };
+    esp_jpeg_image_output_t output_img = {};
 
-    size_t jw = jpeg->width*3;
-    size_t t = y * jw;
-    size_t b = t + (h * jw);
-    size_t l = x * 3;
-    uint8_t *out = jpeg->output+jpeg->data_offset;
-    uint8_t *o = out;
-    size_t iy, ix;
-
-    w = w * 3;
-
-    for(iy=t; iy<b; iy+=jw) {
-        o = out+iy+l;
-        for(ix=0; ix<w; ix+= 3) {
-            o[ix] = data[ix+2];
-            o[ix+1] = data[ix+1];
-            o[ix+2] = data[ix];
-        }
-        data+=w;
-    }
-    return true;
-}
-
-static bool _rgb565_write(void * arg, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data)
-{
-    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
-    if(!data){
-        if(x == 0 && y == 0){
-            //write start
-            jpeg->width = w;
-            jpeg->height = h;
-            //if output is null, this is BMP
-            if(!jpeg->output){
-                size_t out_size = (w*h*3)+jpeg->data_offset;
-                jpeg->output = (uint8_t *)_malloc(out_size);
-                if(!jpeg->output){
-                    ESP_LOGE(TAG, "_malloc failed! %zu", out_size);
-                    return false;
-                }
-            }
-        } else {
-            //write end
-        }
-        return true;
-    }
-
-    size_t jw = jpeg->width*3;
-    size_t jw2 = jpeg->width*2;
-    size_t t = y * jw;
-    size_t t2 = y * jw2;
-    size_t b = t + (h * jw);
-    size_t l = x * 2;
-    uint8_t *out = jpeg->output+jpeg->data_offset;
-    uint8_t *o = out;
-    size_t iy, iy2, ix, ix2;
-
-    w = w * 3;
-
-    for(iy=t, iy2=t2; iy<b; iy+=jw, iy2+=jw2) {
-        o = out+iy2+l;
-        for(ix2=ix=0; ix<w; ix+= 3, ix2 +=2) {
-            uint16_t r = data[ix];
-            uint16_t g = data[ix+1];
-            uint16_t b = data[ix+2];
-            uint16_t c = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-            o[ix2+1] = c>>8;
-            o[ix2] = c&0xff;
-        }
-        data+=w;
-    }
-    return true;
-}
-
-//input buffer
-static unsigned int _jpg_read(void * arg, size_t index, uint8_t *buf, size_t len)
-{
-    rgb_jpg_decoder * jpeg = (rgb_jpg_decoder *)arg;
-    if(buf) {
-        memcpy(buf, jpeg->input + index, len);
-    }
-    return len;
-}
-
-static bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale)
-{
-    rgb_jpg_decoder jpeg;
-    jpeg.width = 0;
-    jpeg.height = 0;
-    jpeg.input = src;
-    jpeg.output = out;
-    jpeg.data_offset = 0;
-
-    if(esp_jpg_decode(src_len, scale, _jpg_read, _rgb_write, (void*)&jpeg) != ESP_OK){
+    if(esp_jpeg_decode(&jpeg_cfg, &output_img) != ESP_OK){
         return false;
     }
     return true;
 }
 
-bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale)
+bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale)
 {
-    rgb_jpg_decoder jpeg;
-    jpeg.width = 0;
-    jpeg.height = 0;
-    jpeg.input = src;
-    jpeg.output = out;
-    jpeg.data_offset = 0;
+    esp_jpeg_image_cfg_t jpeg_cfg = {
+        .indata = (uint8_t *)src,
+        .indata_size = src_len,
+        .outbuf = out,
+        .outbuf_size = UINT32_MAX, // @todo: this is very bold assumption, keeping this like this for now, not to break existing code
+        .out_format = JPEG_IMAGE_FORMAT_RGB565,
+        .out_scale = scale,
+        .flags.swap_color_bytes = 0,
+        .advanced.working_buffer = work,
+        .advanced.working_buffer_size = sizeof(work),
+    };
 
-    if(esp_jpg_decode(src_len, scale, _jpg_read, _rgb565_write, (void*)&jpeg) != ESP_OK){
+    esp_jpeg_image_output_t output_img = {};
+
+    if(esp_jpeg_decode(&jpeg_cfg, &output_img) != ESP_OK){
         return false;
     }
     return true;
@@ -205,40 +105,59 @@ bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t s
 
 bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_len)
 {
-
-    rgb_jpg_decoder jpeg;
-    jpeg.width = 0;
-    jpeg.height = 0;
-    jpeg.input = src;
-    jpeg.output = NULL;
-    jpeg.data_offset = BMP_HEADER_LEN;
-
-    if(esp_jpg_decode(src_len, JPG_SCALE_NONE, _jpg_read, _rgb_write, (void*)&jpeg) != ESP_OK){
+    esp_jpeg_image_cfg_t jpeg_cfg = {
+        .indata = (uint8_t *)src,
+        .indata_size = src_len,
+        .out_format = JPEG_IMAGE_FORMAT_RGB888,
+        .out_scale = JPEG_IMAGE_SCALE_0,
+        .flags.swap_color_bytes = 0,
+        .advanced.working_buffer = work,
+        .advanced.working_buffer_size = sizeof(work),
+    };
+    
+    esp_jpeg_image_output_t output_img = {};
+    if (esp_jpeg_get_image_info(&jpeg_cfg, &output_img) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get image info");
+        return false;
+    }
+    
+    // @todo here we allocate memory and we assume that the user will free it
+    // this is not the best way to do it, but we need to keep the API
+    // compatible with the previous version
+    const size_t output_size = output_img.output_len + BMP_HEADER_LEN;
+    uint8_t *output = _malloc(output_size);
+    if (!output) {
+        ESP_LOGE(TAG, "Failed to allocate output buffer");
         return false;
     }
 
-    size_t output_size = jpeg.width*jpeg.height*3;
+    // Start writing decoded data after the BMP header
+    jpeg_cfg.outbuf = output + BMP_HEADER_LEN;
+    jpeg_cfg.outbuf_size = output_img.output_len;
+    if(esp_jpeg_decode(&jpeg_cfg, &output_img) != ESP_OK){
+        return false;
+    }
 
-    jpeg.output[0] = 'B';
-    jpeg.output[1] = 'M';
-    bmp_header_t * bitmap  = (bmp_header_t*)&jpeg.output[2];
+    output[0] = 'B';
+    output[1] = 'M';
+    bmp_header_t * bitmap  = (bmp_header_t*)&output[2];
     bitmap->reserved = 0;
-    bitmap->filesize = output_size+BMP_HEADER_LEN;
+    bitmap->filesize = output_size;
     bitmap->fileoffset_to_pixelarray = BMP_HEADER_LEN;
     bitmap->dibheadersize = 40;
-    bitmap->width = jpeg.width;
-    bitmap->height = -jpeg.height;//set negative for top to bottom
+    bitmap->width  =  output_img.width;
+    bitmap->height = -output_img.height; //set negative for top to bottom
     bitmap->planes = 1;
     bitmap->bitsperpixel = 24;
     bitmap->compression = 0;
-    bitmap->imagesize = output_size;
+    bitmap->imagesize = output_img.output_len;
     bitmap->ypixelpermeter = 0x0B13 ; //2835 , 72 DPI
     bitmap->xpixelpermeter = 0x0B13 ; //2835 , 72 DPI
     bitmap->numcolorspallette = 0;
     bitmap->mostimpcolor = 0;
 
-    *out = jpeg.output;
-    *out_len = output_size+BMP_HEADER_LEN;
+    *out = output;
+    *out_len = output_size;
 
     return true;
 }
@@ -247,7 +166,7 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 {
     int pix_count = 0;
     if(format == PIXFORMAT_JPEG) {
-        return jpg2rgb888(src_buf, src_len, rgb_buf, JPG_SCALE_NONE);
+        return jpg2rgb888(src_buf, src_len, rgb_buf, JPEG_IMAGE_SCALE_0);
     } else if(format == PIXFORMAT_RGB888) {
         memcpy(rgb_buf, src_buf, src_len);
     } else if(format == PIXFORMAT_RGB565) {

@@ -382,7 +382,7 @@ static void print_rgb888_img(uint8_t *img, int width, int height)
 
 static void tjpgd_decode_rgb565(uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
 {
-    jpg2rgb565(mjpegbuffer, size, outbuffer, JPG_SCALE_NONE);
+    jpg2rgb565(mjpegbuffer, size, outbuffer, JPEG_IMAGE_SCALE_0);
 }
 
 static void tjpgd_decode_rgb888(uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
