@@ -7,6 +7,7 @@
 #include <mbedtls/base64.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
+#include "esp_timer.h"
 
 #include "esp_camera.h"
 
@@ -17,6 +18,8 @@
 #elif defined CONFIG_IDF_TARGET_ESP32S3
 #define BOARD_CAMERA_MODEL_ESP32_S3_EYE 1
 #endif
+
+#define portTICK_RATE_MS              portTICK_PERIOD_MS
 
 // WROVER-KIT PIN Map
 #if BOARD_WROVER_KIT
