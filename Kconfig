@@ -140,6 +140,20 @@ menu "Camera configuration"
             Enable this option if you want to use the MEGA CCM.
             Disable this option to save memory.
             
+    choice SCCB_HARDWARE_I2C_DRIVER_SELECTION
+        prompt "I2C driver selection for SCCB"
+        default SCCB_HARDWARE_I2C_DRIVER_NEW
+        help
+            Select the I2C driver to use for SCCB communication.
+            NOTE: new driver is only supported for ESP-IDF >= 5.4.
+
+        config SCCB_HARDWARE_I2C_DRIVER_LEGACY
+            bool "Legacy I2C driver"
+        config SCCB_HARDWARE_I2C_DRIVER_NEW
+            bool "New I2C driver"
+
+    endchoice
+
     choice SCCB_HARDWARE_I2C_PORT
         bool "I2C peripheral to use for SCCB"
         default SCCB_HARDWARE_I2C_PORT1
