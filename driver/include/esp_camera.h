@@ -240,6 +240,11 @@ esp_err_t esp_camera_load_from_nvs(const char *key);
  */
 void esp_camera_return_all(void);
 
+/**
+ * @brief Check if there are available frames to be immediately acquired
+ */
+bool esp_camera_available_frames(void);
+
 
 #ifdef __cplusplus
 }

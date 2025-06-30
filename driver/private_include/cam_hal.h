@@ -57,6 +57,8 @@ void cam_give(camera_fb_t *dma_buffer);
 
 void cam_give_all(void);
 
+bool cam_get_available_frames(void);
+
 #ifdef __cplusplus
 }
 #endif
