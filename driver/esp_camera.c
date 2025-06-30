@@ -212,13 +212,13 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
     ESP_LOGD(TAG, "Searching for camera address");
     vTaskDelay(10 / portTICK_PERIOD_MS);
 
-    int camera_model_id = 0;
-    uint8_t slave_addr = 0x0;
+    int camera_model_id;
+    uint8_t slv_addr = 0x0;
 
-    for(camera_model_id ; *out_camera_model == CAMERA_NONE && camera_model_id < CAMERA_MODEL_MAX ; camera_model_id++) {
-        slave_addr = camera_sensor[camera_model_id].sccb_addr;
+    for(camera_model_id = 0; (*out_camera_model == CAMERA_NONE && camera_model_id < CAMERA_MODEL_MAX) ; camera_model_id++) {
+        slv_addr = camera_sensor[camera_model_id].sccb_addr;
 
-        if (ESP_OK != SCCB_PROBE(slave_addr)) {
+        if (ESP_OK != SCCB_Probe(slv_addr)) {
             continue;
         }
 
@@ -230,6 +230,9 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
          * Attention: Some sensors have the same SCCB address. Therefore, several attempts may be made in the detection process
          */
         sensor_id_t *id = &s_state->sensor.id;
+        ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+            id->PID, id->VER, id->MIDH, id->MIDL);
+
         for (size_t i = 0; i < sizeof(g_sensors) / sizeof(sensor_func_t); i++) {
             if (g_sensors[i].detect(slv_addr, id)) {
                 camera_sensor_info_t *info = esp_camera_sensor_get_info(id);
@@ -243,16 +246,13 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         }
     }
 
-    ESP_LOGI(TAG, "Detected camera at address=0x%02x", slv_addr);
-
     if (CAMERA_NONE == *out_camera_model) { //If no supported sensors are detected
         ESP_LOGE(TAG, "Detected camera not supported.");
         ret = ESP_ERR_NOT_SUPPORTED;
         goto err;
     }
 
-    ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-             id->PID, id->VER, id->MIDH, id->MIDL);
+    ESP_LOGI(TAG, "Detected camera at address=0x%02x", slv_addr);
 
     ESP_LOGD(TAG, "Doing SW reset of sensor");
     vTaskDelay(10 / portTICK_PERIOD_MS);

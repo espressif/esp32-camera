@@ -198,7 +198,7 @@ int SCCB_Deinit(void)
     return ESP_OK;
 }
 
-int SCCB_Probe(uint8_t slave_addr)
+int SCCB_Probe(uint8_t slv_addr)
 {
     esp_err_t ret;
     i2c_master_bus_handle_t bus_handle;
@@ -210,11 +210,11 @@ int SCCB_Probe(uint8_t slave_addr)
         return ret;
     }
 
-    ret = i2c_master_probe(bus_handle, slave_addr, TIMEOUT_MS);
+    ret = i2c_master_probe(bus_handle, slv_addr, TIMEOUT_MS);
 
     if (ret == ESP_OK)
     {
-        return SCCB_Install_Device(slave_addr);
+        return SCCB_Install_Device(slv_addr);
     }
 
     return ret;
