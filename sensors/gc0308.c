@@ -279,7 +279,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
 static int set_contrast(sensor_t *sensor, int contrast)
 {
-    if (contrast != 0) {
+    if (contrast > 0) {
+        sensor->status.contrast = contrast;
         write_reg(sensor->slv_addr, 0xfe, 0x00);
         write_reg(sensor->slv_addr, 0xb3, contrast);
     }
@@ -370,7 +371,7 @@ static int init_status(sensor_t *sensor)
 {
     write_reg(sensor->slv_addr, 0xfe, 0x00);
     sensor->status.brightness = 0;
-    sensor->status.contrast = 0;
+    sensor->status.contrast = 50;
     sensor->status.saturation = 0;
     sensor->status.sharpness = 0;
     sensor->status.denoise = 0;
