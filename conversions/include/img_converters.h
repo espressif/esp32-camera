@@ -1,4 +1,4 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2015-2025 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_camera.h"
-#include "esp_jpg_decode.h"
+#include "jpeg_decoder.h"
 
 typedef size_t (* jpg_out_cb)(void * arg, size_t index, const void* data, size_t len);
 
@@ -121,7 +121,13 @@ bool frame2bmp(camera_fb_t * fb, uint8_t ** out, size_t * out_len);
  */
 bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf);
 
-bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, jpg_scale_t scale);
+// Macros for backwards compatibility
+#define JPG_SCALE_NONE JPEG_IMAGE_SCALE_0
+#define JPG_SCALE_2X   JPEG_IMAGE_SCALE_1_2
+#define JPG_SCALE_4X   JPEG_IMAGE_SCALE_1_4
+#define JPG_SCALE_8X   JPEG_IMAGE_SCALE_1_8
+#define JPG_SCALE_MAX  JPEG_IMAGE_SCALE_1_8
+bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale);
 
 #ifdef __cplusplus
 }
