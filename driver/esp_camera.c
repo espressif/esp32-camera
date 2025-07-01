@@ -215,7 +215,10 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
     int camera_model_id;
     uint8_t slv_addr = 0x0;
 
-    for(camera_model_id = 0; (*out_camera_model == CAMERA_NONE && camera_model_id < CAMERA_MODEL_MAX) ; camera_model_id++) {
+    /**
+     * This loop probes each known sensor until a supported camera is detected
+     */
+    for(camera_model_id = 0; *out_camera_model == CAMERA_NONE && camera_model_id < CAMERA_MODEL_MAX ; camera_model_id++) {
         slv_addr = camera_sensor[camera_model_id].sccb_addr;
 
         if (ESP_OK != SCCB_Probe(slv_addr)) {
@@ -230,11 +233,11 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
          * Attention: Some sensors have the same SCCB address. Therefore, several attempts may be made in the detection process
          */
         sensor_id_t *id = &s_state->sensor.id;
-        ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-            id->PID, id->VER, id->MIDH, id->MIDL);
 
         for (size_t i = 0; i < sizeof(g_sensors) / sizeof(sensor_func_t); i++) {
             if (g_sensors[i].detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+                    id->PID, id->VER, id->MIDH, id->MIDL);
                 camera_sensor_info_t *info = esp_camera_sensor_get_info(id);
                 if (NULL != info) {
                     *out_camera_model = info->model;
