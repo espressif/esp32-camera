@@ -32,6 +32,8 @@ typedef enum {
     SC030IOT_PID = 0x9a46,
     SC031GS_PID = 0x0031,
     MEGA_CCM_PID =0x039E, 
+    HM1055_PID = 0x0955,
+    HM0360_PID = 0x0360
 } camera_pid_t;
 
 typedef enum {
@@ -50,6 +52,8 @@ typedef enum {
     CAMERA_SC030IOT,
     CAMERA_SC031GS,
     CAMERA_MEGA_CCM,
+    CAMERA_HM1055,
+    CAMERA_HM0360,
     CAMERA_MODEL_MAX,
     CAMERA_NONE,
 } camera_model_t;
@@ -70,6 +74,8 @@ typedef enum {
     SC030IOT_SCCB_ADDR = 0x68,// 0xd0 >> 1
     SC031GS_SCCB_ADDR  = 0x30,
     MEGA_CCM_SCCB_ADDR = 0x1F, // 0x3E >> 1
+    HM1055_SCCB_ADDR   = 0x24,
+    HM0360_SCCB_ADDR   = 0x12,
 } camera_sccb_addr_t;
 
 typedef enum {
@@ -82,6 +88,7 @@ typedef enum {
     PIXFORMAT_RAW,       // RAW
     PIXFORMAT_RGB444,    // 3BP2P/RGB444
     PIXFORMAT_RGB555,    // 3BP2P/RGB555
+    PIXFORMAT_RAW8,      // RAW 8-bit
 } pixformat_t;
 
 typedef enum {
