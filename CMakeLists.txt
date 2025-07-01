@@ -41,6 +41,8 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     sensors/sc030iot.c
     sensors/sc031gs.c
     sensors/mega_ccm.c
+    sensors/hm1055.c
+    sensors/hm0360.c
     )
 
   list(APPEND priv_include_dirs
