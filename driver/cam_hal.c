@@ -46,6 +46,7 @@ static cam_obj_t *cam_obj = NULL;
 static const uint8_t JPEG_SOI_MARKER[] = {0xFF, 0xD8, 0xFF}; /* SOI = FF D8 FF */
 #define JPEG_SOI_MARKER_LEN (3)
 static const uint16_t JPEG_EOI_MARKER = 0xD9FF;              /* EOI = FF D9 */
+#define JPEG_EOI_MARKER_LEN (2)
 
 static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
 {
@@ -66,10 +67,14 @@ static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
 
 static int cam_verify_jpeg_eoi(const uint8_t *inbuf, uint32_t length)
 {
+    if (length < JPEG_EOI_MARKER_LEN) {
+        return -1;
+    }
+
     int offset = -1;
-    uint8_t *dptr = (uint8_t *)inbuf + length - 2;
+    uint8_t *dptr = (uint8_t *)inbuf + length - JPEG_EOI_MARKER_LEN;
     while (dptr > inbuf) {
-        if (memcmp(dptr, &JPEG_EOI_MARKER, 2) == 0) {
+        if (memcmp(dptr, &JPEG_EOI_MARKER, JPEG_EOI_MARKER_LEN) == 0) {
             offset = dptr - inbuf;
             //ESP_LOGW(TAG, "EOI: %d", length - (offset + 2));
             return offset;
