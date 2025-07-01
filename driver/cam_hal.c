@@ -481,7 +481,12 @@ camera_fb_t *cam_take(TickType_t timeout)
 #if CONFIG_IDF_TARGET_ESP32S3
     uint16_t dma_reset_counter = 0;
     static const uint8_t MAX_GDMA_RESETS = 3;
+#else
+    /* throttle repeated NULL frame warnings */
+    static uint16_t warn_null_cnt;
 #endif
+    /* throttle repeated NO-EOI warnings */
+    static uint16_t warn_eoi_miss_cnt;
 
     for (;;)
     {
@@ -506,12 +511,21 @@ camera_fb_t *cam_take(TickType_t timeout)
                 continue; /* retry with queue timeout */
             }
             if (dma_reset_counter == MAX_GDMA_RESETS) {
-                ESP_LOGW(TAG, "Giving up GDMA reset after %u tries", dma_reset_counter);
+                ESP_DRAM_LOGW(TAG, "Giving up GDMA reset after %u tries", dma_reset_counter);
                 dma_reset_counter++; /* suppress further logs */
             }
 #else
             /* Early warning for misbehaving sensors on other chips */
-            ESP_LOGW(TAG, "Unexpected NULL frame on %s", CONFIG_IDF_TARGET);
+            if (warn_null_cnt == 0) {
+                ESP_DRAM_LOGW(TAG, "Unexpected NULL frame on " CONFIG_IDF_TARGET);
+            }
+            if (++warn_null_cnt % 100 == 0) {
+                ESP_LOGW(TAG, "Unexpected NULL frame – 100 additional drops");
+            }
+            if (warn_null_cnt >= 10000) {
+                ESP_LOGW(TAG, "Unexpected NULL frame log counter reset at 10000");
+                warn_null_cnt = 0;
+            }
 #endif
             vTaskDelay(1); /* immediate yield once resets are done */
             continue;             /* go to top of loop */
@@ -525,7 +539,16 @@ camera_fb_t *cam_take(TickType_t timeout)
                 return dma_buffer;
             }
 
-            ESP_LOGW(TAG, "NO-EOI");
+            if (warn_eoi_miss_cnt == 0) {
+                ESP_DRAM_LOGW(TAG, "NO-EOI – JPEG end marker missing");
+            }
+            if (++warn_eoi_miss_cnt % 100 == 0) {
+                ESP_LOGW(TAG, "NO-EOI – 100 additional misses");
+            }
+            if (warn_eoi_miss_cnt >= 10000) {
+                ESP_LOGW(TAG, "NO-EOI counter reset at 10000");
+                warn_eoi_miss_cnt = 0;
+            }
             cam_give(dma_buffer);
             continue; /* wait for another frame */
         } else if (cam_obj->psram_mode &&
