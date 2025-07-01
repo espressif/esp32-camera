@@ -4,7 +4,7 @@
  *
  */
 #ifndef __SC031GS_H__
-#define __SC030GS_H__
+#define __SC031GS_H__
 
 #include "sensor.h"
 
