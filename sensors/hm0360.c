@@ -368,8 +368,31 @@ static int set_dummy(sensor_t *sensor, int val)
     return -1;
 }
 
+static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
+{
+    ESP_LOGW(TAG, "Unsupported");
+    return -1;
+}
+
 static int init_status(sensor_t *sensor)
 {
+    (void) write_addr_reg;
+
+    sensor->status.brightness = 0;
+    sensor->status.contrast = 0;
+    sensor->status.saturation = 0;
+    sensor->status.sharpness = 0;
+    sensor->status.denoise = 0;
+    sensor->status.ae_level = 0;
+    sensor->status.awb = 0;
+    sensor->status.aec = 0;
+    sensor->status.hmirror = check_reg_mask(sensor->slv_addr, 0x101, 0x01);
+    sensor->status.vflip = check_reg_mask(sensor->slv_addr, 0x101, 0x02);
+    sensor->status.lenc = 0;
+    sensor->status.awb_gain = 0;
+    sensor->status.agc_gain = 0;
+    sensor->status.aec_value = 0;
+
     return 0;
 }
 
@@ -399,7 +422,7 @@ int hm0360_init(sensor_t *sensor)
     sensor->set_brightness = set_brightness;
     sensor->set_saturation = set_dummy;
     sensor->set_sharpness = set_dummy;
-    sensor->set_gainceiling = set_dummy;
+    sensor->set_gainceiling = set_gainceiling_dummy;
     sensor->set_quality = set_dummy;
     sensor->set_colorbar = set_colorbar;
     sensor->set_gain_ctrl = set_dummy;

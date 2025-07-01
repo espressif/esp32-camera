@@ -407,11 +407,6 @@ static int set_ae_level(sensor_t *sensor, int level)
     return 0;
 }
 
-static int set_awb_gain_dsp(sensor_t *sensor, int enable)
-{
-    return 0;
-}
-
 static int set_brightness(sensor_t *sensor, int level)
 {
     int ret = 0;
@@ -467,7 +462,6 @@ static int set_contrast(sensor_t *sensor, int level)
 {
     int ret = 0;
     uint8_t ispctrl5 = read_reg(sensor->slv_addr, ISPCTRL5);
-    uint8_t value1 = 0;
 
     ispctrl5 |= 0x80; // enable contrast
     ret = write_reg(sensor->slv_addr, ISPCTRL5, ispctrl5);
@@ -755,6 +749,8 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
 
 static int init_status(sensor_t *sensor)
 {
+    (void) write_addr_reg;
+
     sensor->status.brightness = 0;
     sensor->status.contrast = 0;
     sensor->status.saturation = 0;
