@@ -42,6 +42,30 @@
 static const char *TAG = "cam_hal";
 static cam_obj_t *cam_obj = NULL;
 
+/* At top of cam_hal.c – one switch for noisy ISR prints */
+#ifndef CAM_LOG_SPAM_EVERY_FRAME
+#define CAM_LOG_SPAM_EVERY_FRAME 0   /* set to 1 to restore old behaviour */
+#endif
+
+/* Throttle repeated warnings printed from tight loops / ISRs.
+ *
+ * counter – static DRAM/IRAM uint16_t you pass in
+ * first   – literal C string shown on first hit and as prefix of summaries
+ */
+#if CONFIG_LOG_DEFAULT_LEVEL >= 2
+#define CAM_WARN_THROTTLE(counter, first)                                  \
+    do {                                                                  \
+        if (++(counter) == 1) {                                           \
+            ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: %s\r\n"), first);        \
+        } else if ((counter) % 100 == 0) {                                \
+            ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: %s - 100 additional misses\r\n"), first); \
+        }                                                                 \
+        if ((counter) == 10000) (counter) = 1;                            \
+    } while (0)
+#else
+#define CAM_WARN_THROTTLE(counter, first) do { (void)(counter); } while (0)
+#endif
+
 /* JPEG markers in little-endian order (ESP32). */
 static const uint8_t JPEG_SOI_MARKER[] = {0xFF, 0xD8, 0xFF}; /* SOI = FF D8 FF */
 static const uint16_t JPEG_EOI_MARKER = 0xD9FF;              /* EOI = FF D9 */
@@ -49,9 +73,11 @@ static const uint16_t JPEG_EOI_MARKER = 0xD9FF;              /* EOI = FF D9 */
 static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
 {
     const size_t soi_len = sizeof(JPEG_SOI_MARKER);
+    static uint16_t warn_soi_miss_cnt;
 
     if (length < soi_len) {
-        ESP_LOGW(TAG, "NO-SOI");
+        CAM_WARN_THROTTLE(warn_soi_miss_cnt,
+                          "NO-SOI - JPEG start marker missing (len < 3b)");
         return -1;
     }
 
@@ -61,7 +87,9 @@ static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
             return i;
         }
     }
-    ESP_LOGW(TAG, "NO-SOI");
+
+    CAM_WARN_THROTTLE(warn_soi_miss_cnt,
+                      "NO-SOI - JPEG start marker missing");
     return -1;
 }
 
@@ -119,7 +147,13 @@ void IRAM_ATTR ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType
     if (xQueueSendFromISR(cam->event_queue, (void *)&cam_event, HPTaskAwoken) != pdTRUE) {
         ll_cam_stop(cam);
         cam->state = CAM_STATE_IDLE;
-        ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: EV-%s-OVF\r\n"), cam_event==CAM_IN_SUC_EOF_EVENT ? DRAM_STR("EOF") : DRAM_STR("VSYNC"));
+#if CAM_LOG_SPAM_EVERY_FRAME
+        ESP_DRAM_LOGD(TAG, "EV-%s-OVF", cam_event==CAM_IN_SUC_EOF_EVENT ? "EOF" : "VSYNC");
+#else
+        static uint16_t ovf_cnt;
+        CAM_WARN_THROTTLE(ovf_cnt,
+                          cam_event==CAM_IN_SUC_EOF_EVENT ? "EV-EOF-OVF" : "EV-VSYNC-OVF");
+#endif
     }
 }
 
@@ -493,7 +527,12 @@ camera_fb_t *cam_take(TickType_t timeout)
 #if CONFIG_IDF_TARGET_ESP32S3
     uint16_t dma_reset_counter = 0;
     static const uint8_t MAX_GDMA_RESETS = 3;
+#else
+    /* throttle repeated NULL frame warnings */
+    static uint16_t warn_null_cnt;
 #endif
+    /* throttle repeated NO-EOI warnings */
+    static uint16_t warn_eoi_miss_cnt;
 
     for (;;)
     {
@@ -518,12 +557,14 @@ camera_fb_t *cam_take(TickType_t timeout)
                 continue; /* retry with queue timeout */
             }
             if (dma_reset_counter == MAX_GDMA_RESETS) {
-                ESP_LOGW(TAG, "Giving up GDMA reset after %u tries", dma_reset_counter);
+                ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: Giving up GDMA reset after %u tries\r\n"),
+                                     (unsigned) dma_reset_counter);
                 dma_reset_counter++; /* suppress further logs */
             }
 #else
             /* Early warning for misbehaving sensors on other chips */
-            ESP_LOGW(TAG, "Unexpected NULL frame on %s", CONFIG_IDF_TARGET);
+            CAM_WARN_THROTTLE(warn_null_cnt,
+                              "Unexpected NULL frame on " CONFIG_IDF_TARGET);
 #endif
             vTaskDelay(1); /* immediate yield once resets are done */
             continue;             /* go to top of loop */
@@ -537,7 +578,8 @@ camera_fb_t *cam_take(TickType_t timeout)
                 return dma_buffer;
             }
 
-            ESP_LOGW(TAG, "NO-EOI");
+            CAM_WARN_THROTTLE(warn_eoi_miss_cnt,
+                              "NO-EOI - JPEG end marker missing");
             cam_give(dma_buffer);
             continue; /* wait for another frame */
         } else if (cam_obj->psram_mode &&
