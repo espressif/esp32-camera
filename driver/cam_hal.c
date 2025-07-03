@@ -42,18 +42,43 @@
 static const char *TAG = "cam_hal";
 static cam_obj_t *cam_obj = NULL;
 
-static const uint32_t JPEG_SOI_MARKER = 0xFFD8FF;  // written in little-endian for esp32
-static const uint16_t JPEG_EOI_MARKER = 0xD9FF;  // written in little-endian for esp32
+/* helper to throttle repeated warnings */
+#define CAM_WARN_THROTTLE(first) \
+    do { \
+        if ((warn_soi_miss_cnt) == 0) { \
+            ESP_DRAM_LOGW(TAG, first); \
+        } \
+        if (++(warn_soi_miss_cnt) % 100 == 0) { \
+            ESP_LOGW(TAG, "NO-SOI - 100 additional misses"); \
+        } \
+        if ((warn_soi_miss_cnt) >= 10000) { \
+            ESP_LOGW(TAG, "NO-SOI - counter reset at 10000"); \
+            (warn_soi_miss_cnt) = 0; \
+        } \
+    } while (0)
+
+/* JPEG markers in little-endian order (ESP32). */
+static const uint8_t JPEG_SOI_MARKER[] = {0xFF, 0xD8, 0xFF}; /* SOI = FF D8 FF */
+static const uint16_t JPEG_EOI_MARKER = 0xD9FF;              /* EOI = FF D9 */
 
 static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
 {
-    for (uint32_t i = 0; i < length; i++) {
-        if (memcmp(&inbuf[i], &JPEG_SOI_MARKER, 3) == 0) {
+    const size_t soi_len = sizeof(JPEG_SOI_MARKER);
+    static uint16_t warn_soi_miss_cnt;
+
+    if (length < soi_len) {
+        CAM_WARN_THROTTLE("NO-SOI - JPEG start marker missing (below 3 bytes in length)");
+        return -1;
+    }
+
+    for (uint32_t i = 0; i <= length - soi_len; i++) {
+        if (memcmp(&inbuf[i], JPEG_SOI_MARKER, soi_len) == 0) {
             //ESP_LOGW(TAG, "SOI: %d", (int) i);
             return i;
         }
     }
-    ESP_LOGW(TAG, "NO-SOI");
+
+    CAM_WARN_THROTTLE("NO-SOI - JPEG start marker missing");
     return -1;
 }
 
