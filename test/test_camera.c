@@ -6,8 +6,7 @@
 #include "unity.h"
 #include <mbedtls/base64.h>
 #include "esp_log.h"
-#include "driver/i2c.h"
-#include "esp_timer.h"
+#include "driver/i2c_master.h"
 
 #include "esp_camera.h"
 
@@ -18,8 +17,6 @@
 #elif defined CONFIG_IDF_TARGET_ESP32S3
 #define BOARD_CAMERA_MODEL_ESP32_S3_EYE 1
 #endif
-
-#define portTICK_RATE_MS              portTICK_PERIOD_MS
 
 // WROVER-KIT PIN Map
 #if BOARD_WROVER_KIT
@@ -385,7 +382,7 @@ static void print_rgb888_img(uint8_t *img, int width, int height)
 
 static void tjpgd_decode_rgb565(uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
 {
-    jpg2rgb565(mjpegbuffer, size, outbuffer, JPEG_IMAGE_SCALE_0);
+    jpg2rgb565(mjpegbuffer, size, outbuffer, JPG_SCALE_NONE);
 }
 
 static void tjpgd_decode_rgb888(uint8_t *mjpegbuffer, uint32_t size, uint8_t *outbuffer)
@@ -494,23 +491,23 @@ static void img_jpeg_decode_test(uint16_t pic_index, uint16_t lib_index)
     jpg_decode_test(lib_index, DECODE_RGB565, imgs[pic_index].buf, imgs[pic_index].length, imgs[pic_index].w, imgs[pic_index].h, 16);
 }
 
+
+static i2c_master_bus_handle_t test_bus_handle = NULL;
+
 /**
  * @brief i2c master initialization
  */
-static esp_err_t i2c_master_init(int i2c_port)
+static esp_err_t i2c_master_init_new(void)
 {
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
+    i2c_master_bus_config_t i2c_bus_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = I2C_MASTER_NUM,
         .scl_io_num = I2C_MASTER_SCL_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
     };
-
-    i2c_param_config(i2c_port, &conf);
-
-    return i2c_driver_install(i2c_port, conf.mode, 0, 0, 0);
+    return i2c_new_master_bus(&i2c_bus_config, &test_bus_handle);
 }
 
 TEST_CASE("Conversions image 227x149 jpeg decode test", "[camera]")
@@ -530,9 +527,9 @@ TEST_CASE("Conversions image 480x320 jpeg decode test", "[camera]")
 
 TEST_CASE("Camera driver uses an i2c port initialized by other devices test", "[camera]")
 {
-    TEST_ESP_OK(i2c_master_init(I2C_MASTER_NUM));
-    TEST_ESP_OK(init_camera(20000000, PIXFORMAT_JPEG, FRAMESIZE_QVGA, 2, -1, I2C_MASTER_NUM));
-    vTaskDelay(500 / portTICK_RATE_MS);
+    TEST_ESP_OK(i2c_master_init_new());
+    TEST_ESP_OK(init_camera_with_bus_handle(20000000, PIXFORMAT_JPEG, FRAMESIZE_QVGA, 2, test_bus_handle));
+    vTaskDelay(500 / portTICK_PERIOD_MS);
     TEST_ESP_OK(esp_camera_deinit());
-    TEST_ESP_OK(i2c_driver_delete(I2C_MASTER_NUM));
+    TEST_ESP_OK(i2c_del_master_bus(test_bus_handle));
 }
