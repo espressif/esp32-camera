@@ -59,10 +59,14 @@ static int cam_verify_jpeg_soi(const uint8_t *inbuf, uint32_t length)
 
 static int cam_verify_jpeg_eoi(const uint8_t *inbuf, uint32_t length)
 {
+    if (length < sizeof(JPEG_EOI_MARKER)) {
+        return -1;
+    }
+
     int offset = -1;
-    uint8_t *dptr = (uint8_t *)inbuf + length - 2;
+    uint8_t *dptr = (uint8_t *)inbuf + length - sizeof(JPEG_EOI_MARKER);
     while (dptr > inbuf) {
-        if (memcmp(dptr, &JPEG_EOI_MARKER, 2) == 0) {
+        if (memcmp(dptr, &JPEG_EOI_MARKER, sizeof(JPEG_EOI_MARKER)) == 0) {
             offset = dptr - inbuf;
             //ESP_LOGW(TAG, "EOI: %d", length - (offset + 2));
             return offset;
