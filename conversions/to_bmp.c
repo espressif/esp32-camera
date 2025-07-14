@@ -13,6 +13,7 @@
 // limitations under the License.
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
 #include "img_converters.h"
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
@@ -135,6 +136,7 @@ bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_le
     jpeg_cfg.outbuf = output + BMP_HEADER_LEN;
     jpeg_cfg.outbuf_size = output_img.output_len;
     if(esp_jpeg_decode(&jpeg_cfg, &output_img) != ESP_OK){
+        free(output);
         return false;
     }
 
