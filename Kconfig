@@ -116,6 +116,20 @@ menu "Camera configuration"
             SC031GS is a global shutter CMOS sensor with high frame rate and single-frame HDR.
             Enable this option if you want to use the SC031GS.
             Disable this option to save memory.
+    
+    config HM1055_SUPPORT
+        bool "Support HM1055 VGA"
+        default y
+        help
+            Enable this option if you want to use the HM1055.
+            Disable this option to save memory.
+    
+    config HM0360_SUPPORT
+        bool "Support HM0360 VGA"
+        default y
+        help
+            Enable this option if you want to use the HM0360.
+            Disable this option to save memory.
 
     config MEGA_CCM_SUPPORT
         bool "Support MEGA CCM 5MP"
