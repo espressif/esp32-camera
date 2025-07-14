@@ -224,30 +224,39 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
     ESP_LOGD(TAG, "Searching for camera address");
     vTaskDelay(10 / portTICK_PERIOD_MS);
 
-    uint8_t slv_addr = SCCB_Probe();
-
-    if (slv_addr == 0) {
-        ret = ESP_ERR_NOT_FOUND;
-        goto err;
-    }
-
-    ESP_LOGI(TAG, "Detected camera at address=0x%02x", slv_addr);
-    s_state->sensor.slv_addr = slv_addr;
-    s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
+    int camera_model_id;
+    uint8_t slv_addr = 0x0;
 
     /**
-     * Read sensor ID and then initialize sensor
-     * Attention: Some sensors have the same SCCB address. Therefore, several attempts may be made in the detection process
+     * This loop probes each known sensor until a supported camera is detected
      */
-    sensor_id_t *id = &s_state->sensor.id;
-    for (size_t i = 0; i < sizeof(g_sensors) / sizeof(sensor_func_t); i++) {
-        if (g_sensors[i].detect(slv_addr, id)) {
-            camera_sensor_info_t *info = esp_camera_sensor_get_info(id);
-            if (NULL != info) {
-                *out_camera_model = info->model;
-                ESP_LOGI(TAG, "Detected %s camera", info->name);
-                g_sensors[i].init(&s_state->sensor);
-                break;
+    for(camera_model_id = 0; *out_camera_model == CAMERA_NONE && camera_model_id < CAMERA_MODEL_MAX ; camera_model_id++) {
+        slv_addr = camera_sensor[camera_model_id].sccb_addr;
+
+        if (ESP_OK != SCCB_Probe(slv_addr)) {
+            continue;
+        }
+
+        s_state->sensor.slv_addr = slv_addr;
+        s_state->sensor.xclk_freq_hz = config->xclk_freq_hz;
+
+        /**
+         * Read sensor ID and then initialize sensor
+         * Attention: Some sensors have the same SCCB address. Therefore, several attempts may be made in the detection process
+         */
+        sensor_id_t *id = &s_state->sensor.id;
+
+        for (size_t i = 0; i < sizeof(g_sensors) / sizeof(sensor_func_t); i++) {
+            if (g_sensors[i].detect(slv_addr, id)) {
+                ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
+                    id->PID, id->VER, id->MIDH, id->MIDL);
+                camera_sensor_info_t *info = esp_camera_sensor_get_info(id);
+                if (NULL != info) {
+                    *out_camera_model = info->model;
+                    ESP_LOGI(TAG, "Detected %s camera", info->name);
+                    g_sensors[i].init(&s_state->sensor);
+                    break;
+                }
             }
         }
     }
@@ -258,8 +267,7 @@ static esp_err_t camera_probe(const camera_config_t *config, camera_model_t *out
         goto err;
     }
 
-    ESP_LOGI(TAG, "Camera PID=0x%02x VER=0x%02x MIDL=0x%02x MIDH=0x%02x",
-             id->PID, id->VER, id->MIDH, id->MIDL);
+    ESP_LOGI(TAG, "Detected camera at address=0x%02x", slv_addr);
 
     ESP_LOGD(TAG, "Doing SW reset of sensor");
     vTaskDelay(10 / portTICK_PERIOD_MS);

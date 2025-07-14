@@ -93,26 +93,15 @@ int SCCB_Deinit(void)
     return i2c_driver_delete(sccb_i2c_port);
 }
 
-uint8_t SCCB_Probe(void)
+int SCCB_Probe(uint8_t slv_addr)
 {
-    uint8_t slave_addr = 0x0;
-
-    for (size_t i = 0; i < CAMERA_MODEL_MAX; i++) {
-        if (slave_addr == camera_sensor[i].sccb_addr) {
-            continue;
-        }
-        slave_addr = camera_sensor[i].sccb_addr;
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, ( slave_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
-        i2c_master_stop(cmd);
-        esp_err_t ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
-        i2c_cmd_link_delete(cmd);
-        if( ret == ESP_OK) {
-            return slave_addr;
-        }
-    }
-    return 0;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, ( slv_addr << 1 ) | WRITE_BIT, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(sccb_i2c_port, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
 }
 
 uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
