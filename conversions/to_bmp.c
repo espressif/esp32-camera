@@ -13,6 +13,7 @@
 // limitations under the License.
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
 #include "img_converters.h"
 #include "soc/efuse_reg.h"
 #include "esp_heap_caps.h"
@@ -114,28 +115,31 @@ bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_le
         .advanced.working_buffer = work,
         .advanced.working_buffer_size = sizeof(work),
     };
-    
+
+    bool ret = false;
+    uint8_t *output = NULL;
     esp_jpeg_image_output_t output_img = {};
     if (esp_jpeg_get_image_info(&jpeg_cfg, &output_img) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get image info");
-        return false;
+        goto fail;
     }
-    
+
     // @todo here we allocate memory and we assume that the user will free it
     // this is not the best way to do it, but we need to keep the API
     // compatible with the previous version
     const size_t output_size = output_img.output_len + BMP_HEADER_LEN;
-    uint8_t *output = _malloc(output_size);
+    output = _malloc(output_size);
     if (!output) {
         ESP_LOGE(TAG, "Failed to allocate output buffer");
-        return false;
+        goto fail;
     }
 
     // Start writing decoded data after the BMP header
     jpeg_cfg.outbuf = output + BMP_HEADER_LEN;
     jpeg_cfg.outbuf_size = output_img.output_len;
     if(esp_jpeg_decode(&jpeg_cfg, &output_img) != ESP_OK){
-        return false;
+        ESP_LOGE(TAG, "JPEG decode failed");
+        goto fail;
     }
 
     output[0] = 'B';
@@ -158,8 +162,13 @@ bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_le
 
     *out = output;
     *out_len = output_size;
+    ret = true;
 
-    return true;
+fail:
+    if (!ret && output) {
+        free(output);
+    }
+    return ret;
 }
 
 bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf)
