@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include "sccb.h"
 #include "xclk.h"
 #include "hm0360.h"
@@ -345,6 +346,14 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
 
 static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div)
 {
+    (void)bypass;
+    (void)multiplier;
+    (void)sys_div;
+    (void)root_2x;
+    (void)pre_div;
+    (void)seld5;
+    (void)pclk_manual;
+    (void)pclk_div;
     uint8_t value = 0;
     uint8_t pll_cfg = 0;
 
@@ -358,7 +367,20 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
         value = 0x00;
     }
 
-    pll_cfg = read_reg(sensor->slv_addr, PLL1CFG);
+    int ret = read_reg(sensor->slv_addr, PLL1CFG);
+    if (ret < 0) {
+        return ret;
+    }
+    if (ret > 0xFF) {
+        /*
+         * Guard against unexpected wide register values. If read_reg
+         * ever returns a 16-bit result, reject values that don't fit
+         * in a single byte to avoid truncation.
+         */
+        return -ERANGE;
+    }
+
+    pll_cfg = (uint8_t)ret;
     return write_reg(sensor->slv_addr, PLL1CFG, (pll_cfg & 0xFC) | value);
 }
 
