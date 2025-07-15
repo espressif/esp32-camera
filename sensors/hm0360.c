@@ -358,7 +358,12 @@ static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, i
         value = 0x00;
     }
 
-    pll_cfg = read_reg(sensor->slv_addr, PLL1CFG);
+    int ret = read_reg(sensor->slv_addr, PLL1CFG);
+    if (ret < 0) {
+        return ret;
+    }
+
+    pll_cfg = (uint8_t)ret;
     return write_reg(sensor->slv_addr, PLL1CFG, (pll_cfg & 0xFC) | value);
 }
 
