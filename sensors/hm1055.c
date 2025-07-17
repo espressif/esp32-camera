@@ -449,8 +449,11 @@ static int set_brightness(sensor_t *sensor, int level)
 
     ispctrl5 |= 0x40; // enable brightness
     ret = write_reg(sensor->slv_addr, ISPCTRL5, ispctrl5);
-    ret = write_reg(sensor->slv_addr, BRIGHT, brightness);
-    if (ret != 0)
+    if (ret == 0)
+    {
+        ret = write_reg(sensor->slv_addr, BRIGHT, brightness);
+    }
+    if (ret == 0)
     {
         ESP_LOGD(TAG, "Set brightness to: %d", level);
         sensor->status.brightness = level;
