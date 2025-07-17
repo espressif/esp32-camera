@@ -80,7 +80,7 @@ int SCCB_Install_Device(uint8_t slv_addr)
     esp_err_t ret;
     i2c_master_bus_handle_t bus_handle;
 
-    if (device_count > MAX_DEVICES)
+    if (device_count >= MAX_DEVICES)
     {
         ESP_LOGE(TAG, "cannot add more than %d devices", MAX_DEVICES);
         return ESP_FAIL;
