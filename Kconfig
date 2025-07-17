@@ -214,6 +214,14 @@ menu "Camera configuration"
             Maximum value of DMA buffer
             Larger values may fail to allocate due to insufficient contiguous memory blocks, and smaller value may cause DMA interrupt to be too frequent.
 
+    config CAMERA_PSRAM_DMA
+        bool "Enable PSRAM DMA mode by default"
+        depends on IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        default n
+        help
+            Enable DMA transfers directly from PSRAM on supported targets
+            (ESP32-S2 and ESP32-S3) by default.
+
     choice CAMERA_JPEG_MODE_FRAME_SIZE_OPTION
         prompt "JPEG mode frame size option"
         default CAMERA_JPEG_MODE_FRAME_SIZE_AUTO
