@@ -249,14 +249,14 @@ esp_err_t jpg_httpd_handler(httpd_req_t *req){
 #define PART_BOUNDARY "123456789000000000000987654321"
 static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
 static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
-static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
+static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %zu\r\n\r\n";
 
 esp_err_t jpg_stream_httpd_handler(httpd_req_t *req){
     camera_fb_t * fb = NULL;
     esp_err_t res = ESP_OK;
-    size_t _jpg_buf_len;
-    uint8_t * _jpg_buf;
-    char * part_buf[64];
+    size_t jpg_buf_len = 0;
+    uint8_t * jpg_buf = NULL;
+    char part_buf[64];
     static int64_t last_frame = 0;
     if(!last_frame) {
         last_frame = esp_timer_get_time();
@@ -275,30 +275,36 @@ esp_err_t jpg_stream_httpd_handler(httpd_req_t *req){
             break;
         }
         if(fb->format != PIXFORMAT_JPEG){
-            bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+            bool jpeg_converted = frame2jpg(fb, 80, &jpg_buf, &jpg_buf_len);
             if(!jpeg_converted){
                 ESP_LOGE(TAG, "JPEG compression failed");
                 esp_camera_fb_return(fb);
                 res = ESP_FAIL;
+                break;
             }
         } else {
-            _jpg_buf_len = fb->len;
-            _jpg_buf = fb->buf;
+            jpg_buf_len = fb->len;
+            jpg_buf = fb->buf;
         }
 
         if(res == ESP_OK){
             res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
         }
         if(res == ESP_OK){
-            size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
-
-            res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
+            int hlen = snprintf(part_buf, sizeof(part_buf), _STREAM_PART, jpg_buf_len);
+            if(hlen < 0 || hlen >= sizeof(part_buf)){
+                ESP_LOGE(TAG, "Header truncated (%d bytes needed >= %zu buffer)",
+                         hlen, sizeof(part_buf));
+                res = ESP_FAIL;
+            } else {
+                res = httpd_resp_send_chunk(req, part_buf, (size_t)hlen);
+            }
         }
         if(res == ESP_OK){
-            res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
+            res = httpd_resp_send_chunk(req, (const char *)jpg_buf, jpg_buf_len);
         }
         if(fb->format != PIXFORMAT_JPEG){
-            free(_jpg_buf);
+            free(jpg_buf);
         }
         esp_camera_fb_return(fb);
         if(res != ESP_OK){
@@ -308,9 +314,10 @@ esp_err_t jpg_stream_httpd_handler(httpd_req_t *req){
         int64_t frame_time = fr_end - last_frame;
         last_frame = fr_end;
         frame_time /= 1000;
+        float fps = frame_time > 0 ? 1000.0f / (float)frame_time : 0.0f;
         ESP_LOGI(TAG, "MJPG: %uKB %ums (%.1ffps)",
-            (uint32_t)(_jpg_buf_len/1024),
-            (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time);
+            (uint32_t)(jpg_buf_len/1024),
+            (uint32_t)frame_time, fps);
     }
 
     last_frame = 0;
