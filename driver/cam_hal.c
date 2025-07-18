@@ -193,7 +193,6 @@ static void cam_task(void *arg)
                         if (cam_obj->fb_size < (frame_buffer_event->len + pixels_per_dma)) {
                             ESP_LOGW(TAG, "FB-OVF");
                             ll_cam_stop(cam_obj);
-                            DBG_PIN_SET(0);
                             continue;
                         }
                         frame_buffer_event->len += ll_cam_memcpy(cam_obj,
@@ -207,6 +206,14 @@ static void cam_task(void *arg)
                         cam_obj->state = CAM_STATE_IDLE;
                     }
                     cnt++;
+                    // stop when too many DMA copies occur so the PSRAM
+                    // framebuffer slot doesn't overflow from runaway transfers
+                    if (cnt >= cam_obj->frame_copy_cnt) {
+                        ESP_LOGE(TAG, "DMA overflow");
+                        ll_cam_stop(cam_obj);
+                        cam_obj->state = CAM_STATE_IDLE;
+                        continue;
+                    }
 
                 } else if (cam_event == CAM_VSYNC_EVENT) {
                     //DBG_PIN_SET(1);
