@@ -95,6 +95,7 @@ typedef struct {
 static const char *CAMERA_SENSOR_NVS_KEY = "sensor";
 static const char *CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
 static camera_state_t *s_state = NULL;
+static camera_config_t s_saved_config;
 
 #if CONFIG_IDF_TARGET_ESP32S3 // LCD_CAM module of ESP32-S3 will generate xclk
 #define CAMERA_ENABLE_OUT_CLOCK(v)
@@ -298,6 +299,7 @@ static pixformat_t get_output_data_format(camera_conv_mode_t conv_mode)
 esp_err_t esp_camera_init(const camera_config_t *config)
 {
     esp_err_t err;
+    s_saved_config = *config;
     err = cam_init(config);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera init failed with error 0x%x", err);
@@ -516,4 +518,33 @@ bool esp_camera_available_frames(void)
         return false;
     }
     return cam_get_available_frames();
+}
+
+esp_err_t esp_camera_reconfigure(const camera_config_t *config)
+{
+    if (!config) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (s_state) {
+        esp_err_t err = esp_camera_deinit();
+        if (err != ESP_OK) {
+            return err;
+        }
+    }
+    s_saved_config = *config;
+    return esp_camera_init(&s_saved_config);
+}
+
+esp_err_t esp_camera_set_psram_mode(bool enable)
+{
+    cam_set_psram_mode(enable);
+    if (!s_state) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return esp_camera_reconfigure(&s_saved_config);
+}
+
+bool esp_camera_get_psram_mode(void)
+{
+    return cam_get_psram_mode();
 }

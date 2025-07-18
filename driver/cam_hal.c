@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdalign.h>
 #include "esp_heap_caps.h"
+#include "freertos/FreeRTOS.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
 
@@ -41,6 +42,14 @@
 
 static const char *TAG = "cam_hal";
 static cam_obj_t *cam_obj = NULL;
+#if defined(CONFIG_CAMERA_PSRAM_DMA)
+#define CAMERA_PSRAM_DMA_ENABLED CONFIG_CAMERA_PSRAM_DMA
+#else
+#define CAMERA_PSRAM_DMA_ENABLED 0
+#endif
+
+static volatile bool g_psram_dma_mode = CAMERA_PSRAM_DMA_ENABLED;
+static portMUX_TYPE g_psram_dma_lock = portMUX_INITIALIZER_UNLOCKED;
 
 /* At top of cam_hal.c – one switch for noisy ISR prints */
 #ifndef CAM_LOG_SPAM_EVERY_FRAME
@@ -411,11 +420,12 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
     CAM_CHECK_GOTO(ret == ESP_OK, "ll_cam_set_sample_mode failed", err);
     
     cam_obj->jpeg_mode = config->pixel_format == PIXFORMAT_JPEG;
-#if CONFIG_IDF_TARGET_ESP32
-    cam_obj->psram_mode = false;
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+    cam_obj->psram_mode = g_psram_dma_mode;
 #else
-    cam_obj->psram_mode = (config->xclk_freq_hz == 16000000);
+    cam_obj->psram_mode = false;
 #endif
+    ESP_LOGI(TAG, "PSRAM DMA mode %s", cam_obj->psram_mode ? "enabled" : "disabled");
     cam_obj->frame_cnt = config->fb_count;
     cam_obj->width = resolution[frame_size].width;
     cam_obj->height = resolution[frame_size].height;
@@ -611,4 +621,16 @@ void cam_give_all(void) {
 bool cam_get_available_frames(void)
 {
     return 0 < uxQueueMessagesWaiting(cam_obj->frame_buffer_queue);
+}
+
+void cam_set_psram_mode(bool enable)
+{
+    portENTER_CRITICAL(&g_psram_dma_lock);
+    g_psram_dma_mode = enable;
+    portEXIT_CRITICAL(&g_psram_dma_lock);
+}
+
+bool cam_get_psram_mode(void)
+{
+    return g_psram_dma_mode;
 }
