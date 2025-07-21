@@ -138,7 +138,7 @@ typedef struct {
     int pin_href;                   /*!< GPIO pin for camera HREF line */
     int pin_pclk;                   /*!< GPIO pin for camera PCLK line */
 
-    int xclk_freq_hz;               /*!< Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode */
+    int xclk_freq_hz;               /*!< Frequency of XCLK signal, in Hz. */
 
     ledc_timer_t ledc_timer;        /*!< LEDC timer to be used for generating XCLK  */
     ledc_channel_t ledc_channel;    /*!< LEDC channel to be used for generating XCLK  */
@@ -244,6 +244,35 @@ void esp_camera_return_all(void);
  * @brief Check if there are available frames to be immediately acquired
  */
 bool esp_camera_available_frames(void);
+
+/**
+ * @brief Enable or disable PSRAM DMA mode at runtime.
+ *
+ * @param enable  True to enable PSRAM DMA mode, false to disable it.
+ * @return
+ * - ESP_OK on success
+ * - ESP_ERR_INVALID_STATE if the camera is not initialized
+ * - Propagated error from reinitialization on failure
+ */
+esp_err_t esp_camera_set_psram_mode(bool enable);
+
+/**
+ * @brief Reinitialize the camera with a new configuration.
+ *
+ * @param config  Updated camera configuration structure
+ * @return
+ * - ESP_OK on success
+ * - ESP_ERR_INVALID_ARG if config is NULL
+ * - Propagated error from deinit or init if they fail
+ */
+esp_err_t esp_camera_reconfigure(const camera_config_t *config);
+
+/**
+ * @brief Get current PSRAM DMA mode state.
+ *
+ * @return True if PSRAM DMA is enabled, false otherwise.
+ */
+bool esp_camera_get_psram_mode(void);
 
 
 #ifdef __cplusplus
