@@ -69,6 +69,12 @@ static portMUX_TYPE g_psram_dma_lock = portMUX_INITIALIZER_UNLOCKED;
 #define CAM_SOI_PROBE_BYTES 32
 #endif
 
+/* Number of bytes copied to SRAM for EOI validation when capturing
+ * directly to PSRAM. Tunable to probe more of the frame tail if needed. */
+#ifndef CAM_EOI_PROBE_BYTES
+#define CAM_EOI_PROBE_BYTES 32
+#endif
+
 /*
  * PSRAM DMA may bypass the CPU cache.  Always call esp_cache_msync() on the
  * SOI probe region so cached reads see the data written by DMA.
@@ -669,7 +675,37 @@ camera_fb_t *cam_take(TickType_t timeout)
 
         if (cam_obj->jpeg_mode) {
             /* find the end marker for JPEG. Data after that can be discarded */
-            int offset_e = cam_verify_jpeg_eoi(dma_buffer->buf, dma_buffer->len);
+            int offset_e = -1;
+            if (cam_obj->psram_mode) {
+                size_t probe_len = dma_buffer->len;
+                if (probe_len > CAM_EOI_PROBE_BYTES) {
+                    probe_len = CAM_EOI_PROBE_BYTES;
+                }
+                if (probe_len == 0) {
+                    goto skip_eoi_check;
+                }
+                size_t line = dcache_line_size();
+                if (line == 0) {
+                    line = 32; /* sane fallback */
+                }
+                uintptr_t addr = (uintptr_t)(dma_buffer->buf + dma_buffer->len - probe_len);
+                uintptr_t start = addr & ~(line - 1);
+                size_t sync_len = (probe_len + (addr - start) + line - 1) & ~(line - 1);
+                esp_cache_msync((void *)start, sync_len,
+                                ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+
+                uint8_t eoi_probe[CAM_EOI_PROBE_BYTES];
+                memcpy(eoi_probe, dma_buffer->buf + dma_buffer->len - probe_len, probe_len);
+                int off = cam_verify_jpeg_eoi(eoi_probe, probe_len);
+                if (off >= 0) {
+                    offset_e = dma_buffer->len - probe_len + off;
+                }
+            } else {
+                offset_e = cam_verify_jpeg_eoi(dma_buffer->buf, dma_buffer->len);
+            }
+
+skip_eoi_check:
+
             if (offset_e >= 0) {
                 dma_buffer->len = offset_e + sizeof(JPEG_EOI_MARKER);
                 return dma_buffer;
