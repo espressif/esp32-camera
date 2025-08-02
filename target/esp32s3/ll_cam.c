@@ -68,7 +68,7 @@ void ll_cam_dma_print_state(cam_obj_t *cam)
 void ll_cam_dma_reset(cam_obj_t *cam)
 {
 
-    GDMA.channel[cam->dma_num].in.int_clr.val = ~0;
+    GDMA.channel[cam->dma_num].in.int_clr.val = 0xFFFFFFFFU; // register is W1C; mask covers all sources
     GDMA.channel[cam->dma_num].in.int_ena.val = 0;
 
     GDMA.channel[cam->dma_num].in.conf0.val = 0;
@@ -94,7 +94,7 @@ static void CAMERA_ISR_IRAM_ATTR ll_cam_vsync_isr(void *arg)
 {
     //DBG_PIN_SET(1);
     cam_obj_t *cam = (cam_obj_t *)arg;
-    BaseType_t HPTaskAwoken = pdFALSE;
+    BaseType_t hp = pdFALSE;
 
     typeof(LCD_CAM.lc_dma_int_st) status = LCD_CAM.lc_dma_int_st;
     if (status.val == 0) {
@@ -104,10 +104,10 @@ static void CAMERA_ISR_IRAM_ATTR ll_cam_vsync_isr(void *arg)
     LCD_CAM.lc_dma_int_clr.val = status.val;
 
     if (status.cam_vsync_int_st) {
-        ll_cam_send_event(cam, CAM_VSYNC_EVENT, &HPTaskAwoken);
+        ll_cam_send_event(cam, CAM_VSYNC_EVENT, &hp);
     }
 
-    if (HPTaskAwoken == pdTRUE) {
+    if (hp == pdTRUE) {
         portYIELD_FROM_ISR();
     }
     //DBG_PIN_SET(0);
@@ -116,7 +116,7 @@ static void CAMERA_ISR_IRAM_ATTR ll_cam_vsync_isr(void *arg)
 static void CAMERA_ISR_IRAM_ATTR ll_cam_dma_isr(void *arg)
 {
     cam_obj_t *cam = (cam_obj_t *)arg;
-    BaseType_t HPTaskAwoken = pdFALSE;
+    BaseType_t hp = pdFALSE;
 
     typeof(GDMA.channel[cam->dma_num].in.int_st) status = GDMA.channel[cam->dma_num].in.int_st;
     if (status.val == 0) {
@@ -126,20 +126,19 @@ static void CAMERA_ISR_IRAM_ATTR ll_cam_dma_isr(void *arg)
     GDMA.channel[cam->dma_num].in.int_clr.val = status.val;
 
     if (status.in_suc_eof) {
-        ll_cam_send_event(cam, CAM_IN_SUC_EOF_EVENT, &HPTaskAwoken);
+        ll_cam_send_event(cam, CAM_IN_SUC_EOF_EVENT, &hp);
     }
 
-    if (HPTaskAwoken == pdTRUE) {
+    if (hp == pdTRUE) {
         portYIELD_FROM_ISR();
     }
 }
 
 bool IRAM_ATTR ll_cam_stop(cam_obj_t *cam)
 {
-    if (cam->jpeg_mode || !cam->psram_mode) {
-        GDMA.channel[cam->dma_num].in.int_ena.in_suc_eof = 0;
-        GDMA.channel[cam->dma_num].in.int_clr.in_suc_eof = 1;
-    }
+    GDMA.channel[cam->dma_num].in.int_ena.val = 0;
+    GDMA.channel[cam->dma_num].in.int_clr.val = 0xFFFFFFFFU; // register is W1C; mask covers all sources
+    LCD_CAM.cam_ctrl1.cam_start = 0;
     GDMA.channel[cam->dma_num].in.link.stop = 1;
     return true;
 }
@@ -148,10 +147,10 @@ bool ll_cam_start(cam_obj_t *cam, int frame_pos)
 {
     LCD_CAM.cam_ctrl1.cam_start = 0;
 
-    if (cam->jpeg_mode || !cam->psram_mode) {
-        GDMA.channel[cam->dma_num].in.int_clr.in_suc_eof = 1;
-        GDMA.channel[cam->dma_num].in.int_ena.in_suc_eof = 1;
-    }
+    GDMA.channel[cam->dma_num].in.int_ena.val = 0;
+    GDMA.channel[cam->dma_num].in.int_clr.val = 0xFFFFFFFFU; // register is W1C; mask covers all sources
+    GDMA.channel[cam->dma_num].in.int_clr.in_suc_eof = 1; // redundant but explicit
+    GDMA.channel[cam->dma_num].in.int_ena.in_suc_eof = 1; // only EOF interrupt is re-enabled
 
     LCD_CAM.cam_ctrl1.cam_reset = 1;
     LCD_CAM.cam_ctrl1.cam_reset = 0;

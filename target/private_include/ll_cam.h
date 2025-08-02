@@ -140,7 +140,7 @@ typedef struct {
 #endif
     uint32_t fb_size;
 
-    cam_state_t state;
+    volatile cam_state_t state;
 } cam_obj_t;
 
 
@@ -162,4 +162,4 @@ void ll_cam_dma_reset(cam_obj_t *cam);
 #endif
 
 // implemented in cam_hal
-void ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType_t * HPTaskAwoken);
+void ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType_t *hp);

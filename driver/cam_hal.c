@@ -242,9 +242,15 @@ static bool cam_start_frame(int * frame_pos)
     return false;
 }
 
-void IRAM_ATTR ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType_t * HPTaskAwoken)
+void IRAM_ATTR ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType_t *hp)
 {
-    if (xQueueSendFromISR(cam->event_queue, (void *)&cam_event, HPTaskAwoken) != pdTRUE) {
+    if (!cam->event_queue) {
+        // ESP_DRAM_LOGD(TAG, "drop event: queue deleted");
+        return;
+    }
+
+    BaseType_t woken = pdFALSE;
+    if (xQueueSendFromISR(cam->event_queue, &cam_event, &woken) != pdTRUE) {
         ll_cam_stop(cam);
         cam->state = CAM_STATE_IDLE;
 #if CAM_LOG_SPAM_EVERY_FRAME
@@ -254,6 +260,10 @@ void IRAM_ATTR ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType
         CAM_WARN_THROTTLE(ovf_cnt,
                           cam_event==CAM_IN_SUC_EOF_EVENT ? "EV-EOF-OVF" : "EV-VSYNC-OVF");
 #endif
+    }
+
+    if (hp && woken) {
+        *hp = pdTRUE;
     }
 }
 
@@ -633,15 +643,17 @@ esp_err_t cam_deinit(void)
         return ESP_FAIL;
     }
 
-    cam_stop();
+    cam_stop(); // disable VSYNC and DMA before deleting queues
     if (cam_obj->task_handle) {
         vTaskDelete(cam_obj->task_handle);
     }
     if (cam_obj->event_queue) {
         vQueueDelete(cam_obj->event_queue);
+        cam_obj->event_queue = NULL;
     }
     if (cam_obj->frame_buffer_queue) {
         vQueueDelete(cam_obj->frame_buffer_queue);
+        cam_obj->frame_buffer_queue = NULL;
     }
 
     ll_cam_deinit(cam_obj);
