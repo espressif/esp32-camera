@@ -20,6 +20,7 @@
 #include "ll_cam.h"
 #include "xclk.h"
 #include "cam_hal.h"
+#include "driver/gpio.h"
 
 #if (ESP_IDF_VERSION_MAJOR >= 4) && (ESP_IDF_VERSION_MINOR >= 3)
 #include "esp_rom_gpio.h"

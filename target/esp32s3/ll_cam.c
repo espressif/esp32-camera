@@ -25,6 +25,7 @@
 #include "ll_cam.h"
 #include "cam_hal.h"
 #include "esp_rom_gpio.h"
+#include "driver/gpio.h"
 
 #if (ESP_IDF_VERSION_MAJOR >= 5)
 #include "soc/gpio_sig_map.h"
