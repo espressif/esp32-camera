@@ -597,7 +597,10 @@ camera_fb_t *cam_take(TickType_t timeout)
 
             CAM_WARN_THROTTLE(warn_eoi_miss_cnt,
                               "NO-EOI - JPEG end marker missing");
+            /* Reset DMA so capture can resume after a truncated frame */
+            ll_cam_dma_reset(cam_obj);
             cam_give(dma_buffer);
+            vTaskDelay(1);
             continue; /* wait for another frame */
         } else if (cam_obj->psram_mode &&
                    cam_obj->in_bytes_per_pixel != cam_obj->fb_bytes_per_pixel) {
