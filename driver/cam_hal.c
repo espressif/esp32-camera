@@ -17,6 +17,7 @@
 #include <stdalign.h>
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
 
@@ -200,7 +201,7 @@ static void cam_task(void *arg)
                 if (cam_event == CAM_IN_SUC_EOF_EVENT) {
                     if(!cam_obj->psram_mode){
                         if (cam_obj->fb_size < (frame_buffer_event->len + pixels_per_dma)) {
-                            ESP_LOGW(TAG, "FB-OVF");
+                            ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: FB-OVF\r\n"));
                             ll_cam_stop(cam_obj);
                             continue;
                         }
@@ -232,7 +233,7 @@ static void cam_task(void *arg)
                         if (cam_obj->jpeg_mode) {
                             if (!cam_obj->psram_mode) {
                                 if (cam_obj->fb_size < (frame_buffer_event->len + pixels_per_dma)) {
-                                    ESP_LOGW(TAG, "FB-OVF");
+                                    ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: FB-OVF\r\n"));
                                     cnt--;
                                 } else {
                                     frame_buffer_event->len += ll_cam_memcpy(cam_obj,
@@ -255,7 +256,7 @@ static void cam_task(void *arg)
                         } else if (!cam_obj->jpeg_mode) {
                             if (frame_buffer_event->len != cam_obj->fb_size) {
                                 cam_obj->frames[frame_pos].en = 1;
-                                ESP_LOGE(TAG, "FB-SIZE: %u != %u", frame_buffer_event->len, (unsigned) cam_obj->fb_size);
+                                ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: FB-SIZE: %u != %u\r\n"), frame_buffer_event->len, (unsigned) cam_obj->fb_size);
                             }
                         }
                         //send frame
@@ -266,14 +267,14 @@ static void cam_task(void *arg)
                                 //push the new frame to the end of the queue
                                 if (xQueueSend(cam_obj->frame_buffer_queue, (void *)&frame_buffer_event, 0) != pdTRUE) {
                                     cam_obj->frames[frame_pos].en = 1;
-                                    ESP_LOGE(TAG, "FBQ-SND");
+                                    ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: FBQ-SND\r\n"));
                                 }
                                 //free the popped buffer
                                 cam_give(fb2);
                             } else {
                                 //queue is full and we could not pop a frame from it
                                 cam_obj->frames[frame_pos].en = 1;
-                                ESP_LOGE(TAG, "FBQ-RCV");
+                                ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: FBQ-RCV\r\n"));
                             }
                         }
                     }
