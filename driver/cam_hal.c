@@ -24,6 +24,13 @@
 #include "rom/ets_sys.h"
 #else
 #include "esp_timer.h"
+#include "esp_cache.h"
+#include "hal/cache_hal.h"
+#include "hal/cache_ll.h"
+#include "esp_idf_version.h"
+#ifndef ESP_CACHE_MSYNC_FLAG_DIR_M2C
+#define ESP_CACHE_MSYNC_FLAG_DIR_M2C 0
+#endif
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp32/rom/ets_sys.h"  // will be removed in idf v5.0
 #elif CONFIG_IDF_TARGET_ESP32S2
@@ -55,6 +62,29 @@ static portMUX_TYPE g_psram_dma_lock = portMUX_INITIALIZER_UNLOCKED;
 #ifndef CAM_LOG_SPAM_EVERY_FRAME
 #define CAM_LOG_SPAM_EVERY_FRAME 0   /* set to 1 to restore old behaviour */
 #endif
+
+/* Number of bytes copied to SRAM for SOI validation when capturing
+ * directly to PSRAM. Tunable to probe more of the frame start if needed. */
+#ifndef CAM_SOI_PROBE_BYTES
+#define CAM_SOI_PROBE_BYTES 32
+#endif
+
+/*
+ * PSRAM DMA may bypass the CPU cache.  Always call esp_cache_msync() on the
+ * SOI probe region so cached reads see the data written by DMA.
+ */
+
+static inline size_t dcache_line_size(void)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+    /* cache_hal_get_cache_line_size() added extra argument from IDF 5.2 */
+    return cache_hal_get_cache_line_size(CACHE_LL_LEVEL_EXT_MEM, CACHE_TYPE_DATA);
+#else
+    /* Older releases only expose the ROM helper, all current targets
+     * have a 32‑byte DCache line */
+    return 32;
+#endif
+}
 
 /* Throttle repeated warnings printed from tight loops / ISRs.
  *
@@ -209,11 +239,61 @@ static void cam_task(void *arg)
                             &cam_obj->dma_buffer[(cnt % cam_obj->dma_half_buffer_cnt) * cam_obj->dma_half_buffer_size],
                             cam_obj->dma_half_buffer_size);
                     }
+
                     //Check for JPEG SOI in the first buffer. stop if not found
-                    if (cam_obj->jpeg_mode && cnt == 0 && cam_verify_jpeg_soi(frame_buffer_event->buf, frame_buffer_event->len) != 0) {
-                        ll_cam_stop(cam_obj);
-                        cam_obj->state = CAM_STATE_IDLE;
+                    if (cam_obj->jpeg_mode && cnt == 0) {
+                        if (cam_obj->psram_mode) {
+                            /* dma_half_buffer_size already in BYTES (see ll_cam_memcpy()) */
+                            size_t probe_len = cam_obj->dma_half_buffer_size;
+                            /* clamp to avoid copying past the end of soi_probe */
+                            if (probe_len > CAM_SOI_PROBE_BYTES) {
+                                probe_len = CAM_SOI_PROBE_BYTES;
+                            }
+                            /* Invalidate cache lines for the DMA buffer before probing */
+                            size_t line = dcache_line_size();
+                            if (line == 0) {
+                                line = 32; /* sane fallback */
+                            }
+                            uintptr_t addr = (uintptr_t)frame_buffer_event->buf;
+                            uintptr_t start = addr & ~(line - 1);
+                            size_t sync_len = (probe_len + (addr - start) + line - 1) & ~(line - 1);
+                            esp_cache_msync((void *)start, sync_len,
+                                            ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+
+                            uint8_t soi_probe[CAM_SOI_PROBE_BYTES];
+                            memcpy(soi_probe, frame_buffer_event->buf, probe_len);
+                            int soi_off = cam_verify_jpeg_soi(soi_probe, probe_len);
+                            if (soi_off != 0) {
+                                static uint16_t warn_psram_soi_cnt = 0;
+                                if (soi_off > 0) {
+                                    CAM_WARN_THROTTLE(warn_psram_soi_cnt,
+                                                      "NO-SOI - JPEG start marker not at pos 0 (PSRAM)");
+                                } else {
+                                    CAM_WARN_THROTTLE(warn_psram_soi_cnt,
+                                                      "NO-SOI - JPEG start marker missing (PSRAM)");
+                                }
+                                ll_cam_stop(cam_obj);
+                                cam_obj->state = CAM_STATE_IDLE;
+                                continue;
+                            }
+                        } else {
+                            int soi_off = cam_verify_jpeg_soi(frame_buffer_event->buf, frame_buffer_event->len);
+                            if (soi_off != 0) {
+                                static uint16_t warn_soi_bad_cnt = 0;
+                                if (soi_off > 0) {
+                                    CAM_WARN_THROTTLE(warn_soi_bad_cnt,
+                                                      "NO-SOI - JPEG start marker not at pos 0");
+                                } else {
+                                    CAM_WARN_THROTTLE(warn_soi_bad_cnt,
+                                                      "NO-SOI - JPEG start marker missing");
+                                }
+                                ll_cam_stop(cam_obj);
+                                cam_obj->state = CAM_STATE_IDLE;
+                                continue;
+                            }
+                        }
                     }
+
                     cnt++;
                     // stop when too many DMA copies occur so the PSRAM
                     // framebuffer slot doesn't overflow from runaway transfers
