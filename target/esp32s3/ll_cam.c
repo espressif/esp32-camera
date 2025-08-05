@@ -27,6 +27,7 @@
 #include "esp_rom_gpio.h"
 
 #if (ESP_IDF_VERSION_MAJOR >= 5)
+#include "driver/gpio.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/gpio_periph.h"
 #include "soc/io_mux_reg.h"
