@@ -92,6 +92,24 @@ static inline size_t dcache_line_size(void)
 #endif
 }
 
+/*
+ * Invalidate CPU data cache lines that cover a region in PSRAM which
+ * has just been written by DMA. This guarantees subsequent CPU reads
+ * fetch the fresh data from PSRAM rather than stale cache contents.
+ * Both address and length are aligned to the data cache line size.
+ */
+static inline void cam_drop_psram_cache(void *addr, size_t len)
+{
+    size_t line = dcache_line_size();
+    if (line == 0) {
+        line = 32; /* sane fallback */
+    }
+    uintptr_t start = (uintptr_t)addr & ~(line - 1);
+    size_t sync_len = (len + ((uintptr_t)addr - start) + line - 1) & ~(line - 1);
+    esp_cache_msync((void *)start, sync_len,
+                    ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+}
+
 /* Throttle repeated warnings printed from tight loops / ISRs.
  *
  * counter – static DRAM/IRAM uint16_t you pass in
@@ -256,15 +274,7 @@ static void cam_task(void *arg)
                                 probe_len = CAM_SOI_PROBE_BYTES;
                             }
                             /* Invalidate cache lines for the DMA buffer before probing */
-                            size_t line = dcache_line_size();
-                            if (line == 0) {
-                                line = 32; /* sane fallback */
-                            }
-                            uintptr_t addr = (uintptr_t)frame_buffer_event->buf;
-                            uintptr_t start = addr & ~(line - 1);
-                            size_t sync_len = (probe_len + (addr - start) + line - 1) & ~(line - 1);
-                            esp_cache_msync((void *)start, sync_len,
-                                            ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+                            cam_drop_psram_cache(frame_buffer_event->buf, probe_len);
 
                             uint8_t soi_probe[CAM_SOI_PROBE_BYTES];
                             memcpy(soi_probe, frame_buffer_event->buf, probe_len);
@@ -684,15 +694,7 @@ camera_fb_t *cam_take(TickType_t timeout)
                 if (probe_len == 0) {
                     goto skip_eoi_check;
                 }
-                size_t line = dcache_line_size();
-                if (line == 0) {
-                    line = 32; /* sane fallback */
-                }
-                uintptr_t addr = (uintptr_t)(dma_buffer->buf + dma_buffer->len - probe_len);
-                uintptr_t start = addr & ~(line - 1);
-                size_t sync_len = (probe_len + (addr - start) + line - 1) & ~(line - 1);
-                esp_cache_msync((void *)start, sync_len,
-                                ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+                cam_drop_psram_cache(dma_buffer->buf + dma_buffer->len - probe_len, probe_len);
 
                 uint8_t eoi_probe[CAM_EOI_PROBE_BYTES];
                 memcpy(eoi_probe, dma_buffer->buf + dma_buffer->len - probe_len, probe_len);
@@ -704,12 +706,16 @@ camera_fb_t *cam_take(TickType_t timeout)
                 offset_e = cam_verify_jpeg_eoi(dma_buffer->buf, dma_buffer->len);
             }
 
-skip_eoi_check:
-
             if (offset_e >= 0) {
                 dma_buffer->len = offset_e + sizeof(JPEG_EOI_MARKER);
+                if (cam_obj->psram_mode) {
+                    /* DMA may bypass cache, ensure full frame is visible */
+                    cam_drop_psram_cache(dma_buffer->buf, dma_buffer->len);
+                }
                 return dma_buffer;
             }
+
+skip_eoi_check:
 
             CAM_WARN_THROTTLE(warn_eoi_miss_cnt,
                               "NO-EOI - JPEG end marker missing");
@@ -719,6 +725,11 @@ skip_eoi_check:
                    cam_obj->in_bytes_per_pixel != cam_obj->fb_bytes_per_pixel) {
             /* currently used only for YUV to GRAYSCALE */
             dma_buffer->len = ll_cam_memcpy(cam_obj, dma_buffer->buf, dma_buffer->buf, dma_buffer->len);
+        }
+
+        if (cam_obj->psram_mode) {
+            /* DMA may bypass cache, ensure full frame is visible to the app */
+            cam_drop_psram_cache(dma_buffer->buf, dma_buffer->len);
         }
 
         return dma_buffer;
