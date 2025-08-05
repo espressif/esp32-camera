@@ -187,7 +187,7 @@ menu "Camera configuration"
 
     config CAMERA_TASK_STACK_SIZE
         int "CAM task stack size"
-        default 2048
+        default 4096
         help
             Camera task stack size
 

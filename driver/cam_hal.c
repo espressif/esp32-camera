@@ -45,7 +45,7 @@
 #if CONFIG_CAMERA_TASK_STACK_SIZE
 #define CAM_TASK_STACK             CONFIG_CAMERA_TASK_STACK_SIZE
 #else
-#define CAM_TASK_STACK             (2*1024)
+#define CAM_TASK_STACK             (4*1024)
 #endif
 
 static const char *TAG = "cam_hal";
