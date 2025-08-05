@@ -26,6 +26,7 @@
 #endif
 
 #if (ESP_IDF_VERSION_MAJOR >= 5)
+#include "driver/gpio.h"
 #define GPIO_PIN_INTR_POSEDGE GPIO_INTR_POSEDGE
 #define GPIO_PIN_INTR_NEGEDGE GPIO_INTR_NEGEDGE
 #define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
