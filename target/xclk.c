@@ -51,7 +51,10 @@ esp_err_t camera_enable_out_clock(const camera_config_t* config)
     ch_conf.gpio_num = config->pin_xclk;
     ch_conf.speed_mode = LEDC_LOW_SPEED_MODE;
     ch_conf.channel = config->ledc_channel;
-    ch_conf.intr_type = LEDC_INTR_DISABLE;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6,0,0)  
+    // no need to explicitly configure interrupt, handled in the driver (IDF v6.0 and above)
+    ch_conf.intr_type = LEDC_INTR_DISABLE; 
+#endif
     ch_conf.timer_sel = config->ledc_timer;
     ch_conf.duty = 1;
     ch_conf.hpoint = 0;
