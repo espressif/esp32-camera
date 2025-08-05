@@ -91,6 +91,10 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND srcs driver/sccb.c)
   endif()
 
+  if (idf_version VERSION_GREATER_EQUAL "6.0")
+    list(APPEND priv_requires esp_driver_gpio)
+  endif()
+
 endif()
 
 idf_component_register(
