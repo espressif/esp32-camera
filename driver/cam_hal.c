@@ -17,6 +17,7 @@
 #include <stdalign.h>
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
 
@@ -262,6 +263,18 @@ static void cam_task(void *arg)
                             &frame_buffer_event->buf[frame_buffer_event->len],
                             &cam_obj->dma_buffer[(cnt % cam_obj->dma_half_buffer_cnt) * cam_obj->dma_half_buffer_size],
                             cam_obj->dma_half_buffer_size);
+                    } else {
+                        // stop if the next DMA copy would exceed the framebuffer slot
+                        // size, since we're called only after the copy occurs
+                        // This effectively reduces maximum usable frame buffer size
+                        // by one DMA operation, as we can't predict here, if the next
+                        // cam event will be a VSYNC
+                        if (cnt + 1 >= cam_obj->frame_copy_cnt) {
+                            ESP_CAMERA_ETS_PRINTF(DRAM_STR("cam_hal: DMA overflow\r\n"));
+                            ll_cam_stop(cam_obj);
+                            cam_obj->state = CAM_STATE_IDLE;
+                            continue;
+                        }
                     }
 
                     //Check for JPEG SOI in the first buffer. stop if not found
@@ -311,14 +324,6 @@ static void cam_task(void *arg)
                     }
 
                     cnt++;
-                    // stop when too many DMA copies occur so the PSRAM
-                    // framebuffer slot doesn't overflow from runaway transfers
-                    if (cnt >= cam_obj->frame_copy_cnt) {
-                        ESP_LOGE(TAG, "DMA overflow");
-                        ll_cam_stop(cam_obj);
-                        cam_obj->state = CAM_STATE_IDLE;
-                        continue;
-                    }
 
                 } else if (cam_event == CAM_VSYNC_EVENT) {
                     //DBG_PIN_SET(1);
@@ -416,6 +421,9 @@ static esp_err_t cam_dma_config(const camera_config_t *config)
 
     cam_obj->dma_node_cnt = (cam_obj->dma_buffer_size) / cam_obj->dma_node_buffer_size; // Number of DMA nodes
     cam_obj->frame_copy_cnt = cam_obj->recv_size / cam_obj->dma_half_buffer_size; // Number of interrupted copies, ping-pong copy
+    if (cam_obj->psram_mode) {
+        cam_obj->frame_copy_cnt++;
+    }
 
     ESP_LOGI(TAG, "buffer_size: %d, half_buffer_size: %d, node_buffer_size: %d, node_cnt: %d, total_cnt: %d",
              (int) cam_obj->dma_buffer_size, (int) cam_obj->dma_half_buffer_size, (int) cam_obj->dma_node_buffer_size,
@@ -434,6 +442,7 @@ static esp_err_t cam_dma_config(const camera_config_t *config)
         if (cam_obj->fb_size < cam_obj->recv_size) {
             fb_size = cam_obj->recv_size;
         }
+        fb_size += cam_obj->dma_half_buffer_size;
     }
 
     /* Allocate memory for frame buffer */
