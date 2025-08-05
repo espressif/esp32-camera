@@ -75,7 +75,7 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
       )
   endif()
 
-  set(priv_requires freertos nvs_flash)
+  set(priv_requires freertos nvs_flash esp_mm)
 
   set(min_version_for_esp_timer "4.2")
   if (idf_version VERSION_GREATER_EQUAL min_version_for_esp_timer)
@@ -89,6 +89,10 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND srcs driver/sccb-ng.c)
   else()
     list(APPEND srcs driver/sccb.c)
+  endif()
+
+  if (idf_version VERSION_GREATER_EQUAL "6.0")
+    list(APPEND priv_requires esp_driver_gpio)
   endif()
 
 endif()
