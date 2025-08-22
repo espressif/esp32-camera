@@ -40,7 +40,12 @@
 #include "esp32s3/rom/ets_sys.h"
 #endif
 #endif // ESP_IDF_VERSION_MAJOR
-#define ESP_CAMERA_ETS_PRINTF ets_printf
+
+#if CONFIG_LOG_DEFAULT_LEVEL_NONE
+#define ESP_CAMERA_ETS_PRINTF(f, ...)
+#else
+#define ESP_CAMERA_ETS_PRINTF(f, ...) ets_printf(f, ##__VA_ARGS__)
+#endif
 
 #if CONFIG_CAMERA_TASK_STACK_SIZE
 #define CAM_TASK_STACK             CONFIG_CAMERA_TASK_STACK_SIZE
