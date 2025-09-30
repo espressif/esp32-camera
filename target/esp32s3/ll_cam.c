@@ -186,11 +186,12 @@ esp_err_t ll_cam_deinit(cam_obj_t *cam)
         esp_intr_free(cam->dma_intr_handle);
         cam->dma_intr_handle = NULL;
     }
-    gdma_disconnect(cam->dma_channel_handle);
-    gdma_del_channel(cam->dma_channel_handle);
-    cam->dma_channel_handle = NULL;
-    // GDMA.channel[cam->dma_num].in.link.addr = 0x0;
-
+    if (cam->dma_channel_handle) {
+        // gdma_disconnect(cam->dma_channel_handle); // not needed since code never calls gdma_connect() to connect channel to peripheral
+        gdma_del_channel(cam->dma_channel_handle);
+        cam->dma_channel_handle = NULL;
+        // GDMA.channel[cam->dma_num].in.link.addr = 0x0;
+    }
     LCD_CAM.cam_ctrl1.cam_start = 0;
     LCD_CAM.cam_ctrl1.cam_reset = 1;
     LCD_CAM.cam_ctrl1.cam_reset = 0;
