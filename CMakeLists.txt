@@ -18,8 +18,6 @@ set(include_dirs
   conversions/include
   )
 
-set(COMPONENT_REQUIRES driver)
-
 # set driver sources only for supported platforms
 if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
   list(APPEND srcs
@@ -91,8 +89,11 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND srcs driver/sccb.c)
   endif()
 
+  set(req "")
   if (idf_version VERSION_GREATER_EQUAL "6.0")
-    list(APPEND priv_requires esp_driver_gpio)
+    list(APPEND priv_requires esp_driver_gpio esp_driver_ledc esp_driver_spi esp_driver_i2c)
+  else()
+    list(APPEND req driver)
   endif()
 
 endif()
@@ -101,6 +102,6 @@ idf_component_register(
   SRCS ${srcs}
   INCLUDE_DIRS ${include_dirs}
   PRIV_INCLUDE_DIRS ${priv_include_dirs}
-  REQUIRES driver  # due to include of driver/gpio.h in esp_camera.h
+  REQUIRES ${req}
   PRIV_REQUIRES ${priv_requires}
 )
