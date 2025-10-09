@@ -1,6 +1,8 @@
 # get IDF version for comparison
 set(idf_version "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}")
 
+set(priv_requires "")
+
 # set conversion sources
 set(srcs
   conversions/yuv.c
@@ -73,7 +75,7 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
       )
   endif()
 
-  set(priv_requires freertos nvs_flash esp_mm)
+  list(APPEND priv_requires freertos nvs_flash esp_mm)
 
   set(min_version_for_esp_timer "4.2")
   if (idf_version VERSION_GREATER_EQUAL min_version_for_esp_timer)
