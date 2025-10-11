@@ -81,7 +81,7 @@
 #define CAM_PIN_D6 17
 #define CAM_PIN_D7 16
 #endif
-// ESP32S3 (GOOUU TECH)
+// ESP32S3 (XIAO)
 #ifdef BOARD_ESP32S3_XIAO
 #define CAM_PIN_PWDN -1
 #define CAM_PIN_RESET -1   //software reset will be performed
