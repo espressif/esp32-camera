@@ -1,6 +1,8 @@
 # get IDF version for comparison
 set(idf_version "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}")
 
+set(priv_requires "")
+
 # set conversion sources
 set(srcs
   conversions/yuv.c
@@ -17,8 +19,6 @@ set(include_dirs
   driver/include
   conversions/include
   )
-
-set(COMPONENT_REQUIRES driver)
 
 # set driver sources only for supported platforms
 if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
@@ -75,7 +75,7 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
       )
   endif()
 
-  set(priv_requires freertos nvs_flash esp_mm)
+  list(APPEND priv_requires freertos nvs_flash esp_mm)
 
   set(min_version_for_esp_timer "4.2")
   if (idf_version VERSION_GREATER_EQUAL min_version_for_esp_timer)
@@ -91,16 +91,18 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND srcs driver/sccb.c)
   endif()
 
-  if (idf_version VERSION_GREATER_EQUAL "6.0")
-    list(APPEND priv_requires esp_driver_gpio)
-  endif()
+endif()
 
+set(req driver)
+if (idf_version VERSION_GREATER_EQUAL "6.0")
+  list(APPEND priv_requires esp_driver_gpio esp_driver_spi esp_driver_i2c)
+  list(APPEND req esp_driver_ledc)
 endif()
 
 idf_component_register(
   SRCS ${srcs}
   INCLUDE_DIRS ${include_dirs}
   PRIV_INCLUDE_DIRS ${priv_include_dirs}
-  REQUIRES driver  # due to include of driver/gpio.h in esp_camera.h
+  REQUIRES ${req}
   PRIV_REQUIRES ${priv_requires}
 )
