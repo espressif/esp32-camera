@@ -617,31 +617,140 @@ static int set_reg(sensor_t *sensor, int reg, int mask, int value)
 
 static int init_status(sensor_t *sensor)
 {
-    write_reg(sensor->slv_addr, 0xfe, 0x00);
-    sensor->status.brightness = 0;
-    sensor->status.contrast = 50;
-    sensor->status.saturation = 0;
-    sensor->status.sharpness = 0;
+    int ret;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+
+    // Read brightness from LSC_RED_B2 register (0xd6)
+    // Default is 0x48, map back to level: (reg_val - 0x48) / 0x10
+    ret = read_reg(sensor->slv_addr, LSC_RED_B2);
+    if (ret >= 0) {
+        int brightness_level = (ret - 0x48) / 0x10;
+        sensor->status.brightness = (brightness_level < -2) ? -2 : (brightness_level > 2) ? 2 : brightness_level;
+    } else {
+        sensor->status.brightness = 0;
+    }
+
+    // Read contrast from CONTRAST register (0xb3)
+    // Default is 0x40, map back to level: (reg_val - 0x40) / 0x10
+    ret = read_reg(sensor->slv_addr, CONTRAST);
+    if (ret >= 0) {
+        int contrast_level = (ret - 0x40) / 0x10;
+        sensor->status.contrast = (contrast_level < -2) ? -2 : (contrast_level > 2) ? 2 : contrast_level;
+    } else {
+        sensor->status.contrast = 0;
+    }
+
+    // Read saturation from SATURATION_CB1 register (0x54)
+    // Default is 0x40, map back to level: (reg_val - 0x40) / 0x10
+    ret = read_reg(sensor->slv_addr, SATURATION_CB1);
+    if (ret >= 0) {
+        int saturation_level = (ret - 0x40) / 0x10;
+        sensor->status.saturation = (saturation_level < -2) ? -2 : (saturation_level > 2) ? 2 : saturation_level;
+    } else {
+        sensor->status.saturation = 0;
+    }
+
+    // Read sharpness from EDGE_DEC_SA1 register (0x8b)
+    // Default is 0x20, map back to level: (reg_val - 0x20) / 0x08
+    ret = read_reg(sensor->slv_addr, EDGE_DEC_SA1);
+    if (ret >= 0) {
+        int sharpness_level = (ret - 0x20) / 0x08;
+        sensor->status.sharpness = (sharpness_level < -2) ? -2 : (sharpness_level > 2) ? 2 : sharpness_level;
+    } else {
+        sensor->status.sharpness = 0;
+    }
+
+    // Denoise not supported by GC0308
     sensor->status.denoise = 0;
-    sensor->status.ae_level = 0;
+
+    // Read AE level from AEC_TARGET_Y register (Page 1, 0xf7)
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x01);
+    ret = read_reg(sensor->slv_addr, AEC_TARGET_Y);
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    if (ret >= 0) {
+        int ae_level = (ret - 0x19) / 0x08;
+        sensor->status.ae_level = (ae_level < -2) ? -2 : (ae_level > 2) ? 2 : ae_level;
+    } else {
+        sensor->status.ae_level = 0;
+    }
+
+    // Gainceiling not supported by GC0308
     sensor->status.gainceiling = 0;
-    sensor->status.awb = 0;
+
+    // Read AWB, AGC, AEC status from AEC_MODE1 register (0xd2)
+    sensor->status.awb = check_reg_mask(sensor->slv_addr, AEC_MODE1, AWB_ENABLE);
+    sensor->status.agc = check_reg_mask(sensor->slv_addr, AEC_MODE1, AGC_ENABLE);
+    sensor->status.aec = check_reg_mask(sensor->slv_addr, AEC_MODE1, AEC_ENABLE);
+
+    // DCW not supported by GC0308
     sensor->status.dcw = 0;
-    sensor->status.agc = 0;
-    sensor->status.aec = 0;
-    sensor->status.hmirror = check_reg_mask(sensor->slv_addr, 0x14, 0x01);
-    sensor->status.vflip = check_reg_mask(sensor->slv_addr, 0x14, 0x02);
-    sensor->status.colorbar = 0;
+
+    // Read hmirror and vflip from CISCTL_MODE1 register (0x14)
+    sensor->status.hmirror = check_reg_mask(sensor->slv_addr, CISCTL_MODE1, HMIRROR_MASK);
+    sensor->status.vflip = check_reg_mask(sensor->slv_addr, CISCTL_MODE1, VFLIP_MASK);
+
+    // Read colorbar status from OUT_CTRL register (0x2e)
+    sensor->status.colorbar = check_reg_mask(sensor->slv_addr, OUT_CTRL, 0x01);
+
+    // BPC, WPC not specifically tracked by GC0308 driver
     sensor->status.bpc = 0;
     sensor->status.wpc = 0;
+
+    // Raw GMA, LENC not supported by GC0308
     sensor->status.raw_gma = 0;
     sensor->status.lenc = 0;
+
+    // Quality not supported by GC0308
     sensor->status.quality = 0;
-    sensor->status.special_effect = 0;
-    sensor->status.wb_mode = 0;
+
+    // Read special effect from SPECIAL_EFFECT register (0x23)
+    ret = read_reg(sensor->slv_addr, SPECIAL_EFFECT);
+    if (ret >= 0) {
+        // Map hardware register value to effect enum
+        // Bit[1:0] of SPECIAL_EFFECT register holds the effect mode
+        uint8_t effect_bits = ret & 0x03;
+        if (effect_bits == EFFECT_NORMAL) {
+            sensor->status.special_effect = 0; // Normal
+        } else if (effect_bits == EFFECT_NEGATIVE) {
+            sensor->status.special_effect = 1; // Negative
+        } else if (effect_bits == EFFECT_GRAYSCALE) {
+            // Could be Grayscale (2) or tint effects (3-6) - requires checking FIXED_CB/CR
+            // For simplicity, default to Grayscale when in EFFECT_GRAYSCALE mode
+            sensor->status.special_effect = 2; // Grayscale/B&W
+        } else {
+            sensor->status.special_effect = 0; // Default to Normal
+        }
+    } else {
+        sensor->status.special_effect = 0;
+    }
+
+    // Read white balance mode from AWB registers
+    // This is simplified - full WB mode detection would need to check multiple registers
+    if (sensor->status.awb) {
+        sensor->status.wb_mode = 0; // Auto
+    } else {
+        // Check if specific preset is active (simplified detection)
+        sensor->status.wb_mode = 0; // Default to Auto
+    }
+
+    // AWB gain not specifically tracked
     sensor->status.awb_gain = 0;
-    sensor->status.agc_gain = 0;
+
+    // Read AGC gain from GLOBAL_GAIN register (0x50)
+    // Hardware range is 0-63 (6-bit), map to 0-30 for API compatibility
+    ret = read_reg(sensor->slv_addr, GLOBAL_GAIN);
+    if (ret >= 0) {
+        // Reverse map from hardware (0-63) to API (0-30)
+        sensor->status.agc_gain = (ret * 30) / 63;
+        if (sensor->status.agc_gain > 30) sensor->status.agc_gain = 30;
+    } else {
+        sensor->status.agc_gain = 0;
+    }
+
+    // AEC value not specifically tracked by GC0308
     sensor->status.aec_value = 0;
+
+    // AEC2 not supported by GC0308
     sensor->status.aec2 = 0;
 
     print_regs(sensor->slv_addr);
