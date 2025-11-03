@@ -138,9 +138,9 @@ static int reset(sensor_t *sensor)
     if (ret == 0) {
         ESP_LOGD(TAG, "Camera defaults loaded");
         vTaskDelay(80 / portTICK_PERIOD_MS);
-        write_reg(sensor->slv_addr, 0xfe, 0x00);
+        ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
 #ifdef CONFIG_IDF_TARGET_ESP32
-        set_reg_bits(sensor->slv_addr, 0x28, 4, 0x07, 1);  //frequency division for esp32, ensure pclk <= 15MHz
+        ret |= set_reg_bits(sensor->slv_addr, PCLK_DIV, 4, 0x07, 1);  //frequency division for esp32, ensure pclk <= 15MHz
 #endif
     }
     return ret;
@@ -152,20 +152,19 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
     switch (pixformat) {
     case PIXFORMAT_RGB565:
-        write_reg(sensor->slv_addr, 0xfe, 0x00);
-        ret = set_reg_bits(sensor->slv_addr, 0x24, 0, 0x0f, 6);  //RGB565
+        ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+        ret |= set_reg_bits(sensor->slv_addr, OUTPUT_FMT, 0, 0x0f, 6);  //RGB565
         break;
-
     case PIXFORMAT_YUV422:
-        write_reg(sensor->slv_addr, 0xfe, 0x00);
-        ret = set_reg_bits(sensor->slv_addr, 0x24, 0, 0x0f, 2); //yuv422 Y Cb Y Cr
+        ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+        ret |= set_reg_bits(sensor->slv_addr, OUTPUT_FMT, 0, 0x0f, 2); //yuv422 Y Cb Y Cr
         break;
     case PIXFORMAT_GRAYSCALE:
-        write_reg(sensor->slv_addr, 0xfe, 0x00);
-        ret = write_reg(sensor->slv_addr, 0x24, 0xb1);
+        ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+        ret |= write_reg(sensor->slv_addr, OUTPUT_FMT, 0xb1);
         break;
     default:
-        ESP_LOGW(TAG, "unsupport format");
+        ESP_LOGW(TAG, "Unsupported format %u", pixformat);
         ret = -1;
         break;
     }
@@ -230,45 +229,45 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         }
     }
 
-    write_reg(sensor->slv_addr, 0xfe, 0x00);
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
 
-    write_reg(sensor->slv_addr, 0x05, H8(row_s));
-    write_reg(sensor->slv_addr, 0x06, L8(row_s));
-    write_reg(sensor->slv_addr, 0x07, H8(col_s));
-    write_reg(sensor->slv_addr, 0x08, L8(col_s));
-    write_reg(sensor->slv_addr, 0x09, H8(win_h + 8));
-    write_reg(sensor->slv_addr, 0x0a, L8(win_h + 8));
-    write_reg(sensor->slv_addr, 0x0b, H8(win_w + 8));
-    write_reg(sensor->slv_addr, 0x0c, L8(win_w + 8));
+    ret |= write_reg(sensor->slv_addr, ROW_START_H, H8(row_s));
+    ret |= write_reg(sensor->slv_addr, ROW_START_L, L8(row_s));
+    ret |= write_reg(sensor->slv_addr, COL_START_H, H8(col_s));
+    ret |= write_reg(sensor->slv_addr, COL_START_L, L8(col_s));
+    ret |= write_reg(sensor->slv_addr, WIN_HEIGHT_H, H8(win_h + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_HEIGHT_L, L8(win_h + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_WIDTH_H, H8(win_w + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_WIDTH_L, L8(win_w + 8));
 
-    write_reg(sensor->slv_addr, 0xfe, 0x01);
-    set_reg_bits(sensor->slv_addr, 0x53, 7, 0x01, 1);
-    set_reg_bits(sensor->slv_addr, 0x55, 0, 0x01, 1);
-    write_reg(sensor->slv_addr, 0x54, cfg->reg0x54);
-    write_reg(sensor->slv_addr, 0x56, cfg->reg0x56);
-    write_reg(sensor->slv_addr, 0x57, cfg->reg0x57);
-    write_reg(sensor->slv_addr, 0x58, cfg->reg0x58);
-    write_reg(sensor->slv_addr, 0x59, cfg->reg0x59);
+    ret |= write_reg(sensor->slv_addr, 0xfe, 0x01);
+    ret |= set_reg_bits(sensor->slv_addr, SUBSAMPLE_EN, 7, 0x01, 1);
+    ret |= set_reg_bits(sensor->slv_addr, SUBSAMPLE_EN2, 0, 0x01, 1);
+    ret |= write_reg(sensor->slv_addr, SUBSAMPLE_MODE, cfg->reg0x54);
+    ret |= write_reg(sensor->slv_addr, SUBSAMPLE_Y0, cfg->reg0x56);
+    ret |= write_reg(sensor->slv_addr, SUBSAMPLE_Y1, cfg->reg0x57);
+    ret |= write_reg(sensor->slv_addr, SUBSAMPLE_UV0, cfg->reg0x58);
+    ret |= write_reg(sensor->slv_addr, SUBSAMPLE_UV1, cfg->reg0x59);
 
-    write_reg(sensor->slv_addr, 0xfe, 0x00);
+    ret |= write_reg(sensor->slv_addr, 0xfe, 0x00);
 
 #elif CONFIG_GC_SENSOR_WINDOWING_MODE
-    write_reg(sensor->slv_addr, 0xfe, 0x00);
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
 
-    write_reg(sensor->slv_addr, 0xf7, col_s / 4);
-    write_reg(sensor->slv_addr, 0xf8, row_s / 4);
-    write_reg(sensor->slv_addr, 0xf9, (col_s + w) / 4);
-    write_reg(sensor->slv_addr, 0xfa, (row_s + h) / 4);
+    ret |= write_reg(sensor->slv_addr, SUB_COL_N, col_s / 4);
+    ret |= write_reg(sensor->slv_addr, SUB_ROW_N, row_s / 4);
+    ret |= write_reg(sensor->slv_addr, SUB_COL_N1, (col_s + w) / 4);
+    ret |= write_reg(sensor->slv_addr, SUB_ROW_N1, (row_s + h) / 4);
 
-    write_reg(sensor->slv_addr, 0x05, H8(row_s));
-    write_reg(sensor->slv_addr, 0x06, L8(row_s));
-    write_reg(sensor->slv_addr, 0x07, H8(col_s));
-    write_reg(sensor->slv_addr, 0x08, L8(col_s));
+    ret |= write_reg(sensor->slv_addr, ROW_START_H, H8(row_s));
+    ret |= write_reg(sensor->slv_addr, ROW_START_L, L8(row_s));
+    ret |= write_reg(sensor->slv_addr, COL_START_H, H8(col_s));
+    ret |= write_reg(sensor->slv_addr, COL_START_L, L8(col_s));
 
-    write_reg(sensor->slv_addr, 0x09, H8(h + 8));
-    write_reg(sensor->slv_addr, 0x0a, L8(h + 8));
-    write_reg(sensor->slv_addr, 0x0b, H8(w + 8));
-    write_reg(sensor->slv_addr, 0x0c, L8(w + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_HEIGHT_H, H8(h + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_HEIGHT_L, L8(h + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_WIDTH_H, H8(w + 8));
+    ret |= write_reg(sensor->slv_addr, WIN_WIDTH_L, L8(w + 8));
 
 #endif
     if (ret == 0) {
