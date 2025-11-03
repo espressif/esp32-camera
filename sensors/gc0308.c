@@ -277,32 +277,131 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return 0;
 }
 
-static int set_contrast(sensor_t *sensor, int contrast)
+static int set_contrast(sensor_t *sensor, int level)
 {
-    if (contrast > 0) {
-        sensor->status.contrast = contrast;
-        write_reg(sensor->slv_addr, 0xfe, 0x00);
-        write_reg(sensor->slv_addr, 0xb3, contrast);
+    int ret = 0;
+    // GC0308 contrast range: -2 to +2 (mapped to register values)
+    if (level < -2 || level > 2) {
+        return -1;
     }
-    return 0;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // Adjust contrast (CONTRAST register)
+    // Default value is 0x40, adjust based on level
+    uint8_t contrast_val = 0x40 + (level * 0x10);
+    ret |= write_reg(sensor->slv_addr, CONTRAST, contrast_val);
+    if (ret == 0) {
+        sensor->status.contrast = level;
+        ESP_LOGD(TAG, "Set contrast to: %d", level);
+    }
+    return ret;
 }
 
-static int set_global_gain(sensor_t *sensor, int gain_level)
+static int set_brightness(sensor_t *sensor, int level)
 {
-    if (gain_level != 0) {
-        write_reg(sensor->slv_addr, 0xfe, 0x00);
-        write_reg(sensor->slv_addr, 0x50, gain_level);
+    int ret = 0;
+    // GC0308 brightness range: -2 to +2 (mapped to register values)
+    if (level < -2 || level > 2) {
+        return -1;
     }
-    return 0;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // Adjust brightness via LSC target Y base (LSC_RED_B2)
+    // Default value is 0x48, adjust based on level
+    uint8_t brightness_val = 0x48 + (level * 0x10);
+    ret |= write_reg(sensor->slv_addr, LSC_RED_B2, brightness_val);
+    if (ret == 0) {
+        sensor->status.brightness = level;
+        ESP_LOGD(TAG, "Set brightness to: %d", level);
+    }
+    return ret;
+}
+
+static int set_saturation(sensor_t *sensor, int level)
+{
+    int ret = 0;
+    // GC0308 saturation range: -2 to +2
+    if (level < -2 || level > 2) {
+        return -1;
+    }
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // Adjust saturation via Cb and Cr gain (SATURATION_CB1, SATURATION_CR1)
+    // Default values: SATURATION_CB=0xcb, SATURATION_CB1=0x10, SATURATION_CR1=0x90
+    uint8_t sat_base = 0x40 + (level * 0x10);
+    ret |= write_reg(sensor->slv_addr, SATURATION_CB1, sat_base);
+    ret |= write_reg(sensor->slv_addr, SATURATION_CR1, sat_base + 0x50);
+    if (ret == 0) {
+        sensor->status.saturation = level;
+        ESP_LOGD(TAG, "Set saturation to: %d", level);
+    }
+    return ret;
+}
+
+static int set_sharpness(sensor_t *sensor, int level)
+{
+    int ret = 0;
+    // GC0308 sharpness range: -2 to +2
+    if (level < -2 || level > 2) {
+        return -1;
+    }
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // Adjust sharpness via edge enhancement (EDGE_DEC_SA1-SA3)
+    // Lower values = less sharp, higher values = more sharp
+    uint8_t sharp_val = 0x20 + (level * 0x08);
+    ret |= write_reg(sensor->slv_addr, EDGE_DEC_SA1, sharp_val);
+    ret |= write_reg(sensor->slv_addr, EDGE_DEC_SA2, sharp_val);
+    ret |= write_reg(sensor->slv_addr, EDGE_DEC_SA3, sharp_val);
+    if (ret == 0) {
+        sensor->status.sharpness = level;
+        ESP_LOGD(TAG, "Set sharpness to: %d", level);
+    }
+    return ret;
+}
+
+static int set_whitebal(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // AWB enable/disable via AEC_MODE1 register, AWB_ENABLE bit
+    ret |= set_reg_bits(sensor->slv_addr, AEC_MODE1, 1, 0x01, enable != 0);
+    if (ret == 0) {
+        sensor->status.awb = enable;
+        ESP_LOGD(TAG, "Set AWB to: %d", enable);
+    }
+    return ret;
+}
+
+static int set_gain_ctrl(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // AGC enable/disable via AEC_MODE1 register, AGC_ENABLE bit
+    ret |= set_reg_bits(sensor->slv_addr, AEC_MODE1, 2, 0x01, enable != 0);
+    if (ret == 0) {
+        sensor->status.agc = enable;
+        ESP_LOGD(TAG, "Set AGC to: %d", enable);
+    }
+    return ret;
+}
+
+static int set_exposure_ctrl(sensor_t *sensor, int enable)
+{
+    int ret = 0;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    // AEC enable/disable via AEC_MODE1 register, AEC_ENABLE bit
+    ret |= set_reg_bits(sensor->slv_addr, AEC_MODE1, 0, 0x01, enable != 0);
+    if (ret == 0) {
+        sensor->status.aec = enable;
+        ESP_LOGD(TAG, "Set AEC to: %d", enable);
+    }
+    return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
 {
     int ret = 0;
-    sensor->status.hmirror = enable;
     ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
-    ret |= set_reg_bits(sensor->slv_addr, 0x14, 0, 0x01, enable != 0);
+    ret |= set_reg_bits(sensor->slv_addr, CISCTL_MODE1, 0, 0x01, enable != 0);
     if (ret == 0) {
+        sensor->status.hmirror = enable;
         ESP_LOGD(TAG, "Set h-mirror to: %d", enable);
     }
     return ret;
@@ -311,11 +410,34 @@ static int set_hmirror(sensor_t *sensor, int enable)
 static int set_vflip(sensor_t *sensor, int enable)
 {
     int ret = 0;
-    sensor->status.vflip = enable;
     ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
-    ret |= set_reg_bits(sensor->slv_addr, 0x14, 1, 0x01, enable != 0);
+    ret |= set_reg_bits(sensor->slv_addr, CISCTL_MODE1, 1, 0x01, enable != 0);
     if (ret == 0) {
+        sensor->status.vflip = enable;
         ESP_LOGD(TAG, "Set v-flip to: %d", enable);
+    }
+    return ret;
+}
+
+
+static int set_agc_gain(sensor_t *sensor, int gain)
+{
+    int ret = 0;
+    // GC0308 AGC gain range: 0-30 (standard sensor API range)
+    // Maps to hardware register values 0x00-0x3F (6-bit effective range)
+    // Hardware default is 0x14 (20)
+    if (gain < 0) {
+        gain = 0;
+    } else if (gain > 30) {
+        gain = 30;
+    }
+    // Map API range 0-30 to hardware range 0-63 (approximately 2x multiplier)
+    uint8_t gain_value = (gain * 63) / 30;
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    ret |= write_reg(sensor->slv_addr, GLOBAL_GAIN, gain_value);
+    if (ret == 0) {
+        sensor->status.agc_gain = gain;
+        ESP_LOGD(TAG, "Set AGC gain to: %d (hw: 0x%02x)", gain, gain_value);
     }
     return ret;
 }
@@ -324,10 +446,136 @@ static int set_colorbar(sensor_t *sensor, int enable)
 {
     int ret = 0;
     ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
-    ret |= set_reg_bits(sensor->slv_addr, 0x2e, 0, 0x01, enable);
+    ret |= set_reg_bits(sensor->slv_addr, OUT_CTRL, 0, 0x01, enable);
     if (ret == 0) {
         sensor->status.colorbar = enable;
         ESP_LOGD(TAG, "Set colorbar to: %d", enable);
+    }
+    return ret;
+}
+
+static int set_special_effect(sensor_t *sensor, int effect)
+{
+    int ret = 0;
+    // Effect values: 0=Normal, 1=Negative, 2=Grayscale, 3=Red Tint, 4=Green Tint, 5=Blue Tint, 6=Sepia
+    if (effect < 0 || effect > 6) {
+        return -1;
+    }
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    switch (effect) {
+        case 0: // Normal
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_NORMAL);
+            ret |= write_reg(sensor->slv_addr, EFFECT_MODE, 0x0a);
+            ret |= write_reg(sensor->slv_addr, FIXED_CB, 0x7f);
+            ret |= write_reg(sensor->slv_addr, FIXED_CR, 0xfa);
+            break;
+        case 1: // Negative
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_NEGATIVE);
+            break;
+        case 2: // Grayscale (B&W)
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_GRAYSCALE);
+            ret |= write_reg(sensor->slv_addr, EFFECT_MODE, 0x0a);
+            ret |= write_reg(sensor->slv_addr, FIXED_CB, 0x7f);
+            ret |= write_reg(sensor->slv_addr, FIXED_CR, 0xfa);
+            break;
+        case 3: // Red Tint
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_GRAYSCALE);
+            ret |= write_reg(sensor->slv_addr, EFFECT_MODE, 0x0a);
+            ret |= write_reg(sensor->slv_addr, FIXED_CB, 0x80);
+            ret |= write_reg(sensor->slv_addr, FIXED_CR, 0xc0);
+            break;
+        case 4: // Green Tint
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_GRAYSCALE);
+            ret |= write_reg(sensor->slv_addr, EFFECT_MODE, 0x0a);
+            ret |= write_reg(sensor->slv_addr, FIXED_CB, 0x50);
+            ret |= write_reg(sensor->slv_addr, FIXED_CR, 0x50);
+            break;
+        case 5: // Blue Tint
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_GRAYSCALE);
+            ret |= write_reg(sensor->slv_addr, EFFECT_MODE, 0x0a);
+            ret |= write_reg(sensor->slv_addr, FIXED_CB, 0xa0);
+            ret |= write_reg(sensor->slv_addr, FIXED_CR, 0x80);
+            break;
+        case 6: // Sepia
+            ret |= set_reg_bits(sensor->slv_addr, SPECIAL_EFFECT, 0, 0x03, EFFECT_GRAYSCALE);
+            ret |= write_reg(sensor->slv_addr, EFFECT_MODE, 0x0a);
+            ret |= write_reg(sensor->slv_addr, FIXED_CB, 0xd0);
+            ret |= write_reg(sensor->slv_addr, FIXED_CR, 0x28);
+            break;
+        default:
+            ret = -1;
+            break;
+    }
+    if (ret == 0) {
+        sensor->status.special_effect = effect;
+        ESP_LOGD(TAG, "Set special effect to: %d", effect);
+    }
+    return ret;
+}
+
+static int set_wb_mode(sensor_t *sensor, int mode)
+{
+    int ret = 0;
+    // WB modes: 0=Auto, 1=Sunny, 2=Cloudy, 3=Office, 4=Home
+    if (mode < 0 || mode > 4) {
+        return -1;
+    }
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x00);
+    if (mode == 0) {
+        // Auto WB - enable AWB via AEC_MODE1
+        ret |= set_reg_bits(sensor->slv_addr, AEC_MODE1, 1, 0x01, 1);
+    } else {
+        // Manual WB - disable AWB and set specific gains
+        ret |= set_reg_bits(sensor->slv_addr, AEC_MODE1, 1, 0x01, 0);
+        switch (mode) {
+            case 1: // Sunny
+                ret |= write_reg(sensor->slv_addr, AWB_R_GAIN, 0x74);
+                ret |= write_reg(sensor->slv_addr, AWB_G_GAIN, 0x52);
+                ret |= write_reg(sensor->slv_addr, AWB_B_GAIN, 0x40);
+                break;
+            case 2: // Cloudy
+                ret |= write_reg(sensor->slv_addr, AWB_R_GAIN, 0x8c);
+                ret |= write_reg(sensor->slv_addr, AWB_G_GAIN, 0x50);
+                ret |= write_reg(sensor->slv_addr, AWB_B_GAIN, 0x40);
+                break;
+            case 3: // Office
+                ret |= write_reg(sensor->slv_addr, AWB_R_GAIN, 0x48);
+                ret |= write_reg(sensor->slv_addr, AWB_G_GAIN, 0x40);
+                ret |= write_reg(sensor->slv_addr, AWB_B_GAIN, 0x5c);
+                break;
+            case 4: // Home
+                ret |= write_reg(sensor->slv_addr, AWB_R_GAIN, 0x40);
+                ret |= write_reg(sensor->slv_addr, AWB_G_GAIN, 0x54);
+                ret |= write_reg(sensor->slv_addr, AWB_B_GAIN, 0x70);
+                break;
+            default:
+                ret = -1;
+                break;
+        }
+    }
+    if (ret == 0) {
+        sensor->status.wb_mode = mode;
+        ESP_LOGD(TAG, "Set WB mode to: %d", mode);
+    }
+    return ret;
+}
+
+static int set_ae_level(sensor_t *sensor, int level)
+{
+    int ret = 0;
+    // AE level range: -2 to +2
+    if (level < -2 || level > 2) {
+        return -1;
+    }
+    ret = write_reg(sensor->slv_addr, 0xfe, 0x01);
+    // Adjust AE target via AEC_TARGET_Y register (Page 1)
+    // Default is around 0x19, adjust based on level
+    uint8_t ae_target = 0x19 + (level * 0x08);
+    ret |= write_reg(sensor->slv_addr, AEC_TARGET_Y, ae_target);
+    ret |= write_reg(sensor->slv_addr, 0xfe, 0x00);
+    if (ret == 0) {
+        sensor->status.ae_level = level;
+        ESP_LOGD(TAG, "Set AE level to: %d", level);
     }
     return ret;
 }
@@ -433,27 +681,27 @@ int esp32_camera_gc0308_init(sensor_t *sensor)
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
     sensor->set_contrast = set_contrast;
-    sensor->set_brightness = set_dummy;
-    sensor->set_saturation = set_dummy;
-    sensor->set_sharpness = set_dummy;
+    sensor->set_brightness = set_brightness;
+    sensor->set_saturation = set_saturation;
+    sensor->set_sharpness = set_sharpness;
     sensor->set_denoise = set_dummy;
     sensor->set_gainceiling = set_gainceiling_dummy;
     sensor->set_quality = set_dummy;
     sensor->set_colorbar = set_colorbar;
-    sensor->set_whitebal = set_dummy;
-    sensor->set_gain_ctrl = set_global_gain;
-    sensor->set_exposure_ctrl = set_dummy;
+    sensor->set_whitebal = set_whitebal;
+    sensor->set_gain_ctrl = set_gain_ctrl;
+    sensor->set_exposure_ctrl = set_exposure_ctrl;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
 
     sensor->set_aec2 = set_dummy;
     sensor->set_awb_gain = set_dummy;
-    sensor->set_agc_gain = set_dummy;
+    sensor->set_agc_gain = set_agc_gain;
     sensor->set_aec_value = set_dummy;
 
-    sensor->set_special_effect = set_dummy;
-    sensor->set_wb_mode = set_dummy;
-    sensor->set_ae_level = set_dummy;
+    sensor->set_special_effect = set_special_effect;
+    sensor->set_wb_mode = set_wb_mode;
+    sensor->set_ae_level = set_ae_level;
 
     sensor->set_dcw = set_dummy;
     sensor->set_bpc = set_dummy;
