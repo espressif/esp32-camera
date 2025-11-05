@@ -393,7 +393,7 @@ static int init_status(sensor_t *sensor)
 static int set_dummy(sensor_t *sensor, int val){ return -1; }
 static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1; }
 
-int ov7670_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_ov7670_detect(int slv_addr, sensor_id_t *id)
 {
     if (OV7670_SCCB_ADDR == slv_addr) {
         SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
@@ -411,7 +411,7 @@ int ov7670_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int ov7670_init(sensor_t *sensor)
+int esp32_camera_ov7670_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

@@ -18,7 +18,7 @@
  *     0:       Can't detect this sensor
  *     Nonzero: This sensor has been detected
  */
-int ov2640_detect(int slv_addr, sensor_id_t *id);
+int esp32_camera_ov2640_detect(int slv_addr, sensor_id_t *id);
 
 /**
  * @brief initialize sensor function pointers
@@ -27,6 +27,6 @@ int ov2640_detect(int slv_addr, sensor_id_t *id);
  * @return
  *      Always 0
  */
-int ov2640_init(sensor_t *sensor);
+int esp32_camera_ov2640_init(sensor_t *sensor);
 
 #endif // __OV2640_H__
