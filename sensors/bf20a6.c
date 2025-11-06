@@ -347,7 +347,7 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
     return -1;
 }
 
-int bf20a6_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_bf20a6_detect(int slv_addr, sensor_id_t *id)
 {
     if (BF20A6_SCCB_ADDR == slv_addr) {
         uint8_t MIDL = SCCB_Read(slv_addr, SENSOR_ID_LOW);
@@ -363,7 +363,7 @@ int bf20a6_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int bf20a6_init(sensor_t *sensor)
+int esp32_camera_bf20a6_init(sensor_t *sensor)
 {
     sensor->init_status = init_status;
     sensor->reset = reset;

@@ -18,7 +18,6 @@
 #include "soc/lcd_cam_struct.h"
 #include "soc/lcd_cam_reg.h"
 #include "soc/gdma_struct.h"
-#include "soc/gdma_periph.h"
 #include "soc/gdma_reg.h"
 #include "hal/clk_gate_ll.h"
 #include "esp_private/gdma.h"
@@ -34,6 +33,12 @@
 #define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
 #define gpio_matrix_out(a,b,c,d) esp_rom_gpio_connect_out_signal(a,b,c,d)
 #define ets_delay_us(a) esp_rom_delay_us(a)
+#endif
+
+#if (ESP_IDF_VERSION_MAJOR > 5)
+#include "soc/dport_access.h"
+#else
+#include "soc/gdma_periph.h"
 #endif
 
 #if !defined(SOC_GDMA_PAIRS_PER_GROUP) && defined(SOC_GDMA_PAIRS_PER_GROUP_MAX)
@@ -236,16 +241,20 @@ static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
     //     }
     // }
 
+#if ESP_IDF_VERSION_MAJOR > 5
+    if (!(DPORT_REG_GET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST) == 0 &&
+          DPORT_REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) != 0)) {
+        DPORT_CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
+        DPORT_SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
+        DPORT_SET_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
+        DPORT_CLEAR_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
+    }
+#else
     if (!periph_ll_periph_enabled(PERIPH_GDMA_MODULE)) {
         periph_ll_disable_clk_set_rst(PERIPH_GDMA_MODULE);
         periph_ll_enable_clk_clear_rst(PERIPH_GDMA_MODULE);
     }
-    // if (REG_GET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN) == 0) {
-    //     REG_CLR_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
-    //     REG_SET_BIT(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN);
-    //     REG_SET_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
-    //     REG_CLR_BIT(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST);
-    // }
+#endif
     ll_cam_dma_reset(cam);
     return ESP_OK;
 }
@@ -406,7 +415,12 @@ esp_err_t ll_cam_set_pin(cam_obj_t *cam, const camera_config_t *config)
 esp_err_t ll_cam_init_isr(cam_obj_t *cam)
 {
 	esp_err_t ret = ESP_OK;
-    ret = esp_intr_alloc_intrstatus(gdma_periph_signals.groups[0].pairs[cam->dma_num].rx_irq_id,
+    ret = esp_intr_alloc_intrstatus(
+#if (ESP_IDF_VERSION_MAJOR > 5)
+                                     ETS_DMA_IN_CH0_INTR_SOURCE + cam->dma_num,
+#else
+                                     gdma_periph_signals.groups[0].pairs[cam->dma_num].rx_irq_id,
+#endif
                                      ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_SHARED | CAMERA_ISR_IRAM_FLAG,
                                      (uint32_t)&GDMA.channel[cam->dma_num].in.int_st, GDMA_IN_SUC_EOF_CH0_INT_ST_M,
                                      ll_cam_dma_isr, cam, &cam->dma_intr_handle);

@@ -934,7 +934,7 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
-int nt99141_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_nt99141_detect(int slv_addr, sensor_id_t *id)
 {
     if (NT99141_SCCB_ADDR == slv_addr) {
         SCCB_Write16(slv_addr, 0x3008, 0x01);//bank sensor
@@ -981,7 +981,7 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
-int nt99141_init(sensor_t *sensor)
+int esp32_camera_nt99141_init(sensor_t *sensor)
 {
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;

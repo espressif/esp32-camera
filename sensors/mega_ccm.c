@@ -344,7 +344,7 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
     return -1;
 }
 
-int mega_ccm_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_mega_ccm_detect(int slv_addr, sensor_id_t *id)
 {
     if (MEGA_CCM_SCCB_ADDR == slv_addr) {
         uint8_t h = read_reg(slv_addr, SENSOR_ID_HIGH);
@@ -360,7 +360,7 @@ int mega_ccm_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int mega_ccm_init(sensor_t *sensor)
+int esp32_camera_mega_ccm_init(sensor_t *sensor)
 {
     sensor->init_status = init_status;
     sensor->reset = reset;

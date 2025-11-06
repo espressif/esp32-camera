@@ -328,7 +328,7 @@ static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val)
     return -1;
 }
 
-int gc032a_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_gc032a_detect(int slv_addr, sensor_id_t *id)
 {
     if (GC032A_SCCB_ADDR == slv_addr) {
         uint8_t MIDL = SCCB_Read(slv_addr, SENSOR_ID_LOW);
@@ -344,7 +344,7 @@ int gc032a_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int gc032a_init(sensor_t *sensor)
+int esp32_camera_gc032a_init(sensor_t *sensor)
 {
     sensor->init_status = init_status;
     sensor->reset = reset;

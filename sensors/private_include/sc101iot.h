@@ -17,7 +17,7 @@
  *     0:       Can't detect this sensor
  *     Nonzero: This sensor has been detected
  */
-int sc101iot_detect(int slv_addr, sensor_id_t *id);
+int esp32_camera_sc101iot_detect(int slv_addr, sensor_id_t *id);
 
 /**
  * @brief initialize sensor function pointers
@@ -26,6 +26,6 @@ int sc101iot_detect(int slv_addr, sensor_id_t *id);
  * @return
  *      Always 0
  */
-int sc101iot_init(sensor_t *sensor);
+int esp32_camera_sc101iot_init(sensor_t *sensor);
 
 #endif // __SC101IOT_H__
