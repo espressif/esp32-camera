@@ -45,6 +45,11 @@ static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
 #define gpio_matrix_in(a,b,c) esp_rom_gpio_connect_in_signal(a,b,c)
 #endif
 
+#if (ESP_IDF_VERSION_MAJOR > 5)
+#include "soc/dport_access.h"
+#include "soc/dport_reg.h"
+#endif
+
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2) 
 #define ets_delay_us esp_rom_delay_us
 #endif
@@ -289,7 +294,12 @@ bool ll_cam_start(cam_obj_t *cam, int frame_pos)
 esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
 {
     // Enable and configure I2S peripheral
+#if ESP_IDF_VERSION_MAJOR > 5
+    DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_I2S0_CLK_EN);
+    DPORT_CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN_REG, DPORT_I2S0_RST);
+#else
     periph_module_enable(PERIPH_I2S0_MODULE);
+#endif
 
     I2S0.conf.rx_reset = 1;
     I2S0.conf.rx_reset = 0;

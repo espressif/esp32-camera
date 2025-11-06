@@ -17,7 +17,7 @@
  *     0:       Can't detect this sensor
  *     Nonzero: This sensor has been detected
  */
-int gc032a_detect(int slv_addr, sensor_id_t *id);
+int esp32_camera_gc032a_detect(int slv_addr, sensor_id_t *id);
 
 /**
  * @brief initialize sensor function pointers
@@ -26,6 +26,6 @@ int gc032a_detect(int slv_addr, sensor_id_t *id);
  * @return
  *      Always 0
  */
-int gc032a_init(sensor_t *sensor);
+int esp32_camera_gc032a_init(sensor_t *sensor);
 
 #endif // __GC032A_H__

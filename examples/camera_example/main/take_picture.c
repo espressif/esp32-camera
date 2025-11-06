@@ -10,6 +10,7 @@
 // #define BOARD_ESP32S3_WROOM
 // #define BOARD_ESP32S3_XIAO
 // #define BOARD_ESP32S3_GOOUUU
+// #define BOARD_ESP32S3_XIAO
 
 /**
  * 2. Kconfig setup

@@ -284,7 +284,7 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
-int sc030iot_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_sc030iot_detect(int slv_addr, sensor_id_t *id)
 {
     if (SC030IOT_SCCB_ADDR == slv_addr) {
         uint8_t MIDL = SCCB_Read(slv_addr, SC030_SENSOR_ID_LOW_REG);
@@ -300,7 +300,7 @@ int sc030iot_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int sc030iot_init(sensor_t *sensor)
+int esp32_camera_sc030iot_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

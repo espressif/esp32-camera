@@ -292,7 +292,7 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
-int sc031gs_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_sc031gs_detect(int slv_addr, sensor_id_t *id)
 {
     if (SC031GS_SCCB_ADDR == slv_addr) {
         uint8_t MIDL = SCCB_Read16(slv_addr, SC031GS_PID_HIGH_REG);
@@ -308,7 +308,7 @@ int sc031gs_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int sc031gs_init(sensor_t *sensor)
+int esp32_camera_sc031gs_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

@@ -476,7 +476,7 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
-int bf3005_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_bf3005_detect(int slv_addr, sensor_id_t *id)
 {
     if (BF3005_SCCB_ADDR == slv_addr) {
         uint16_t PID = SCCB_Read(slv_addr, 0xFC);
@@ -493,7 +493,7 @@ int bf3005_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int bf3005_init(sensor_t *sensor)
+int esp32_camera_bf3005_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

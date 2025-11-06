@@ -502,7 +502,7 @@ static int set_xclk(sensor_t *sensor, int timer, int xclk)
     return ret;
 }
 
-int ov7725_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_ov7725_detect(int slv_addr, sensor_id_t *id)
 {
     if (OV7725_SCCB_ADDR == slv_addr) {
         SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
@@ -520,7 +520,7 @@ int ov7725_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int ov7725_init(sensor_t *sensor)
+int esp32_camera_ov7725_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

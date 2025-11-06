@@ -33,6 +33,10 @@
 #define ets_delay_us(a) esp_rom_delay_us(a)
 #endif
 
+#if (ESP_IDF_VERSION_MAJOR > 5)
+#include "soc/dport_access.h"
+#endif
+
 static const char *TAG = "s2 ll_cam";
 
 #define I2S_ISR_ENABLE(i) {I2S0.int_clr.i = 1;I2S0.int_ena.i = 1;}
@@ -136,7 +140,12 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     if(err != ESP_OK) {
         return err;
     }
+#if ESP_IDF_VERSION_MAJOR > 5
+    DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_I2S0_CLK_EN);
+    DPORT_CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN0_REG, DPORT_I2S0_RST);
+#else
     periph_module_enable(PERIPH_I2S0_MODULE);
+#endif
     // Configure the clock
     I2S0.clkm_conf.clkm_div_num = 2; // 160MHz / 2 = 80MHz
     I2S0.clkm_conf.clkm_div_b = 0;
