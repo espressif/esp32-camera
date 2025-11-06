@@ -1073,7 +1073,7 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
-int ov5640_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_ov5640_detect(int slv_addr, sensor_id_t *id)
 {
     if (OV5640_SCCB_ADDR == slv_addr) {
         uint8_t h = SCCB_Read16(slv_addr, 0x300A);
@@ -1089,7 +1089,7 @@ int ov5640_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int ov5640_init(sensor_t *sensor)
+int esp32_camera_ov5640_init(sensor_t *sensor)
 {
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;

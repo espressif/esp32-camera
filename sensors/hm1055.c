@@ -772,7 +772,7 @@ static int init_status(sensor_t *sensor)
     return 0;
 }
 
-int hm1055_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_hm1055_detect(int slv_addr, sensor_id_t *id)
 {
     if (HM1055_SCCB_ADDR == slv_addr)
     {
@@ -792,7 +792,7 @@ int hm1055_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int hm1055_init(sensor_t *sensor)
+int esp32_camera_hm1055_init(sensor_t *sensor)
 {
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;

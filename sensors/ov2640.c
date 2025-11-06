@@ -545,7 +545,7 @@ static int init_status(sensor_t *sensor){
     return 0;
 }
 
-int ov2640_detect(int slv_addr, sensor_id_t *id)
+int esp32_camera_ov2640_detect(int slv_addr, sensor_id_t *id)
 {
     if (OV2640_SCCB_ADDR == slv_addr) {
         SCCB_Write(slv_addr, 0xFF, 0x01);//bank sensor
@@ -563,7 +563,7 @@ int ov2640_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
-int ov2640_init(sensor_t *sensor)
+int esp32_camera_ov2640_init(sensor_t *sensor)
 {
     sensor->reset = reset;
     sensor->init_status = init_status;

@@ -112,55 +112,55 @@ typedef struct {
 
 static const sensor_func_t g_sensors[] = {
 #if CONFIG_OV7725_SUPPORT
-    {ov7725_detect, ov7725_init},
+    {esp32_camera_ov7725_detect, esp32_camera_ov7725_init},
 #endif
 #if CONFIG_OV7670_SUPPORT
-    {ov7670_detect, ov7670_init},
+    {esp32_camera_ov7670_detect, esp32_camera_ov7670_init},
 #endif
 #if CONFIG_OV2640_SUPPORT
-    {ov2640_detect, ov2640_init},
+    {esp32_camera_ov2640_detect, esp32_camera_ov2640_init},
 #endif
 #if CONFIG_OV3660_SUPPORT
-    {ov3660_detect, ov3660_init},
+    {esp32_camera_ov3660_detect, esp32_camera_ov3660_init},
 #endif
 #if CONFIG_OV5640_SUPPORT
-    {ov5640_detect, ov5640_init},
+    {esp32_camera_ov5640_detect, esp32_camera_ov5640_init},
 #endif
 #if CONFIG_NT99141_SUPPORT
-    {nt99141_detect, nt99141_init},
+    {esp32_camera_nt99141_detect, esp32_camera_nt99141_init},
 #endif
 #if CONFIG_GC2145_SUPPORT
-    {gc2145_detect, gc2145_init},
+    {esp32_camera_gc2145_detect, esp32_camera_gc2145_init},
 #endif
 #if CONFIG_GC032A_SUPPORT
-    {gc032a_detect, gc032a_init},
+    {esp32_camera_gc032a_detect, esp32_camera_gc032a_init},
 #endif
 #if CONFIG_GC0308_SUPPORT
-    {gc0308_detect, gc0308_init},
+    {esp32_camera_gc0308_detect, esp32_camera_gc0308_init},
 #endif
 #if CONFIG_BF3005_SUPPORT
-    {bf3005_detect, bf3005_init},
+    {esp32_camera_bf3005_detect, esp32_camera_bf3005_init},
 #endif
 #if CONFIG_BF20A6_SUPPORT
-    {bf20a6_detect, bf20a6_init},
+    {esp32_camera_bf20a6_detect, esp32_camera_bf20a6_init},
 #endif
 #if CONFIG_SC101IOT_SUPPORT
-    {sc101iot_detect, sc101iot_init},
+    {esp32_camera_sc101iot_detect, esp32_camera_sc101iot_init},
 #endif
 #if CONFIG_SC030IOT_SUPPORT
-    {sc030iot_detect, sc030iot_init},
+    {esp32_camera_sc030iot_detect, esp32_camera_sc030iot_init},
 #endif
 #if CONFIG_SC031GS_SUPPORT
-    {sc031gs_detect, sc031gs_init},
+    {esp32_camera_sc031gs_detect, esp32_camera_sc031gs_init},
 #endif
 #if CONFIG_MEGA_CCM_SUPPORT
-    {mega_ccm_detect, mega_ccm_init},
+    {esp32_camera_mega_ccm_detect, esp32_camera_mega_ccm_init},
 #endif
 #if CONFIG_HM1055_SUPPORT
-    {hm1055_detect, hm1055_init},
+    {esp32_camera_hm1055_detect, esp32_camera_hm1055_init},
 #endif
 #if CONFIG_HM0360_SUPPORT
-    {hm0360_detect, hm0360_init},
+    {esp32_camera_hm0360_detect, esp32_camera_hm0360_init},
 #endif
 };
 
