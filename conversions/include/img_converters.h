@@ -129,6 +129,17 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 #define JPG_SCALE_MAX  JPEG_IMAGE_SCALE_1_8
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale);
 
+/**
+ * @brief Configure RGB565 input byte order for JPEG encoding.
+ *
+ * Controls how RGB565 source pixel data is interpreted before JPEG conversion.
+ * By default, the encoder assumes big-endian byte order (MSB first), which
+ * matches most ESP32 camera and frame buffer outputs.
+ *
+ * @param enable    True to use big-endian RGB565 (default), false for little-endian.
+ */
+void jpgSetRgb565BE(bool enable);
+
 #ifdef __cplusplus
 }
 #endif

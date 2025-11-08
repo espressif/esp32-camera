@@ -29,6 +29,8 @@
 static const char* TAG = "to_jpg";
 #endif
 
+static bool rgb565_big_endian = true;
+
 static void *_malloc(size_t size)
 {
     void * res = malloc(size);
@@ -60,9 +62,15 @@ static IRAM_ATTR void convert_line_format(uint8_t * src, pixformat_t format, uin
         l = width * 2;
         src += l * line;
         for(i=0; i<l; i+=2) {
-            dst[o++] = src[i] & 0xF8;
-            dst[o++] = (src[i] & 0x07) << 5 | (src[i+1] & 0xE0) >> 3;
-            dst[o++] = (src[i+1] & 0x1F) << 3;
+            if (rgb565_big_endian) {
+                dst[o++] = src[i] & 0xF8;
+                dst[o++] = (src[i] & 0x07) << 5 | (src[i+1] & 0xE0) >> 3;
+                dst[o++] = (src[i+1] & 0x1F) << 3;
+            } else  {
+                dst[o++] = src[i+1] & 0xF8;
+                dst[o++] = (src[i+1] & 0x07) << 5 | (src[i] & 0xE0) >> 3;
+                dst[o++] = (src[i] & 0x1F) << 3;
+            }
         }
     } else if(format == PIXFORMAT_YUV422) {
         uint8_t y0, y1, u, v;
@@ -232,4 +240,9 @@ bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixf
 bool frame2jpg(camera_fb_t * fb, uint8_t quality, uint8_t ** out, size_t * out_len)
 {
     return fmt2jpg(fb->buf, fb->len, fb->width, fb->height, fb->format, quality, out, out_len);
+}
+
+void jpgSetRgb565BE(bool enable)
+{
+    rgb565_big_endian = enable;
 }
