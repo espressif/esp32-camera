@@ -29,6 +29,8 @@
 static const char* TAG = "to_jpg";
 #endif
 
+static jpge::subsampling_t default_subsampling = jpge::H2V2;
+
 static void *_malloc(size_t size)
 {
     void * res = malloc(size);
@@ -91,7 +93,7 @@ static IRAM_ATTR void convert_line_format(uint8_t * src, pixformat_t format, uin
 bool convert_image(uint8_t *src, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpge::output_stream *dst_stream)
 {
     int num_channels = 3;
-    jpge::subsampling_t subsampling = jpge::H2V2;
+    jpge::subsampling_t subsampling = default_subsampling;
 
     if(format == PIXFORMAT_GRAYSCALE) {
         num_channels = 1;
@@ -232,4 +234,9 @@ bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixf
 bool frame2jpg(camera_fb_t * fb, uint8_t quality, uint8_t ** out, size_t * out_len)
 {
     return fmt2jpg(fb->buf, fb->len, fb->width, fb->height, fb->format, quality, out, out_len);
+}
+
+void jpgSetChroma(chroma_t chroma)
+{
+    default_subsampling = static_cast<jpge::subsampling_t>(chroma);
 }
