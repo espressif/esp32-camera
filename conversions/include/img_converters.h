@@ -129,6 +129,26 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 #define JPG_SCALE_MAX  JPEG_IMAGE_SCALE_1_8
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale);
 
+/**
+ * @brief Chroma subsampling modes for JPEG encoding.
+ *
+ * CHROMA_444: full chroma resolution (4:4:4)
+ * CHROMA_422: horizontal chroma subsampling (4:2:2)
+ * CHROMA_420: horizontal and vertical subsampling (4:2:0)
+ */
+typedef enum {
+    CHROMA_444 = 1,
+    CHROMA_422 = 2,
+    CHROMA_420 = 3
+} chroma_t;
+
+/**
+ * @brief Set default chroma subsampling mode for JPEG encoding.
+ *
+ * @param chroma Chroma subsampling mode (CHROMA_444, CHROMA_422, CHROMA_420)
+ */
+void jpgSetChroma(chroma_t chroma);
+
 #ifdef __cplusplus
 }
 #endif
