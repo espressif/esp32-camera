@@ -152,7 +152,7 @@ int SCCB_Use_Port(int i2c_num)
         return ESP_ERR_INVALID_ARG;
     }
     sccb_i2c_port = i2c_num;
-
+    sccb_owns_i2c_port = false; // in this case, camera doesn't own the i2c port
     return ESP_OK;
 }
 
