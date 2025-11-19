@@ -149,6 +149,17 @@ typedef enum {
  */
 void jpgSetChroma(chroma_t chroma);
 
+/**
+ * @brief Configure RGB565 input byte order for JPEG encoding.
+ *
+ * Controls how RGB565 source pixel data is interpreted before JPEG conversion.
+ * By default, the encoder assumes big-endian byte order (MSB first), which
+ * matches most ESP32 camera and frame buffer outputs.
+ *
+ * @param enable    True to use big-endian RGB565 (default), false for little-endian.
+ */
+void jpgSetRgb565BE(bool enable);
+
 #ifdef __cplusplus
 }
 #endif
