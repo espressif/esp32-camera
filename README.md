@@ -1,6 +1,7 @@
 # ESP32 Camera Driver
 
 [![Build examples](https://github.com/espressif/esp32-camera/actions/workflows/build.yml/badge.svg)](https://github.com/espressif/esp32-camera/actions/workflows/build.yml) [![Component Registry](https://components.espressif.com/components/espressif/esp32-camera/badge.svg)](https://components.espressif.com/components/espressif/esp32-camera)
+
 ## General Information
 
 This repository hosts ESP32 series Soc compatible driver for image sensors. Additionally it provides a few tools, which allow converting the captured frame data to the more common BMP and JPEG formats.
@@ -42,7 +43,6 @@ This repository hosts ESP32 series Soc compatible driver for image sensors. Addi
 - You can switch PSRAM DMA mode at runtime using `esp_camera_set_psram_mode()`.
 
 ## Installation Instructions
-
 
 ### Using with ESP-IDF
 
@@ -366,5 +366,37 @@ esp_err_t bmp_httpd_handler(httpd_req_t *req){
 }
 ```
 
+### Autofocus (OV5640)
 
+This component includes an optional autofocus helper for OV5640 modules that have an AF-capable lens.
 
+- Enable it in `menuconfig`: `Component config` → `Camera configuration` → `Enable autofocus (OV5640)`.
+- Include the header: `#include "esp_camera_af.h"`.
+
+Basic usage:
+
+```c
+#include "esp_camera.h"
+#include "esp_camera_af.h"
+
+// After esp_camera_init(...)
+sensor_t *s = esp_camera_sensor_get();
+
+esp_camera_af_config_t af_cfg = {
+    .mode = ESP_CAMERA_AF_MODE_AUTO,
+    .timeout_ms = 2000,
+};
+
+ESP_ERROR_CHECK(esp_camera_af_init(s, &af_cfg));
+
+// Optional: trigger a single AF cycle and wait for completion
+ESP_ERROR_CHECK(esp_camera_af_trigger(s));
+
+esp_camera_af_status_t st;
+ESP_ERROR_CHECK(esp_camera_af_wait(s, 0, &st));
+```
+
+Notes:
+
+- If autofocus is disabled (or the sensor is not OV5640), the AF APIs return `ESP_ERR_NOT_SUPPORTED`.
+- OV5640 autofocus relies on loading an internal firmware blob over SCCB during `esp_camera_af_init()`.

@@ -42,6 +42,22 @@ menu "Camera configuration"
             Enable this option if you want to use the OV5640.
             Disable this option to save memory.
 
+    config CAMERA_AF_SUPPORT
+        bool "Enable autofocus (OV5640)"
+        depends on OV5640_SUPPORT
+        default n
+        help
+            Enable OV5640 autofocus support via the esp_camera_af API.
+            If disabled, the AF API will return ESP_ERR_NOT_SUPPORTED.
+
+    config CAMERA_AF_DEFAULT_TIMEOUT_MS
+        int "Autofocus default timeout (ms)"
+        depends on CAMERA_AF_SUPPORT
+        range 100 20000
+        default 2000
+        help
+            Default timeout used for autofocus operations (firmware load, trigger/wait).
+
     config GC2145_SUPPORT
         bool "Support GC2145 2MP"
         default y
