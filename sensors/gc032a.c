@@ -166,7 +166,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         ret = set_reg_bits(sensor->slv_addr, 0x44, 0, 0x1f, 3);
         break;
     default:
-        ESP_LOGW(TAG, "unsupport format");
+        ESP_LOGW(TAG, "unsupported format");
         ret = -1;
         break;
     }

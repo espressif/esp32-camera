@@ -1,0 +1,54 @@
+name: Pre-Commit Checks
+
+# Triggers on pull requests and pushes to master or main branches
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      # Fetches full Git history to enable branch comparison
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      # Identifies changed files using git diff
+      - name: Get modified files
+        id: modified_files
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_BRANCH="${{ github.base_ref }}"
+            git fetch origin "$BASE_BRANCH" --depth=1
+            MODIFIED_FILES="$(git diff --name-only "origin/$BASE_BRANCH...HEAD" || echo "")"
+          else
+            MODIFIED_FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || echo "")"
+          fi
+
+          if [ -n "$MODIFIED_FILES" ]; then
+            echo "Running pre-commit on changed files:"
+            echo "$MODIFIED_FILES"
+            echo "files=$(echo "$MODIFIED_FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+            echo "has_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No modified files to check."
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run pre-commit on modified files
+        if: steps.modified_files.outputs.has_files == 'true'
+        run: pre-commit run --files ${{ steps.modified_files.outputs.files }}
+
+

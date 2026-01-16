@@ -31,7 +31,7 @@
 #define PLL2CFG 0x0301
 #define PLL3CFG 0x0302
 
-// frame timming control
+// frame timing control
 #define FRAME_LENGTH_LINES_H 0x0340
 #define FRAME_LENGTH_LINES_L 0x0341
 #define LINE_LENGTH_PCK_H 0x0342

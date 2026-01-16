@@ -192,7 +192,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ESP_LOGI(TAG, "Set FRAMESIZE_VGA");
         ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 0);
     } else {
-        ESP_LOGI(TAG, "Dont suppost this size, Set FRAMESIZE_VGA");
+        ESP_LOGI(TAG, "Dont support this size, Set FRAMESIZE_VGA");
         ret |= set_reg_bits(sensor->slv_addr, 0x3024, 0, 0x01, 0);
     }
 

@@ -124,7 +124,7 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
     {0x0214, 0x03}, // BPC_Control_BYTE_3 // 3rd bpc strength[4:0] , [7:5] is for 2line bpc temp_control_bit
     {0x0215, 0x10}, // BPC_Control_BYTE_4 // 1st bpc strength[4:0]
     {0x0216, 0x08}, // BPC_Control_BYTE_5 // 1st br pulse strength[4:0]
-    {0x0217, 0x05}, // BPC_Control_BYTE_6 // 1st gbgr pulse strengh[4:0]
+    {0x0217, 0x05}, // BPC_Control_BYTE_6 // 1st gbgr pulse strength[4:0]
     {0x0218, 0xB8},
     {0x0219, 0x01},
     {0x021A, 0xB8},
@@ -431,7 +431,7 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
     {0x05B7, 0x10}, // SHARP_ORE ALPHA0
     {0x05BF, 0x20}, // EDGESUB ALPHA0
     {0x05C1, 0x06}, // SHARPNESS STRENGTH OUTDOOR
-    {0x05C2, 0x18}, // SHARP ORE OUTDOOR
+    {0x05C2, 0x18}, // SHARP OR OUTDOOR
     {0x05C7, 0x00}, // TFBPI
     {0x05CC, 0x04}, // Raw sharpness strength
     {0x05CD, 0x00}, // Raw sharpness strength ALPHA0

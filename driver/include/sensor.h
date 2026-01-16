@@ -260,7 +260,7 @@ typedef struct _sensor {
 
     int  (*get_reg)             (sensor_t *sensor, int reg, int mask);
     int  (*set_reg)             (sensor_t *sensor, int reg, int mask, int value);
-    int  (*set_res_raw)         (sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning);
+    int  (*set_res_raw)         (sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totally, int outputX, int outputY, bool scale, bool binning);
     int  (*set_pll)             (sensor_t *sensor, int bypass, int mul, int sys, int root, int pre, int seld5, int pclken, int pclk);
     int  (*set_xclk)            (sensor_t *sensor, int timer, int xclk);
 } sensor_t;

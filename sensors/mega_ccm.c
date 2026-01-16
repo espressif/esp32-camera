@@ -76,7 +76,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         ret = write_reg(sensor->slv_addr, PIXEL_FMT_REG, 0x03);
         break;
     default:
-        ESP_LOGW(TAG, "unsupport format");
+        ESP_LOGW(TAG, "unsupported format");
         ret = -1;
         break;
     }
@@ -138,7 +138,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = write_reg(sensor->slv_addr, RESOLUTION_REG, 0x09); //320x320
         break;
          default:
-        ESP_LOGW(TAG, "unsupport framesize");
+        ESP_LOGW(TAG, "unsupported framesize");
         ret = -1;
         break;
     }

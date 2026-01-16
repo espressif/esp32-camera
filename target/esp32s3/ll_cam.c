@@ -92,7 +92,7 @@ void ll_cam_dma_reset(cam_obj_t *cam)
     GDMA.channel[cam->dma_num].in.peri_sel.sel = 5;
     //GDMA.channel[cam->dma_num].in.pri.rx_pri = 1;//rx prio 0-15
     //GDMA.channel[cam->dma_num].in.sram_size.in_size = 6;//This register is used to configure the size of L2 Tx FIFO for Rx channel. 0:16 bytes, 1:24 bytes, 2:32 bytes, 3: 40 bytes, 4: 48 bytes, 5:56 bytes, 6: 64 bytes, 7: 72 bytes, 8: 80 bytes.
-    //GDMA.channel[cam->dma_num].in.wight.rx_weight = 7;//The weight of Rx channel 0-15
+    //GDMA.channel[cam->dma_num].in.weight.rx_weight = 7;//The weight of Rx channel 0-15
 }
 
 static void CAMERA_ISR_IRAM_ATTR ll_cam_vsync_isr(void *arg)
@@ -459,9 +459,9 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t nodes_per_line = 1;
     size_t lines_per_node = 1;
 
-    // Calculate DMA Node Size so that it's divisable by or divisor of the line width
+    // Calculate DMA Node Size so that it's divisible by or divisor of the line width
     if(line_width >= node_max){
-        // One or more nodes will be requied for one line
+        // One or more nodes will be required for one line
         for(size_t i = node_max; i > 0; i=i-1){
             if ((line_width % i) == 0) {
                 node_size = i;
@@ -498,10 +498,10 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     // Calculate minimum EOF size = max(mode_size, line_size)
     size_t dma_half_buffer_min = node_size * nodes_per_line;
 
-    // Calculate max EOF size divisable by node size
+    // Calculate max EOF size divisible by node size
     size_t dma_half_buffer = (dma_half_buffer_max / dma_half_buffer_min) * dma_half_buffer_min;
 
-    // Adjust EOF size so that height will be divisable by the number of lines in each EOF
+    // Adjust EOF size so that height will be divisible by the number of lines in each EOF
     size_t lines_per_half_buffer = dma_half_buffer / line_width;
     while((cam->height % lines_per_half_buffer) != 0){
         dma_half_buffer = dma_half_buffer - dma_half_buffer_min;
