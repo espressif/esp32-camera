@@ -168,7 +168,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         write_reg(sensor->slv_addr, 0xe3, 0x02);
         break;
     default:
-        ESP_LOGW(TAG, "set_pix unsupport format");
+        ESP_LOGW(TAG, "set_pix unsupported format");
         ret = -1;
         break;
     }

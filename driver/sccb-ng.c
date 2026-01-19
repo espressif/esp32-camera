@@ -44,8 +44,8 @@ const int SCCB_I2C_PORT_DEFAULT = 0;
 
 /*
  The legacy I2C driver used addresses to differentiate between devices, whereas the new driver uses
- i2c_master_dev_handle_t structs which are registed to the bus.
- To avoid re-writing all camera dependant code, we simply translate the devices address to the corresponding
+ i2c_master_dev_handle_t structs which are registered to the bus.
+ To avoid re-writing all camera dependent code, we simply translate the devices address to the corresponding
  device_handle. This keeps all interfaces to the drivers identical.
  To perform this conversion the following local struct is used.
 */

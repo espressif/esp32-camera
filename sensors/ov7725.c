@@ -179,7 +179,7 @@ static int reset(sensor_t *sensor)
     // Delay 10 ms
     vTaskDelay(10 / portTICK_PERIOD_MS);
 
-    // Write default regsiters
+    // Write default registers
     for (i=0, regs = default_regs; regs[i][0]; i++) {
         SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
     }

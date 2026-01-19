@@ -284,7 +284,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ESP_LOGD(TAG, "Set FRAMESIZE_HD");
         ret = write_regs(sensor->slv_addr, sensor_framesize_HD);
     } else {
-        ESP_LOGD(TAG, "Dont suppost this size, Set FRAMESIZE_VGA");
+        ESP_LOGD(TAG, "Dont support this size, Set FRAMESIZE_VGA");
         ret = write_regs(sensor->slv_addr, sensor_framesize_VGA);
     }
 
