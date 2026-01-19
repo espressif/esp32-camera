@@ -485,9 +485,9 @@ static int set_reg(sensor_t *sensor, int reg, int mask, int value)
     return ret;
 }
 
-static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totally, int outputX, int outputY, bool scale, bool binning)
+static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning)
 {
-    return set_window(sensor, (ov2640_sensor_mode_t)startX, offsetX, offsetY, totalX, totally, outputX, outputY);
+    return set_window(sensor, (ov2640_sensor_mode_t)startX, offsetX, offsetY, totalX, totalY, outputX, outputY);
 }
 
 static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div)

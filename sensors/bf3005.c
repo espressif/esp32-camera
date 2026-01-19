@@ -465,7 +465,7 @@ static int init_status(sensor_t *sensor)
 
 static int set_dummy(sensor_t *sensor, int val){ return -1; }
 static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1; }
-static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totally, int outputX, int outputY, bool scale, bool binning){return -1;}
+static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning){return -1;}
 static int _set_pll(sensor_t *sensor, int bypass, int multiplier, int sys_div, int root_2x, int pre_div, int seld5, int pclk_manual, int pclk_div){return -1;}
 
 static int set_xclk(sensor_t *sensor, int timer, int xclk)

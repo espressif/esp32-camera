@@ -618,7 +618,7 @@ static int set_reg(sensor_t *sensor, int reg, int mask, int value)
     return ret;
 }
 
-static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totally, int outputX, int outputY, bool scale, bool binning)
+static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning)
 {
     return 0;
 }

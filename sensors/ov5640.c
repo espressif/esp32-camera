@@ -1011,13 +1011,13 @@ static int set_reg(sensor_t *sensor, int reg, int mask, int value)
     return ret;
 }
 
-static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totally, int outputX, int outputY, bool scale, bool binning)
+static int set_res_raw(sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning)
 {
     int ret = 0;
     ret  = write_addr_reg(sensor->slv_addr, X_ADDR_ST_H, startX, startY)
         || write_addr_reg(sensor->slv_addr, X_ADDR_END_H, endX, endY)
         || write_addr_reg(sensor->slv_addr, X_OFFSET_H, offsetX, offsetY)
-        || write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, totalX, totally)
+        || write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, totalX, totalY)
         || write_addr_reg(sensor->slv_addr, X_OUTPUT_SIZE_H, outputX, outputY)
         || write_reg_bits(sensor->slv_addr, ISP_CONTROL_01, 0x20, scale);
     if(!ret){

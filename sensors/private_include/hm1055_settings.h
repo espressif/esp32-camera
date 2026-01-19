@@ -431,7 +431,7 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
     {0x05B7, 0x10}, // SHARP_ORE ALPHA0
     {0x05BF, 0x20}, // EDGESUB ALPHA0
     {0x05C1, 0x06}, // SHARPNESS STRENGTH OUTDOOR
-    {0x05C2, 0x18}, // SHARP OR OUTDOOR
+    {0x05C2, 0x18}, // SHARP ORE OUTDOOR
     {0x05C7, 0x00}, // TFBPI
     {0x05CC, 0x04}, // Raw sharpness strength
     {0x05CD, 0x00}, // Raw sharpness strength ALPHA0
