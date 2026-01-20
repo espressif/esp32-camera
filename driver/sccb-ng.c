@@ -225,17 +225,22 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
 
     uint8_t tx_buffer[1];
-    uint8_t rx_buffer[1];
+    uint8_t rx_buffer[1] = {0};
 
     tx_buffer[0] = reg;
 
-    esp_err_t ret = i2c_master_transmit_receive(dev_handle, tx_buffer, 1, rx_buffer, 1, TIMEOUT_MS);
+    esp_err_t ret = i2c_master_transmit(dev_handle, tx_buffer, 1, TIMEOUT_MS);
 
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "SCCB_Read Failed addr:0x%02x, reg:0x%02x, data:0x%02x, ret:%d", slv_addr, reg, rx_buffer[0], ret);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "SCCB_Read addr phase failed addr:0x%02x, reg:0x%02x, ret:%d", slv_addr, reg, ret);
+        return 0;
     }
 
+    ret = i2c_master_receive(dev_handle, rx_buffer, 1, TIMEOUT_MS);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "SCCB_Read Failed addr:0x%02x, reg:0x%02x, ret:%d", slv_addr, reg, ret);
+    }
+    ESP_LOGW(TAG, "read OK");
     return rx_buffer[0];
 }
 
