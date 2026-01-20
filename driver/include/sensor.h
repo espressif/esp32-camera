@@ -263,6 +263,14 @@ typedef struct _sensor {
     int  (*set_res_raw)         (sensor_t *sensor, int startX, int startY, int endX, int endY, int offsetX, int offsetY, int totalX, int totalY, int outputX, int outputY, bool scale, bool binning);
     int  (*set_pll)             (sensor_t *sensor, int bypass, int mul, int sys, int root, int pre, int seld5, int pclken, int pclk);
     int  (*set_xclk)            (sensor_t *sensor, int timer, int xclk);
+
+    // Autofocus function pointers (sensor-specific implementations)
+    int  (*af_is_supported)     (sensor_t *sensor);
+    int  (*af_init)             (sensor_t *sensor, uint32_t timeout_ms);
+    int  (*af_set_mode)         (sensor_t *sensor, int mode);  // 0=auto, 1=manual
+    int  (*af_trigger)          (sensor_t *sensor);
+    int  (*af_get_status)       (sensor_t *sensor, uint8_t *out_raw, bool *out_focused, bool *out_busy);
+    int  (*af_set_manual_position) (sensor_t *sensor, uint16_t position);
 } sensor_t;
 
 camera_sensor_info_t *esp_camera_sensor_get_info(sensor_id_t *id);

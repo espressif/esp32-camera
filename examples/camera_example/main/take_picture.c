@@ -146,8 +146,8 @@ void app_main(void)
     }
 
 #if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
-    // Enable OV5640 autofocus if configured and supported.
-    // In menuconfig: Component config → Camera configuration → Enable autofocus (OV5640)
+    // Initialize autofocus if configured and supported by the sensor.
+    // In menuconfig: Component config → Camera configuration → Enable autofocus support
     maybe_init_autofocus();
 #endif
 

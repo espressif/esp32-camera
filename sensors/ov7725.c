@@ -563,6 +563,14 @@ int esp32_camera_ov7725_init(sensor_t *sensor)
     sensor->set_pll = _set_pll;
     sensor->set_xclk = set_xclk;
     
+    // No autofocus support
+    sensor->af_is_supported = NULL;
+    sensor->af_init = NULL;
+    sensor->af_set_mode = NULL;
+    sensor->af_trigger = NULL;
+    sensor->af_get_status = NULL;
+    sensor->af_set_manual_position = NULL;
+    
     // Retrieve sensor's signature
     sensor->id.MIDH = SCCB_Read(sensor->slv_addr, REG_MIDH);
     sensor->id.MIDL = SCCB_Read(sensor->slv_addr, REG_MIDL);

@@ -405,6 +405,14 @@ int esp32_camera_bf20a6_init(sensor_t *sensor)
     sensor->set_pll = NULL;
     sensor->set_xclk = NULL;
 
+    // No autofocus support
+    sensor->af_is_supported = NULL;
+    sensor->af_init = NULL;
+    sensor->af_set_mode = NULL;
+    sensor->af_trigger = NULL;
+    sensor->af_get_status = NULL;
+    sensor->af_set_manual_position = NULL;
+
     ESP_LOGD(TAG, "BF20A6 Attached");
     return 0;
 }

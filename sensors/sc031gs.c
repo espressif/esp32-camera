@@ -338,6 +338,14 @@ int esp32_camera_sc031gs_init(sensor_t *sensor)
     sensor->set_reg = set_reg;
     sensor->set_xclk = set_xclk;
     
+    // No autofocus support
+    sensor->af_is_supported = NULL;
+    sensor->af_init = NULL;
+    sensor->af_set_mode = NULL;
+    sensor->af_trigger = NULL;
+    sensor->af_get_status = NULL;
+    sensor->af_set_manual_position = NULL;
+
     ESP_LOGD(TAG, "sc031gs Attached");
 
     return 0;
