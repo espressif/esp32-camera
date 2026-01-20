@@ -209,7 +209,7 @@ static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
     gdma_channel_alloc_config_t rx_alloc_config = {
         .direction = GDMA_CHANNEL_DIRECTION_RX,
     };
-#if ((ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 4) || ESP_IDF_VERSION_MAJOR > 5)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
     esp_err_t ret = gdma_new_ahb_channel(&rx_alloc_config, &cam->dma_channel_handle);
 #else
     esp_err_t ret = gdma_new_channel(&rx_alloc_config, &cam->dma_channel_handle);

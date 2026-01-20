@@ -16,7 +16,7 @@
 #include <string.h>
 #include "soc/i2s_struct.h"
 #include "esp_idf_version.h"
-#if (ESP_IDF_VERSION_MAJOR >= 4) && (ESP_IDF_VERSION_MINOR > 1)
+#if ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(4, 1, 0)
 #include "hal/gpio_ll.h"
 #else
 #include "soc/gpio_periph.h"
@@ -34,7 +34,7 @@ static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
 #include "xclk.h"
 #include "cam_hal.h"
 
-#if (ESP_IDF_VERSION_MAJOR >= 4) && (ESP_IDF_VERSION_MINOR >= 3)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
 #include "esp_rom_gpio.h"
 #endif
 
