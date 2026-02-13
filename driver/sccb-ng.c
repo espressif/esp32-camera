@@ -23,7 +23,10 @@ static const char *TAG = "sccb-ng";
 
 #define LITTLETOBIG(x) ((x << 8) | (x >> 8))
 
+#if (ESP_IDF_VERSION_MAJOR <= 5)
 #include "esp_private/i2c_platform.h"
+#endif
+
 #include "driver/i2c_master.h"
 #include "driver/i2c_types.h"
 
