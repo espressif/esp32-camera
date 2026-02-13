@@ -12,15 +12,17 @@
 #define CONFIG_CAMERA_AF_DEFAULT_TIMEOUT_MS 2000
 #endif
 
+#if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
+
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
 #define TAG ""
 #else
 #include "esp_log.h"
+#if CONFIG_LOG_DEFAULT_LEVEL > 0
 static const char *TAG = "camera_af";
 #endif
-
-#if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
+#endif
 
 static uint32_t s_default_timeout_ms = CONFIG_CAMERA_AF_DEFAULT_TIMEOUT_MS;
 
