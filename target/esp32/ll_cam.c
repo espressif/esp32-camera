@@ -48,6 +48,7 @@ static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
 #if (ESP_IDF_VERSION_MAJOR > 5)
 #include "soc/dport_access.h"
 #include "soc/dport_reg.h"
+#include "soc/gpio_sig_map.h"
 #endif
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2) 

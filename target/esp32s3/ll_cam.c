@@ -206,6 +206,7 @@ esp_err_t ll_cam_deinit(cam_obj_t *cam)
 static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
 {
     //alloc rx gdma channel
+#if (ESP_IDF_VERSION_MAJOR < 6)
     gdma_channel_alloc_config_t rx_alloc_config = {
         .direction = GDMA_CHANNEL_DIRECTION_RX,
     };
@@ -213,6 +214,10 @@ static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
     esp_err_t ret = gdma_new_ahb_channel(&rx_alloc_config, &cam->dma_channel_handle);
 #else
     esp_err_t ret = gdma_new_channel(&rx_alloc_config, &cam->dma_channel_handle);
+#endif
+#else
+    gdma_channel_alloc_config_t rx_alloc_config = {0};
+    esp_err_t ret = gdma_new_ahb_channel(&rx_alloc_config, NULL, &cam->dma_channel_handle);
 #endif
     if (ret != ESP_OK) {
         cam_deinit();
