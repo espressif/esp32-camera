@@ -213,7 +213,7 @@ static int reset(sensor_t *sensor)
     int i=0;
     const uint8_t (*regs)[2];
 
-    // Write default regsiters
+    // Write default registers
     for (i=0, regs = default_regs; regs[i][0]; i++) {
         SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
     }

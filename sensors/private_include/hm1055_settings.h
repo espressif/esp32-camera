@@ -124,7 +124,7 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
     {0x0214, 0x03}, // BPC_Control_BYTE_3 // 3rd bpc strength[4:0] , [7:5] is for 2line bpc temp_control_bit
     {0x0215, 0x10}, // BPC_Control_BYTE_4 // 1st bpc strength[4:0]
     {0x0216, 0x08}, // BPC_Control_BYTE_5 // 1st br pulse strength[4:0]
-    {0x0217, 0x05}, // BPC_Control_BYTE_6 // 1st gbgr pulse strengh[4:0]
+    {0x0217, 0x05}, // BPC_Control_BYTE_6 // 1st gbgr pulse strength[4:0]
     {0x0218, 0xB8},
     {0x0219, 0x01},
     {0x021A, 0xB8},

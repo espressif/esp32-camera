@@ -262,7 +262,7 @@ void IRAM_ATTR ll_cam_send_event(cam_obj_t *cam, cam_event_t cam_event, BaseType
     }
 }
 
-//Copy fram from DMA dma_buffer to fram dma_buffer
+//Copy frame from DMA dma_buffer to frame dma_buffer
 static void cam_task(void *arg)
 {
     int cnt = 0;
