@@ -1126,5 +1126,23 @@ int esp32_camera_ov5640_init(sensor_t *sensor)
     sensor->set_res_raw = set_res_raw;
     sensor->set_pll = _set_pll;
     sensor->set_xclk = set_xclk;
+
+    // Register autofocus function pointers
+#if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
+    sensor->af_is_supported = ov5640_af_is_supported;
+    sensor->af_init = ov5640_af_init;
+    sensor->af_set_mode = ov5640_af_set_mode;
+    sensor->af_trigger = ov5640_af_trigger;
+    sensor->af_get_status = ov5640_af_get_status;
+    sensor->af_set_manual_position = ov5640_af_set_manual_position;
+#else
+    sensor->af_is_supported = NULL;
+    sensor->af_init = NULL;
+    sensor->af_set_mode = NULL;
+    sensor->af_trigger = NULL;
+    sensor->af_get_status = NULL;
+    sensor->af_set_manual_position = NULL;
+#endif
+
     return 0;
 }
