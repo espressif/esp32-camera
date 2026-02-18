@@ -33,6 +33,8 @@
 
 // ================================ CODE ======================================
 
+#include "sdkconfig.h"
+
 #include <esp_log.h>
 #include <esp_system.h>
 #include <nvs_flash.h>
@@ -48,6 +50,10 @@
 #endif
 
 #include "esp_camera.h"
+
+#if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
+#include "esp_camera_af.h"
+#endif
 
 #define BOARD_WROVER_KIT 1
 
@@ -101,6 +107,35 @@ static esp_err_t init_camera(void)
 
     return ESP_OK;
 }
+
+#if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
+static void maybe_init_autofocus(void)
+{
+    sensor_t *s = esp_camera_sensor_get();
+    if (!s) {
+        ESP_LOGW(TAG, "AF: no sensor handle");
+        return;
+    }
+
+    if (!esp_camera_af_is_supported(s)) {
+        ESP_LOGI(TAG, "AF: not supported by this sensor");
+        return;
+    }
+
+    esp_camera_af_config_t af_cfg = {
+        .mode = ESP_CAMERA_AF_MODE_AUTO,
+        .timeout_ms = CONFIG_CAMERA_AF_DEFAULT_TIMEOUT_MS,
+    };
+
+    esp_err_t ret = esp_camera_af_init(s, &af_cfg);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "AF init failed: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    ESP_LOGI(TAG, "AF initialized (AUTO mode)");
+}
+#endif
 #endif
 
 void app_main(void)
@@ -109,6 +144,12 @@ void app_main(void)
     if(ESP_OK != init_camera()) {
         return;
     }
+
+#if defined(CONFIG_CAMERA_AF_SUPPORT) && CONFIG_CAMERA_AF_SUPPORT
+    // Initialize autofocus if configured and supported by the sensor.
+    // In menuconfig: Component config → Camera configuration → Enable autofocus support
+    maybe_init_autofocus();
+#endif
 
     while (1)
     {

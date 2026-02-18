@@ -76,7 +76,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         ret = write_reg(sensor->slv_addr, PIXEL_FMT_REG, 0x03);
         break;
     default:
-        ESP_LOGW(TAG, "unsupport format");
+        ESP_LOGW(TAG, "unsupported format");
         ret = -1;
         break;
     }
@@ -138,7 +138,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = write_reg(sensor->slv_addr, RESOLUTION_REG, 0x09); //320x320
         break;
          default:
-        ESP_LOGW(TAG, "unsupport framesize");
+        ESP_LOGW(TAG, "unsupported framesize");
         ret = -1;
         break;
     }
@@ -401,6 +401,14 @@ int esp32_camera_mega_ccm_init(sensor_t *sensor)
     sensor->set_res_raw = NULL;
     sensor->set_pll = NULL;
     sensor->set_xclk = NULL;
+
+    // No autofocus support
+    sensor->af_is_supported = NULL;
+    sensor->af_init = NULL;
+    sensor->af_set_mode = NULL;
+    sensor->af_trigger = NULL;
+    sensor->af_get_status = NULL;
+    sensor->af_set_manual_position = NULL;
 
     ESP_LOGD(TAG, "MEGA_CCM Attached");
     return 0;

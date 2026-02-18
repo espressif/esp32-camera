@@ -203,7 +203,7 @@ static const char *get_cam_format_name(pixformat_t pixel_format)
     default:
         break;
     }
-    return "UNKNOW";
+    return "UNKNOWN";
 }
 
 static void printf_img_base64(const camera_fb_t *pic)

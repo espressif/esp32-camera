@@ -16,7 +16,7 @@
 #include <string.h>
 #include "soc/i2s_struct.h"
 #include "esp_idf_version.h"
-#if (ESP_IDF_VERSION_MAJOR >= 4) && (ESP_IDF_VERSION_MINOR > 1)
+#if ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(4, 1, 0)
 #include "hal/gpio_ll.h"
 #else
 #include "soc/gpio_periph.h"
@@ -34,7 +34,7 @@ static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
 #include "xclk.h"
 #include "cam_hal.h"
 
-#if (ESP_IDF_VERSION_MAJOR >= 4) && (ESP_IDF_VERSION_MINOR >= 3)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
 #include "esp_rom_gpio.h"
 #endif
 
@@ -48,6 +48,7 @@ static inline int gpio_ll_get_level(gpio_dev_t *hw, int gpio_num)
 #if (ESP_IDF_VERSION_MAJOR > 5)
 #include "soc/dport_access.h"
 #include "soc/dport_reg.h"
+#include "soc/gpio_sig_map.h"
 #endif
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 2) 
@@ -424,9 +425,9 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     size_t dma_half_buffer = dma_half_buffer_max;
     size_t dma_buffer_size = dma_buffer_max;
 
-    // Calculate DMA Node Size so that it's divisable by or divisor of the line width
+    // Calculate DMA Node Size so that it's divisible by or divisor of the line width
     if(line_width >= node_max){
-        // One or more nodes will be requied for one line
+        // One or more nodes will be required for one line
         for(size_t i = node_max; i > 0; i=i-1){
             if ((line_width % i) == 0) {
                 node_size = i;
@@ -450,9 +451,9 @@ static bool ll_cam_calc_rgb_dma(cam_obj_t *cam){
     }
     // Calculate minimum EOF size = max(mode_size, line_size)
     dma_half_buffer_min = node_size * nodes_per_line;
-    // Calculate max EOF size divisable by node size
+    // Calculate max EOF size divisible by node size
     dma_half_buffer = (dma_half_buffer_max / dma_half_buffer_min) * dma_half_buffer_min;
-    // Adjust EOF size so that height will be divisable by the number of lines in each EOF
+    // Adjust EOF size so that height will be divisible by the number of lines in each EOF
     lines_per_half_buffer = dma_half_buffer / line_width;
     while((cam->height % lines_per_half_buffer) != 0){
         dma_half_buffer = dma_half_buffer - dma_half_buffer_min;

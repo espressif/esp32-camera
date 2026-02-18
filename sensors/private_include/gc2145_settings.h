@@ -585,7 +585,7 @@ static const uint16_t gc2145_default_init_regs[][2] = {
     {0x6c, 0xb2}, //R2G_stand5[7:0]  A
     {0x6d, 0xac}, //B2G_stand5[7:0]
     {0x6e, 0x40}, //AWB_skin_weight R2G_stand5[9:8] B2G_stand5[9:8]
-    {0x6f, 0x18}, //AWB_indoor_THD (0x21=17 caculate)
+    {0x6f, 0x18}, //AWB_indoor_THD (0x21=17 calculate)
     {0x73, 0x00}, //AWB_indoor_mode
 
     {0x70, 0x10}, //AWB low luma TH

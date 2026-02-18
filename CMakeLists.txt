@@ -24,11 +24,13 @@ set(include_dirs
 if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
   list(APPEND srcs
     driver/esp_camera.c
+    driver/esp_camera_af.c
     driver/cam_hal.c
     driver/sensor.c
     sensors/ov2640.c
     sensors/ov3660.c
     sensors/ov5640.c
+    sensors/ov5640_af.c
     sensors/ov7725.c
     sensors/ov7670.c
     sensors/nt99141.c
@@ -97,6 +99,9 @@ set(req driver)
 if (idf_version VERSION_GREATER_EQUAL "6.0")
   list(APPEND priv_requires esp_driver_gpio esp_driver_spi esp_driver_i2c)
   list(APPEND req esp_driver_ledc)
+endif()
+if (idf_version VERSION_GREATER_EQUAL "6.1")
+  list(APPEND priv_requires esp_hal_clock)
 endif()
 
 idf_component_register(
