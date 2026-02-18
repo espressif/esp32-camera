@@ -98,10 +98,7 @@ endif()
 set(req driver)
 if (idf_version VERSION_GREATER_EQUAL "6.0")
   list(APPEND priv_requires esp_driver_gpio esp_driver_spi esp_driver_i2c)
-  list(APPEND req esp_driver_ledc)
-endif()
-if (idf_version VERSION_GREATER_EQUAL "6.1")
-  list(APPEND priv_requires esp_hal_clock)
+  list(APPEND req esp_driver_ledc esp_hal_clock)
 endif()
 
 idf_component_register(
