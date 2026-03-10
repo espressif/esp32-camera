@@ -386,16 +386,19 @@ esp_err_t ll_cam_set_pin(cam_obj_t *cam, const camera_config_t *config)
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config->pin_pclk], PIN_FUNC_GPIO);
     gpio_set_direction(config->pin_pclk, GPIO_MODE_INPUT);
     gpio_set_pull_mode(config->pin_pclk, GPIO_FLOATING);
+    gpio_pulldown_en(config->pin_pclk);
     gpio_matrix_in(config->pin_pclk, CAM_PCLK_IDX, false);
 
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config->pin_vsync], PIN_FUNC_GPIO);
     gpio_set_direction(config->pin_vsync, GPIO_MODE_INPUT);
     gpio_set_pull_mode(config->pin_vsync, GPIO_FLOATING);
+    gpio_pulldown_en(config->pin_vsync);
     gpio_matrix_in(config->pin_vsync, CAM_V_SYNC_IDX, cam->vsync_invert);
 
     PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config->pin_href], PIN_FUNC_GPIO);
     gpio_set_direction(config->pin_href, GPIO_MODE_INPUT);
     gpio_set_pull_mode(config->pin_href, GPIO_FLOATING);
+    gpio_pulldown_en(config->pin_href);
     gpio_matrix_in(config->pin_href, CAM_H_ENABLE_IDX, false);
 
     int data_pins[8] = {

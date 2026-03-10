@@ -279,10 +279,16 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
                 /* These values from Omnivision */
                 ret = ov7670_frame_control(sensor, 158, 14, 12, 490);
             }
-        break; 
+        break;
+
+        case FRAMESIZE_224X224:
+            if( (ret = ov7670_write_array(sensor, ov7670_qvga)) == 0 ) {
+                ret = ov7670_frame_control(sensor, 206, 46, 18, 466);
+            }
+        break;
 
         default:
-            ret = -1;   
+            ret = -1;
     }
 
     vTaskDelay(30 / portTICK_PERIOD_MS);
@@ -328,7 +334,10 @@ static int set_whitebal(sensor_t *sensor, int enable)
     reg = COM8_SET_AWB(reg, enable);
 
     // Write back register COM8
-    return SCCB_Write(sensor->slv_addr, COM8, reg);
+    int ret = SCCB_Write(sensor->slv_addr, COM8, reg);
+    if (ret == 0)
+        sensor->status.awb = enable;
+    return ret;
 }
 
 static int set_gain_ctrl(sensor_t *sensor, int enable)
@@ -379,6 +388,52 @@ static int set_vflip(sensor_t *sensor, int enable)
     return SCCB_Write(sensor->slv_addr, MVFP, reg);
 }
 
+static int set_ae_level(sensor_t *sensor, int level)
+{
+    // AEC target value (register AEW = upper bound, AEB = lower bound)
+    int ret = SCCB_Write(sensor->slv_addr, AEW, level & 0xFF);
+    return ret;
+}
+
+static int get_ae_level(sensor_t *sensor)
+{
+    return SCCB_Read(sensor->slv_addr, AEW);
+}
+
+static int set_agc_gain(sensor_t *sensor, int gain)
+{
+    // GAIN register [7:0] = gain value
+    // COM9[6:4] = gain ceiling
+    int ret = SCCB_Write(sensor->slv_addr, GAIN, gain & 0xFF);
+    return ret;
+}
+
+static int get_agc_gain(sensor_t *sensor)
+{
+    return SCCB_Read(sensor->slv_addr, GAIN);
+}
+
+static int set_awb_gain(sensor_t *sensor, int gain)
+{
+    // Manual AWB gain via BLUE and RED channel registers
+    int ret = SCCB_Write(sensor->slv_addr, BLUE, (gain >> 8) & 0xFF);
+    ret |= SCCB_Write(sensor->slv_addr, RED, gain & 0xFF);
+    return ret;
+}
+
+static int set_gainceiling(sensor_t *sensor, gainceiling_t val) {
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM9);
+    return SCCB_Write(sensor->slv_addr, COM9, (reg & 0x8F) | ((val & 0x07) << 4));
+}
+
+static int set_exposure_czone(sensor_t *sensor, int min, int max) {
+    return SCCB_Write(sensor->slv_addr, AEW, max & 0xFF) | SCCB_Write(sensor->slv_addr, AEB, min & 0xFF);
+}
+
+static int set_exposure_szone(sensor_t *sensor, int min, int max) {
+    return SCCB_Write(sensor->slv_addr, VPT, ((max & 0x0F) << 4) | (min & 0x0F));
+}
+
 static int init_status(sensor_t *sensor)
 {
     sensor->status.awb = 0;
@@ -391,7 +446,6 @@ static int init_status(sensor_t *sensor)
 }
 
 static int set_dummy(sensor_t *sensor, int val){ return -1; }
-static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1; }
 
 int esp32_camera_ov7670_detect(int slv_addr, sensor_id_t *id)
 {
@@ -425,21 +479,27 @@ int esp32_camera_ov7670_init(sensor_t *sensor)
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
 
-    //not supported
-    sensor->set_brightness= set_dummy;
-    sensor->set_saturation= set_dummy;
+    // Implemented controls
+    sensor->set_ae_level = set_ae_level;
+    sensor->set_agc_gain = set_agc_gain;
+    sensor->set_awb_gain = set_awb_gain;
+    sensor->set_gainceiling = set_gainceiling;
+    sensor->get_agc_gain = get_agc_gain;
+    sensor->get_ae_level = get_ae_level;
+    sensor->set_exposure_czone = set_exposure_czone;
+    sensor->set_exposure_szone = set_exposure_szone;
+
+    // Not supported
+    sensor->set_brightness = set_dummy;
+    sensor->set_saturation = set_dummy;
     sensor->set_quality = set_dummy;
-    sensor->set_gainceiling = set_gainceiling_dummy;
     sensor->set_aec2 = set_dummy;
     sensor->set_aec_value = set_dummy;
     sensor->set_special_effect = set_dummy;
     sensor->set_wb_mode = set_dummy;
-    sensor->set_ae_level = set_dummy;
     sensor->set_dcw = set_dummy;
     sensor->set_bpc = set_dummy;
     sensor->set_wpc = set_dummy;
-    sensor->set_awb_gain = set_dummy;
-    sensor->set_agc_gain = set_dummy;
     sensor->set_raw_gma = set_dummy;
     sensor->set_lenc = set_dummy;
     sensor->set_sharpness = set_dummy;

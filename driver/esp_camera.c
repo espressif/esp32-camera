@@ -332,6 +332,7 @@ esp_err_t esp_camera_init(const camera_config_t *config)
         ESP_LOGE(TAG, "Camera config failed with error 0x%x", err);
         goto fail;
     }
+    cam_set_sensor(&s_state->sensor);
 
     s_state->sensor.status.framesize = frame_size;
     s_state->sensor.pixformat = pix_format;

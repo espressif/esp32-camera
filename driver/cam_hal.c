@@ -55,6 +55,7 @@
 
 static const char *TAG = "cam_hal";
 static cam_obj_t *cam_obj = NULL;
+static sensor_t *sensor_obj = NULL;
 #if defined(CONFIG_CAMERA_PSRAM_DMA)
 #define CAMERA_PSRAM_DMA_ENABLED CONFIG_CAMERA_PSRAM_DMA
 #else
@@ -241,6 +242,11 @@ static bool cam_start_frame(int * frame_pos)
             uint64_t us = (uint64_t)esp_timer_get_time();
             cam_obj->frames[*frame_pos].fb.timestamp.tv_sec = us / 1000000UL;
             cam_obj->frames[*frame_pos].fb.timestamp.tv_usec = us % 1000000UL;
+            if (sensor_obj != NULL)
+            {
+                cam_obj->frames[*frame_pos].fb.gain = sensor_obj->get_agc_gain(sensor_obj);
+                cam_obj->frames[*frame_pos].fb.exposure = sensor_obj->get_ae_level(sensor_obj);
+            }
             return true;
         }
     }
@@ -267,6 +273,7 @@ static void cam_task(void *arg)
 {
     int cnt = 0;
     int frame_pos = 0;
+    bool skip_frame = false;
     cam_obj->state = CAM_STATE_IDLE;
     cam_event_t cam_event = 0;
 
@@ -369,6 +376,18 @@ static void cam_task(void *arg)
                 } else if (cam_event == CAM_VSYNC_EVENT) {
                     //DBG_PIN_SET(1);
                     ll_cam_stop(cam_obj);
+
+                    skip_frame = !skip_frame;
+                    if (skip_frame) {
+                        // Discard this frame, start capturing the next one
+                        if(!cam_start_frame(&frame_pos)){
+                            cam_obj->state = CAM_STATE_IDLE;
+                        } else {
+                            cam_obj->frames[frame_pos].fb.len = 0;
+                        }
+                        cnt = 0;
+                        break;
+                    }
 
                     if (cnt || !cam_obj->jpeg_mode || cam_obj->psram_mode) {
                         if (cam_obj->jpeg_mode) {
@@ -562,6 +581,11 @@ err:
     free(cam_obj);
     cam_obj = NULL;
     return ESP_FAIL;
+}
+
+void cam_set_sensor(sensor_t *sensor)
+{
+    sensor_obj = sensor;
 }
 
 esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint16_t sensor_pid)

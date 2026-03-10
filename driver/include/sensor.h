@@ -97,6 +97,7 @@ typedef enum {
     FRAMESIZE_128X128,    // 128x128
     FRAMESIZE_QCIF,     // 176x144
     FRAMESIZE_HQVGA,    // 240x176
+    FRAMESIZE_224X224,  // 224x224
     FRAMESIZE_240X240,  // 240x240
     FRAMESIZE_QVGA,     // 320x240
     FRAMESIZE_320X320,  // 320x320
@@ -246,6 +247,12 @@ typedef struct _sensor {
     int  (*set_awb_gain)        (sensor_t *sensor, int enable);
     int  (*set_agc_gain)        (sensor_t *sensor, int gain);
     int  (*set_aec_value)       (sensor_t *sensor, int gain);
+
+    int  (*get_agc_gain)        (sensor_t *sensor);
+    int  (*get_ae_level)        (sensor_t *sensor);
+
+    int  (*set_exposure_czone)  (sensor_t *sensor, int min, int max);
+    int  (*set_exposure_szone)  (sensor_t *sensor, int min, int max);
 
     int  (*set_special_effect)  (sensor_t *sensor, int effect);
     int  (*set_wb_mode)         (sensor_t *sensor, int mode);

@@ -167,6 +167,8 @@ typedef struct {
     size_t height;              /*!< Height of the buffer in pixels */
     pixformat_t format;         /*!< Format of the pixel data */
     struct timeval timestamp;   /*!< Timestamp since boot of the first DMA buffer of the frame */
+    uint16_t gain;              /*!< Sensor gain at time of capture */
+    uint16_t exposure;          /*!< Sensor exposure at time of capture */
 } camera_fb_t;
 
 #define ESP_ERR_CAMERA_BASE 0x20000

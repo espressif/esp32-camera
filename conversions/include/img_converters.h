@@ -40,7 +40,7 @@ typedef size_t (* jpg_out_cb)(void * arg, size_t index, const void* data, size_t
  *
  * @return true on success
  */
-bool fmt2jpg_cb(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpg_out_cb cb, void * arg);
+esp_err_t fmt2jpg_cb(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpg_out_cb cb, void * arg);
 
 /**
  * @brief Convert camera frame buffer to JPEG
@@ -50,12 +50,12 @@ bool fmt2jpg_cb(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, p
  * @param cp        Callback to be called to write the bytes of the output JPEG
  * @param arg       Pointer to be passed to the callback
  *
- * @return true on success
+ * @return ESP_OK on success
  */
-bool frame2jpg_cb(camera_fb_t * fb, uint8_t quality, jpg_out_cb cb, void * arg);
+esp_err_t frame2jpg_cb(camera_fb_t * fb, uint8_t quality, jpg_out_cb cb, void * arg);
 
 /**
- * @brief Convert image buffer to JPEG buffer
+ * @brief Convert image buffer to JPEG in caller-provided buffer
  *
  * @param src       Source buffer in RGB565, RGB888, YUYV or GRAYSCALE format
  * @param src_len   Length in bytes of the source buffer
@@ -63,25 +63,25 @@ bool frame2jpg_cb(camera_fb_t * fb, uint8_t quality, jpg_out_cb cb, void * arg);
  * @param height    Height in pixels of the source image
  * @param format    Format of the source image
  * @param quality   JPEG quality of the resulting image
- * @param out       Pointer to be populated with the address of the resulting buffer.
- *                  You MUST free the pointer once you are done with it.
- * @param out_len   Pointer to be populated with the length of the output buffer
+ * @param out       Caller-provided output buffer
+ * @param out_len   On input: buffer capacity. On success: actual JPEG size.
+ *                  On ESP_ERR_INVALID_SIZE: suggested new buffer size.
  *
- * @return true on success
+ * @return ESP_OK on success, ESP_ERR_INVALID_SIZE if buffer too small
  */
-bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, uint8_t ** out, size_t * out_len);
+esp_err_t fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, uint8_t * out, size_t * out_len);
 
 /**
- * @brief Convert camera frame buffer to JPEG buffer
+ * @brief Convert camera frame buffer to JPEG in caller-provided buffer
  *
  * @param fb        Source camera frame buffer
  * @param quality   JPEG quality of the resulting image
- * @param out       Pointer to be populated with the address of the resulting buffer
- * @param out_len   Pointer to be populated with the length of the output buffer
+ * @param out       Caller-provided output buffer
+ * @param out_len   On input: buffer capacity. On success: actual JPEG size.
  *
- * @return true on success
+ * @return ESP_OK on success, ESP_ERR_INVALID_SIZE if buffer too small
  */
-bool frame2jpg(camera_fb_t * fb, uint8_t quality, uint8_t ** out, size_t * out_len);
+esp_err_t frame2jpg(camera_fb_t * fb, uint8_t quality, uint8_t * out, size_t * out_len);
 
 /**
  * @brief Convert image buffer to BMP buffer

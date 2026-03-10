@@ -33,20 +33,6 @@ static const char* TAG = "to_jpg";
 static jpge::subsampling_t default_subsampling = jpge::H2V2;
 static bool rgb565_big_endian = true;
 
-static void *_malloc(size_t size)
-{
-    void * res = malloc(size);
-    if(res) {
-        return res;
-    }
-
-    // check if SPIRAM is enabled and is allocatable
-#if ((CONFIG_SPIRAM || CONFIG_SPIRAM_SUPPORT) && (CONFIG_SPIRAM_USE_CAPS_ALLOC || CONFIG_SPIRAM_USE_MALLOC))
-    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-#endif
-    return NULL;
-}
-
 static IRAM_ATTR void convert_line_format(uint8_t * src, pixformat_t format, uint8_t * dst, size_t width, size_t in_channels, size_t line)
 {
     int i=0, o=0, l=0;
@@ -98,7 +84,7 @@ static IRAM_ATTR void convert_line_format(uint8_t * src, pixformat_t format, uin
     }
 }
 
-bool convert_image(uint8_t *src, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpge::output_stream *dst_stream)
+esp_err_t convert_image(uint8_t *src, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpge::output_stream *dst_stream)
 {
     int num_channels = 3;
     jpge::subsampling_t subsampling = default_subsampling;
@@ -122,31 +108,31 @@ bool convert_image(uint8_t *src, uint16_t width, uint16_t height, pixformat_t fo
 
     if (!dst_image.init(dst_stream, width, height, num_channels, comp_params)) {
         ESP_LOGE(TAG, "JPG encoder init failed");
-        return false;
+        return ESP_FAIL;
     }
 
-    uint8_t* line = (uint8_t*)_malloc(width * num_channels);
+    uint8_t* line = (uint8_t*)malloc(width * num_channels);
     if(!line) {
         ESP_LOGE(TAG, "Scan line malloc failed");
-        return false;
+        return ESP_ERR_NO_MEM;
     }
 
     for (int i = 0; i < height; i++) {
         convert_line_format(src, format, line, width, num_channels, i);
         if (!dst_image.process_scanline(line)) {
-            ESP_LOGE(TAG, "JPG process line %u failed", i);
+            ESP_LOGW(TAG, "JPG process line %u failed", i);
             free(line);
-            return false;
+            return ESP_ERR_INVALID_SIZE;
         }
     }
     free(line);
 
     if (!dst_image.process_scanline(NULL)) {
-        ESP_LOGE(TAG, "JPG image finish failed");
-        return false;
+        ESP_LOGW(TAG, "JPG image finish failed");
+        return ESP_ERR_INVALID_SIZE;
     }
     dst_image.deinit();
-    return true;
+    return ESP_OK;
 }
 
 class callback_stream : public jpge::output_stream {
@@ -169,13 +155,13 @@ public:
     }
 };
 
-bool fmt2jpg_cb(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpg_out_cb cb, void * arg)
+esp_err_t fmt2jpg_cb(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, jpg_out_cb cb, void * arg)
 {
     callback_stream dst_stream(cb, arg);
     return convert_image(src, width, height, format, quality, &dst_stream);
 }
 
-bool frame2jpg_cb(camera_fb_t * fb, uint8_t quality, jpg_out_cb cb, void * arg)
+esp_err_t frame2jpg_cb(camera_fb_t * fb, uint8_t quality, jpg_out_cb cb, void * arg)
 {
     return fmt2jpg_cb(fb->buf, fb->len, fb->width, fb->height, fb->format, quality, cb, arg);
 }
@@ -201,6 +187,7 @@ public:
         if ((size_t)len > (max_len - index)) {
             //ESP_LOGW(TAG, "JPG output overflow: %d bytes (%d,%d,%d)", len - (max_len - index), len, index, max_len);
             len = max_len - index;
+            return false;
         }
         if (len) {
             memcpy(out_buf + index, pBuf, len);
@@ -215,31 +202,24 @@ public:
     }
 };
 
-bool fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, uint8_t ** out, size_t * out_len)
+esp_err_t fmt2jpg(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t quality, uint8_t * out, size_t * out_len)
 {
-    //todo: allocate proper buffer for holding JPEG data
-    //this should be enough for CIF frame size
-    int jpg_buf_len = 128*1024;
+    memory_stream dst_stream(out, *out_len);
 
+    esp_err_t conv_res = convert_image(src, width, height, format, quality, &dst_stream);
 
-    uint8_t * jpg_buf = (uint8_t *)_malloc(jpg_buf_len);
-    if(jpg_buf == NULL) {
-        ESP_LOGE(TAG, "JPG buffer malloc failed");
-        return false;
-    }
-    memory_stream dst_stream(jpg_buf, jpg_buf_len);
-
-    if(!convert_image(src, width, height, format, quality, &dst_stream)) {
-        free(jpg_buf);
-        return false;
+    if (conv_res == ESP_ERR_INVALID_SIZE) {
+        *out_len = *out_len + 1000;
     }
 
-    *out = jpg_buf;
-    *out_len = dst_stream.get_size();
-    return true;
+    if (conv_res == ESP_OK) {
+        *out_len = dst_stream.get_size();
+    }
+
+    return conv_res;
 }
 
-bool frame2jpg(camera_fb_t * fb, uint8_t quality, uint8_t ** out, size_t * out_len)
+esp_err_t frame2jpg(camera_fb_t * fb, uint8_t quality, uint8_t * out, size_t * out_len)
 {
     return fmt2jpg(fb->buf, fb->len, fb->width, fb->height, fb->format, quality, out, out_len);
 }
