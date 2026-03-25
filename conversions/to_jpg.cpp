@@ -188,7 +188,7 @@ protected:
     size_t max_len, index;
 
 public:
-    memory_stream(void *pBuf, uint buf_size) : out_buf(static_cast<uint8_t*>(pBuf)), max_len(buf_size), index(0) { }
+    memory_stream(void *pBuf, size_t buf_size) : out_buf(static_cast<uint8_t*>(pBuf)), max_len(buf_size), index(0) { }
 
     virtual ~memory_stream() { }
 
