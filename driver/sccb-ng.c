@@ -243,7 +243,7 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SCCB_Read Failed addr:0x%02x, reg:0x%02x, ret:%d", slv_addr, reg, ret);
     }
-    ESP_LOGW(TAG, "read OK");
+    ESP_LOGD(TAG, "read OK");
     return rx_buffer[0];
 }
 
