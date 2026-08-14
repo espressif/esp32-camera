@@ -461,6 +461,7 @@ int esp32_camera_hm0360_init(sensor_t *sensor)
     sensor->set_dcw = set_dummy;
     sensor->set_bpc = set_dummy;
     sensor->set_wpc = set_dummy;
+    sensor->set_awb_gain = set_dummy;
     sensor->set_agc_gain = set_dummy;
     sensor->set_raw_gma = set_dummy;
     sensor->set_lenc = set_dummy;
