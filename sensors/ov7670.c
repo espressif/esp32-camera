@@ -426,8 +426,9 @@ int esp32_camera_ov7670_init(sensor_t *sensor)
     sensor->set_vflip = set_vflip;
 
     //not supported
-    sensor->set_brightness= set_dummy;
-    sensor->set_saturation= set_dummy;
+	sensor->set_contrast = set_dummy;
+    sensor->set_brightness = set_dummy;
+    sensor->set_saturation = set_dummy;
     sensor->set_quality = set_dummy;
     sensor->set_gainceiling = set_gainceiling_dummy;
     sensor->set_aec2 = set_dummy;
