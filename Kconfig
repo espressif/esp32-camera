@@ -35,6 +35,13 @@ menu "Camera configuration"
             Enable this option if you want to use the OV3360.
             Disable this option to save memory.
 
+    config OV3640_SUPPORT
+        bool "Support OV3640 3MP"
+        default y
+        help
+            Enable this option if you want to use the OV3640.
+            Disable this option to save memory.
+
     config OV5640_SUPPORT
         bool "Support OV5640 5MP"
         default y

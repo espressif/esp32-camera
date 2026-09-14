@@ -36,6 +36,9 @@
 #if CONFIG_OV3660_SUPPORT
 #include "ov3660.h"
 #endif
+#if CONFIG_OV3640_SUPPORT
+#include "ov3640.h"
+#endif
 #if CONFIG_OV5640_SUPPORT
 #include "ov5640.h"
 #endif
@@ -119,6 +122,9 @@ static const sensor_func_t g_sensors[] = {
 #endif
 #if CONFIG_OV2640_SUPPORT
     {esp32_camera_ov2640_detect, esp32_camera_ov2640_init},
+#endif
+#if CONFIG_OV3640_SUPPORT
+    {esp32_camera_ov3640_detect, esp32_camera_ov3640_init},
 #endif
 #if CONFIG_OV3660_SUPPORT
     {esp32_camera_ov3660_detect, esp32_camera_ov3660_init},
