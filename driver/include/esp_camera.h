@@ -39,7 +39,8 @@
         .frame_size     = FRAMESIZE_SVGA,
         .jpeg_quality   = 10,
         .fb_count       = 2,
-        .grab_mode      = CAMERA_GRAB_WHEN_EMPTY
+        .grab_mode      = CAMERA_GRAB_WHEN_EMPTY,
+        .jpeg_buffer_size = 0
     };
 
     esp_err_t camera_example_init(){
@@ -155,6 +156,7 @@ typedef struct {
 #endif
 
     int sccb_i2c_port;              /*!< If pin_sccb_sda is -1, use the already configured I2C bus by number */
+    size_t jpeg_buffer_size;        /*!< Size of the JPEG frame buffer in bytes. Set to 0 to use the default size */
 } camera_config_t;
 
 /**

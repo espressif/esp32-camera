@@ -146,8 +146,20 @@ static camera_config_t camera_config = {
 
     .jpeg_quality = 12, //0-63, for OV series camera sensors, lower number means higher quality
     .fb_count = 1, //When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
-    .grab_mode = CAMERA_GRAB_WHEN_EMPTY//CAMERA_GRAB_LATEST. Sets when buffers should be filled
+    .grab_mode = CAMERA_GRAB_WHEN_EMPTY,//CAMERA_GRAB_LATEST. Sets when buffers should be filled
+    .jpeg_buffer_size = 0//Set to a custom size in bytes for JPEG mode, or 0 to use the default size
 };
+
+/*
+ * The JPEG frame buffer size can be set independently of frame_size, for
+ * example:
+ *
+ *     .frame_size = FRAMESIZE_UXGA,
+ *     .jpeg_buffer_size = 128 * 1024,
+ *
+ * Set jpeg_buffer_size to 0 to use the default size derived from frame_size or
+ * CONFIG_CAMERA_JPEG_MODE_FRAME_SIZE.
+ */
 
 esp_err_t camera_init(){
     //power up the camera if PWDN pin is defined
