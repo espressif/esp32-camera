@@ -526,6 +526,11 @@ int esp32_camera_bf3005_init(sensor_t *sensor)
     sensor->set_special_effect = set_dummy;
     sensor->set_wb_mode = set_dummy;
     sensor->set_ae_level = set_dummy;
+    sensor->set_aec2 = set_dummy;
+    sensor->set_aec_value = set_dummy;
+    sensor->set_dcw = set_dummy;
+    sensor->set_bpc = set_dummy;
+    sensor->set_wpc = set_dummy;
     sensor->set_gainceiling = set_gainceiling_dummy;
 
 
