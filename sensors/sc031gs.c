@@ -283,6 +283,7 @@ static int init_status(sensor_t *sensor)
 }
 
 static int set_dummy(sensor_t *sensor, int val){ return -1; }
+static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1; }
 
 static int set_xclk(sensor_t *sensor, int timer, int xclk)
 {
@@ -324,13 +325,23 @@ int esp32_camera_sc031gs_init(sensor_t *sensor)
     sensor->set_special_effect = set_special_effect;
     
     //not supported
+    sensor->set_brightness = set_dummy;
+    sensor->set_gainceiling = set_gainceiling_dummy;
+    sensor->set_whitebal = set_dummy;
+    sensor->set_gain_ctrl = set_dummy;
+    sensor->set_exposure_ctrl = set_dummy;
+    sensor->set_aec2 = set_dummy;
+    sensor->set_dcw = set_dummy;
+    sensor->set_bpc = set_dummy;
+    sensor->set_wpc = set_dummy;
+    sensor->set_raw_gma = set_dummy;
+    sensor->set_lenc = set_dummy;
     sensor->set_awb_gain = set_dummy;
     sensor->set_contrast = set_dummy;
     sensor->set_sharpness = set_dummy;
     sensor->set_saturation= set_dummy;
     sensor->set_denoise = set_dummy;
     sensor->set_quality = set_dummy;
-    sensor->set_special_effect = set_dummy;
     sensor->set_wb_mode = set_dummy;
     sensor->set_ae_level = set_dummy;
     

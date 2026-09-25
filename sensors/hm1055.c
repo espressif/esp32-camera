@@ -792,6 +792,9 @@ int esp32_camera_hm1055_detect(int slv_addr, sensor_id_t *id)
     return 0;
 }
 
+static int set_dummy(sensor_t *sensor, int val){ return -1; }
+static int set_gainceiling_dummy(sensor_t *sensor, gainceiling_t val){ return -1; }
+
 int esp32_camera_hm1055_init(sensor_t *sensor)
 {
     sensor->reset = reset;
@@ -801,7 +804,7 @@ int esp32_camera_hm1055_init(sensor_t *sensor)
     sensor->set_brightness = set_brightness;
     sensor->set_saturation = set_saturation;
     sensor->set_sharpness = set_sharpness;
-    sensor->set_gainceiling = NULL;
+    sensor->set_gainceiling = set_gainceiling_dummy;
     sensor->set_quality = set_quality;
     sensor->set_colorbar = set_colorbar;
     sensor->set_gain_ctrl = set_gain_ctrl;
@@ -810,14 +813,15 @@ int esp32_camera_hm1055_init(sensor_t *sensor)
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
     sensor->init_status = init_status;
-    sensor->set_aec2 = NULL;
+    sensor->set_aec2 = set_dummy;
     sensor->set_aec_value = set_aec_value;
-    sensor->set_special_effect = NULL;
-    sensor->set_wb_mode = NULL;
+    sensor->set_special_effect = set_dummy;
+    sensor->set_wb_mode = set_dummy;
     sensor->set_ae_level = set_ae_level;
-    sensor->set_dcw = NULL;
-    sensor->set_bpc = NULL;
-    sensor->set_wpc = NULL;
+    sensor->set_dcw = set_dummy;
+    sensor->set_bpc = set_dummy;
+    sensor->set_wpc = set_dummy;
+    sensor->set_awb_gain = set_dummy;
     sensor->set_agc_gain = set_agc_gain;
     sensor->set_raw_gma = set_raw_gma_dsp;
     sensor->set_lenc = set_lenc_dsp;
