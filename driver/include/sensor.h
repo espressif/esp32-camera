@@ -20,6 +20,7 @@ typedef enum {
     OV7725_PID = 0x77,
     OV2640_PID = 0x26,
     OV3660_PID = 0x3660,
+    OV3640_PID = 0x3640,
     OV5640_PID = 0x5640,
     OV7670_PID = 0x76,
     NT99141_PID = 0x1410,
@@ -40,6 +41,7 @@ typedef enum {
     CAMERA_OV7725,
     CAMERA_OV2640,
     CAMERA_OV3660,
+    CAMERA_OV3640,
     CAMERA_OV5640,
     CAMERA_OV7670,
     CAMERA_NT99141,
@@ -62,6 +64,7 @@ typedef enum {
     OV2640_SCCB_ADDR   = 0x30,// 0x60 >> 1
     OV5640_SCCB_ADDR   = 0x3C,// 0x78 >> 1
     OV3660_SCCB_ADDR   = 0x3C,// 0x78 >> 1
+    OV3640_SCCB_ADDR   = 0x3C,// 0x78 >> 1
     OV7725_SCCB_ADDR   = 0x21,// 0x42 >> 1
     OV7670_SCCB_ADDR   = 0x21,// 0x42 >> 1
     NT99141_SCCB_ADDR  = 0x2A,// 0x54 >> 1
