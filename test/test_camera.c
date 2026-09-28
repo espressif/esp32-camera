@@ -527,6 +527,34 @@ TEST_CASE("Conversions image 480x320 jpeg decode test", "[camera]")
     img_jpeg_decode_test(2, 0);
 }
 
+TEST_CASE("Conversions bounded jpeg decode respects output size", "[camera]")
+{
+    extern const uint8_t img_start[] asm("_binary_testimg_jpeg_start");
+    extern const uint8_t img_end[]   asm("_binary_testimg_jpeg_end");
+    const size_t img_len = img_end - img_start;
+    const size_t rgb565_len = 227 * 149 * 2;
+    const size_t rgb888_len = 227 * 149 * 3;
+    const size_t buf_len = rgb888_len + 1;
+
+    uint8_t *buf = heap_caps_malloc(buf_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    TEST_ASSERT_NOT_NULL(buf);
+
+    // One byte short: rejected before anything is written
+    memset(buf, 0xA5, buf_len);
+    TEST_ASSERT_FALSE(jpg2rgb565_bounded(img_start, img_len, buf, rgb565_len - 1, JPEG_IMAGE_SCALE_0));
+    TEST_ASSERT_EACH_EQUAL_UINT8(0xA5, buf, buf_len);
+    TEST_ASSERT_FALSE(fmt2rgb888_bounded(img_start, img_len, PIXFORMAT_JPEG, buf, rgb888_len - 1));
+    TEST_ASSERT_EACH_EQUAL_UINT8(0xA5, buf, buf_len);
+
+    // Exact size: decodes without writing past the end
+    TEST_ASSERT_TRUE(jpg2rgb565_bounded(img_start, img_len, buf, rgb565_len, JPEG_IMAGE_SCALE_0));
+    TEST_ASSERT_EACH_EQUAL_UINT8(0xA5, buf + rgb565_len, buf_len - rgb565_len);
+    TEST_ASSERT_TRUE(fmt2rgb888_bounded(img_start, img_len, PIXFORMAT_JPEG, buf, rgb888_len));
+    TEST_ASSERT_EQUAL_UINT8(0xA5, buf[rgb888_len]);
+
+    heap_caps_free(buf);
+}
+
 TEST_CASE("Camera driver uses an i2c port initialized by other devices test", "[camera]")
 {
     TEST_ESP_OK(i2c_master_init(I2C_MASTER_NUM));

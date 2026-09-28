@@ -117,9 +117,28 @@ bool frame2bmp(camera_fb_t * fb, uint8_t ** out, size_t * out_len);
  * @param format    Format of the source image
  * @param rgb_buf   Pointer to the output buffer (width * height * 3)
  *
+ * @note Writes to rgb_buf are not bounded. For JPEG input the output size comes
+ *       from the image header, so prefer fmt2rgb888_bounded().
+ *
  * @return true on success
  */
 bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf);
+
+/**
+ * @brief Convert image buffer to RGB888 buffer, bounded by the output buffer size
+ *
+ * @param src_buf       Source buffer in JPEG, RGB565, RGB888, YUYV or GRAYSCALE format
+ * @param src_len       Length in bytes of the source buffer
+ * @param format        Format of the source image
+ * @param rgb_buf       Pointer to the output buffer
+ * @param rgb_buf_size  Size in bytes of rgb_buf. For JPEG input it must hold
+ *                      width * height * 3 bytes of the image declared in its header
+ *                      (see esp_jpeg_get_image_info()).
+ *
+ * @return true on success. false if the output would not fit in rgb_buf_size
+ *         bytes (checked before anything is written) or if conversion fails.
+ */
+bool fmt2rgb888_bounded(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf, size_t rgb_buf_size);
 
 // Macros for backwards compatibility
 #define JPG_SCALE_NONE JPEG_IMAGE_SCALE_0
@@ -127,7 +146,37 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
 #define JPG_SCALE_4X   JPEG_IMAGE_SCALE_1_4
 #define JPG_SCALE_8X   JPEG_IMAGE_SCALE_1_8
 #define JPG_SCALE_MAX  JPEG_IMAGE_SCALE_1_8
+
+/**
+ * @brief Decode JPEG to RGB565
+ *
+ * @param src       Source JPEG buffer
+ * @param src_len   Length in bytes of the source buffer
+ * @param out       Pointer to the output buffer
+ * @param scale     Output scale
+ *
+ * @note Writes to out are not bounded; the output size comes from the image
+ *       header. Prefer jpg2rgb565_bounded().
+ *
+ * @return true on success
+ */
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale);
+
+/**
+ * @brief Decode JPEG to RGB565, bounded by the output buffer size
+ *
+ * @param src       Source JPEG buffer
+ * @param src_len   Length in bytes of the source buffer
+ * @param out       Pointer to the output buffer
+ * @param out_size  Size in bytes of out. It must hold (width / N) * (height / N) * 2
+ *                  bytes of the image declared in its header, where N is the scale
+ *                  divisor (see esp_jpeg_get_image_info()).
+ * @param scale     Output scale
+ *
+ * @return true on success. false if the output would not fit in out_size bytes
+ *         (checked before anything is written) or if decoding fails.
+ */
+bool jpg2rgb565_bounded(const uint8_t *src, size_t src_len, uint8_t * out, size_t out_size, esp_jpeg_image_scale_t scale);
 
 /**
  * @brief Chroma subsampling modes for JPEG encoding.

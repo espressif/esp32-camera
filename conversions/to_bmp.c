@@ -61,14 +61,16 @@ static void *_malloc(size_t size)
     return malloc(size);
 }
 
-static bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale)
+// esp_jpeg_decode() fails without writing if the decoded image exceeds out_size
+static bool jpg2rgb(const uint8_t *src, size_t src_len, uint8_t * out, size_t out_size,
+                    esp_jpeg_image_format_t format, esp_jpeg_image_scale_t scale)
 {
     esp_jpeg_image_cfg_t jpeg_cfg = {
         .indata = (uint8_t *)src,
         .indata_size = src_len,
         .outbuf = out,
-        .outbuf_size = UINT32_MAX, // @todo: this is very bold assumption, keeping this like this for now, not to break existing code
-        .out_format = JPEG_IMAGE_FORMAT_RGB888,
+        .outbuf_size = out_size,
+        .out_format = format,
         .out_scale = scale,
         .flags.swap_color_bytes = 0,
         .advanced.working_buffer = work,
@@ -82,26 +84,15 @@ static bool jpg2rgb888(const uint8_t *src, size_t src_len, uint8_t * out, esp_jp
     return true;
 }
 
+bool jpg2rgb565_bounded(const uint8_t *src, size_t src_len, uint8_t * out, size_t out_size, esp_jpeg_image_scale_t scale)
+{
+    return jpg2rgb(src, src_len, out, out_size, JPEG_IMAGE_FORMAT_RGB565, scale);
+}
+
 bool jpg2rgb565(const uint8_t *src, size_t src_len, uint8_t * out, esp_jpeg_image_scale_t scale)
 {
-    esp_jpeg_image_cfg_t jpeg_cfg = {
-        .indata = (uint8_t *)src,
-        .indata_size = src_len,
-        .outbuf = out,
-        .outbuf_size = UINT32_MAX, // @todo: this is very bold assumption, keeping this like this for now, not to break existing code
-        .out_format = JPEG_IMAGE_FORMAT_RGB565,
-        .out_scale = scale,
-        .flags.swap_color_bytes = 0,
-        .advanced.working_buffer = work,
-        .advanced.working_buffer_size = sizeof(work),
-    };
-
-    esp_jpeg_image_output_t output_img = {};
-
-    if(esp_jpeg_decode(&jpeg_cfg, &output_img) != ESP_OK){
-        return false;
-    }
-    return true;
+    // Unbounded for backward compatibility
+    return jpg2rgb565_bounded(src, src_len, out, SIZE_MAX, scale);
 }
 
 bool jpg2bmp(const uint8_t *src, size_t src_len, uint8_t ** out, size_t * out_len)
@@ -171,14 +162,30 @@ fail:
     return ret;
 }
 
-bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf)
+// True if `count` output units of `unit_size` bytes fit in `buf_size` bytes
+static bool rgb_buf_fits(size_t count, size_t unit_size, size_t buf_size)
+{
+    if(count > buf_size / unit_size) {
+        ESP_LOGE(TAG, "RGB888 buffer too small (%u bytes)", (unsigned)buf_size);
+        return false;
+    }
+    return true;
+}
+
+bool fmt2rgb888_bounded(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf, size_t rgb_buf_size)
 {
     int pix_count = 0;
     if(format == PIXFORMAT_JPEG) {
-        return jpg2rgb888(src_buf, src_len, rgb_buf, JPEG_IMAGE_SCALE_0);
+        return jpg2rgb(src_buf, src_len, rgb_buf, rgb_buf_size, JPEG_IMAGE_FORMAT_RGB888, JPEG_IMAGE_SCALE_0);
     } else if(format == PIXFORMAT_RGB888) {
+        if(!rgb_buf_fits(src_len, 1, rgb_buf_size)) {
+            return false;
+        }
         memcpy(rgb_buf, src_buf, src_len);
     } else if(format == PIXFORMAT_RGB565) {
+        if(!rgb_buf_fits(src_len / 2, 3, rgb_buf_size)) {
+            return false;
+        }
         int i;
         uint8_t hb, lb;
         pix_count = src_len / 2;
@@ -190,6 +197,9 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
             *rgb_buf++ = hb & 0xF8;
         }
     } else if(format == PIXFORMAT_GRAYSCALE) {
+        if(!rgb_buf_fits(src_len, 3, rgb_buf_size)) {
+            return false;
+        }
         int i;
         uint8_t b;
         pix_count = src_len;
@@ -200,6 +210,10 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
             *rgb_buf++ = b;
         }
     } else if(format == PIXFORMAT_YUV422) {
+        // 4 input bytes (Y0 U Y1 V) produce 2 RGB888 pixels
+        if(!rgb_buf_fits(src_len / 4, 6, rgb_buf_size)) {
+            return false;
+        }
         pix_count = src_len / 2;
         int i, maxi = pix_count / 2;
         uint8_t y0, y1, u, v;
@@ -222,6 +236,12 @@ bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint
         }
     }
     return true;
+}
+
+bool fmt2rgb888(const uint8_t *src_buf, size_t src_len, pixformat_t format, uint8_t * rgb_buf)
+{
+    // Unbounded for backward compatibility
+    return fmt2rgb888_bounded(src_buf, src_len, format, rgb_buf, SIZE_MAX);
 }
 
 bool fmt2bmp(uint8_t *src, size_t src_len, uint16_t width, uint16_t height, pixformat_t format, uint8_t ** out, size_t * out_len)
