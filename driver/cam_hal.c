@@ -393,6 +393,34 @@ static void cam_task(void *arg)
                                 frame_buffer_event->len = cnt * cam_obj->dma_half_buffer_size;
                             } else {
                                 frame_buffer_event->len = cam_obj->recv_size;
+#if CONFIG_IDF_TARGET_ESP32S3
+                                /* In this mode the DMA writes the frame straight into the frame
+                                 * buffer and the driver never sees the individual transfers:
+                                 * in_suc_eof is not enabled for this combination (see
+                                 * ll_cam_start()), so cnt stays 0 and the transfer count the
+                                 * non-PSRAM path uses to validate a frame does not exist here.
+                                 *
+                                 * What the DMA did write is still visible in the descriptors it
+                                 * was given: the hardware marks a descriptor only once it has
+                                 * been filled completely, so a transfer that stopped early
+                                 * leaves the trailing descriptors empty. Reporting recv_size
+                                 * unconditionally handed such truncated frames to the
+                                 * application as if they were complete, which is silent
+                                 * corruption for the consumer. Check the chain and drop the
+                                 * frame instead: a dropped frame is a visible failure, a
+                                 * truncated one is not. */
+                                size_t written = 0, capacity = 0;
+                                for (uint32_t i = 0; i < cam_obj->dma_node_cnt; i++) {
+                                    written += cam_obj->frames[frame_pos].dma[i].length;
+                                    capacity += cam_obj->frames[frame_pos].dma[i].size;
+                                }
+                                if (written < capacity) {
+                                    static uint16_t warn_psram_short_cnt = 0;
+                                    cam_obj->frames[frame_pos].en = 1;
+                                    CAM_WARN_THROTTLE(warn_psram_short_cnt,
+                                                      "FB-SIZE: incomplete frame (PSRAM), dropped");
+                                }
+#endif
                             }
                         } else if (!cam_obj->jpeg_mode) {
                             if (frame_buffer_event->len != cam_obj->fb_size) {
