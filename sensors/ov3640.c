@@ -441,6 +441,91 @@ static int set_image_options(sensor_t *sensor)
     return ret;
 }
 
+/* OV3640 readout window used when the crop registers read back as garbage
+ * (the datasheet default of 0x3024/0x3025 is 0x1800 = 6144, which cannot be a
+ * real width for a 2048-pixel array). Also matches the scaling input size
+ * SIZE_IN = 2072 x 1548 that sensor_default_regs relies on. */
+#define OV3640_ARRAY_W 2072
+#define OV3640_ARRAY_H 1548
+
+/**
+ * Crop and scale the OV3640 to the requested output size.
+ *
+ * The 0x3800..0x3815 windowing block used by the OV3660 driver does not exist
+ * on this sensor, which is why the size requested by set_framesize() was never
+ * applied. On the OV3640 the pipeline is (datasheet 4.2 and 5.7):
+ *
+ *   crop HS/VS/HW/VH (0x3020..0x3027)
+ *     -> zoom out SIZE_IN (0x335F..0x3361) / SIZE_OUT (0x3362..0x3364)
+ *       -> ISP output 0x3088..0x308B, which is what the DVP port sends out
+ *
+ * Every stage must be smaller than (or equal to) the previous one.
+ *
+ * @param sensor    sensor handle
+ * @param aspect_w  crop width wanted, normally ratio_table.max_width
+ * @param aspect_h  crop height wanted, normally ratio_table.max_height
+ * @param out_w     requested output width
+ * @param out_h     requested output height
+ */
+static int set_window(sensor_t *sensor, uint16_t aspect_w, uint16_t aspect_h,
+                      uint16_t out_w, uint16_t out_h)
+{
+    /* Current readout window; keep the crop inside it so that a wrong guess
+     * can only lose field of view, never pull in pixels outside the array */
+    int r_hs = read_reg16(sensor->slv_addr, OV3640_WIN_HS);
+    int r_vs = read_reg16(sensor->slv_addr, OV3640_WIN_VS);
+    int r_hw = read_reg16(sensor->slv_addr, OV3640_WIN_HW);
+    int r_vh = read_reg16(sensor->slv_addr, OV3640_WIN_VH);
+
+    uint16_t hs = (r_hs > 0 && r_hs < OV3640_ARRAY_W) ? (uint16_t)r_hs : 0;
+    uint16_t vs = (r_vs > 0 && r_vs < OV3640_ARRAY_H) ? (uint16_t)r_vs : 0;
+    uint16_t hw = (r_hw > 0 && r_hw <= OV3640_ARRAY_W - hs) ? (uint16_t)r_hw
+                                                           : (OV3640_ARRAY_W - hs);
+    uint16_t vh = (r_vh > 0 && r_vh <= OV3640_ARRAY_H - vs) ? (uint16_t)r_vh
+                                                           : (OV3640_ARRAY_H - vs);
+
+    uint16_t crop_w = (aspect_w < hw) ? aspect_w : hw;
+    uint16_t crop_h = (aspect_h < vh) ? aspect_h : vh;
+    uint16_t crop_x = hs + (hw - crop_w) / 2;
+    uint16_t crop_y = vs + (vh - crop_h) / 2;
+
+    int ret = write_addr_reg(sensor->slv_addr, OV3640_WIN_HS, crop_x, crop_y)
+        || write_addr_reg(sensor->slv_addr, OV3640_WIN_HW, crop_w, crop_h);
+
+    /* Zoom out: SIZE_OUT stays a hair above the final size so the pipeline has
+     * room to align, but must remain strictly smaller than SIZE_IN */
+    uint16_t scale_w = out_w + 8;
+    uint16_t scale_h = out_h + 4;
+    if (scale_w >= crop_w) {
+        scale_w = (out_w < crop_w) ? out_w : (crop_w - 1);
+    }
+    if (scale_h >= crop_h) {
+        scale_h = (out_h < crop_h) ? out_h : (crop_h - 1);
+    }
+
+    ret = ret
+        || write_reg_bits(sensor->slv_addr, OV3640_DSP_CTRL_2, OV3640_SCALE_EN, 1)
+        || write_reg(sensor->slv_addr, SIZE_IN_MISC, ((crop_h >> 4) & 0x70) | ((crop_w >> 8) & 0x0F))
+        || write_reg(sensor->slv_addr, HSIZE_IN_L, crop_w & 0xFF)
+        || write_reg(sensor->slv_addr, VSIZE_IN_L, crop_h & 0xFF)
+        || write_reg(sensor->slv_addr, SIZE_OUT_MISC, ((scale_h >> 4) & 0x70) | ((scale_w >> 8) & 0x0F))
+        || write_reg(sensor->slv_addr, HSIZE_OUT_L, scale_w & 0xFF)
+        || write_reg(sensor->slv_addr, VSIZE_OUT_L, scale_h & 0xFF)
+        || write_reg(sensor->slv_addr, ISP_XOUT_H, (out_w >> 8) & 0x0F)
+        || write_reg(sensor->slv_addr, ISP_XOUT_L, out_w & 0xFF)
+        || write_reg(sensor->slv_addr, ISP_YOUT_H, (out_h >> 8) & 0x07)
+        || write_reg(sensor->slv_addr, ISP_YOUT_L, out_h & 0xFF);
+
+    if (ret == 0) {
+        ESP_LOGI(TAG, "Crop %u,%u %ux%u (readout %u,%u %ux%u) -> zoom %ux%u -> DVP %ux%u",
+                 crop_x, crop_y, crop_w, crop_h, hs, vs, hw, vh,
+                 scale_w, scale_h, out_w, out_h);
+    } else {
+        ESP_LOGE(TAG, "Setting output size to %ux%u failed", out_w, out_h);
+    }
+    return ret;
+}
+
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret = 0;
@@ -460,20 +545,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     sensor->status.scale = !((w == settings.max_width && h == settings.max_height)
         || (w == (settings.max_width / 2) && h == (settings.max_height / 2)));
 
-    ret  = write_addr_reg(sensor->slv_addr, X_ADDR_ST_H, settings.start_x, settings.start_y)
-        || write_addr_reg(sensor->slv_addr, X_ADDR_END_H, settings.end_x, settings.end_y)
-        || write_addr_reg(sensor->slv_addr, X_OUTPUT_SIZE_H, w, h);
-
+    /* OV3640 does not have the 0x3800..0x3815 windowing/output registers of the
+     * OV3660 this driver was derived from: crop + zoom-out + ISP output size
+     * have to be programmed through their own registers. */
+    ret = set_window(sensor, settings.max_width, settings.max_height, w, h);
     if (ret) {
         goto fail;
-    }
-
-    if (sensor->status.binning) {
-        ret  = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, settings.total_x, (settings.total_y / 2) + 1)
-            || write_addr_reg(sensor->slv_addr, X_OFFSET_H, 8, 2);
-    } else {
-        ret  = write_addr_reg(sensor->slv_addr, X_TOTAL_SIZE_H, settings.total_x, settings.total_y)
-            || write_addr_reg(sensor->slv_addr, X_OFFSET_H, 16, 6);
     }
 
     if (ret == 0) {
