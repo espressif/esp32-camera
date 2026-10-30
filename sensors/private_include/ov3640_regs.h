@@ -200,6 +200,22 @@
 #define ISP_YOUT_H       0x308A // Bit[2:0]: Y_out[10:8]
 #define ISP_YOUT_L       0x308B // Y_out[7:0]
 
+/* System clock (datasheet table 7-1, sheets 2-3). The OV3660/OV5640 PLL
+ * registers this driver inherited (0x303a..0x303d / 0x3824 / 0x460c) do not
+ * exist on the OV3640: 0x303A..0x303D are the AEC metering window (AVS/AHW),
+ * so writing the inherited PLL values there corrupts auto exposure. */
+#define OV3640_PLL_1     0x300E // Bit[5:0]: Rx_PLL, PLLDiv = 64 - Rx_PLL
+#define OV3640_PLL_2     0x300F // Bit[7:6]: FreqDiv, [5:4]: Bit8Div, [3]: bypass,
+                                //          [1:0]: InDiv
+#define OV3640_PLL_3     0x3010 // Bit[7:6]: DvpDiv, [5]: LaneDiv, [4]: SensorDiv,
+                                //          [3:0]: ScaleDiv
+#define OV3640_CLK_CTRL  0x3011 // Bit[7]: freq doubler, [6]: bypass, [5:0]: CLK
+                                //          divider, CLK = XCLK1 / (value + 1)
+#define OV3640_FMT_CTRL  0x3012 // Bit[7]: SRST, [6:4]: array resolution
+                                //          000 QXGA, 001 XGA, 111 SXGA
+#define OV3640_HTS_H     0x3028 // {0x3028, 0x3029}: horizontal total (default 2375)
+#define OV3640_VTS_H     0x302A // {0x302A, 0x302B}: vertical total (default 1568)
+
 #define SCALE_CTRL_1     0x5601 // Bit[6:4]: HDIV RW
                                 //          DCW scale times
                                 //          000: DCW 1 time

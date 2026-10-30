@@ -486,6 +486,17 @@ static int set_window(sensor_t *sensor, uint16_t aspect_w, uint16_t aspect_h,
 
     uint16_t crop_w = (aspect_w < hw) ? aspect_w : hw;
     uint16_t crop_h = (aspect_h < vh) ? aspect_h : vh;
+
+    /* The readout window can be narrower or shorter than the requested aspect
+     * ratio, and clamping only one dimension makes the zoom block stretch the
+     * image. Shrink the other dimension to keep the ratio, e.g. a 4:3 crop of
+     * 2048x1536 inside a 1787 wide window becomes 1787x1340. */
+    if ((uint32_t)crop_w * aspect_h > (uint32_t)crop_h * aspect_w) {
+        crop_w = (uint16_t)((uint32_t)crop_h * aspect_w / aspect_h);
+    } else if ((uint32_t)crop_w * aspect_h < (uint32_t)crop_h * aspect_w) {
+        crop_h = (uint16_t)((uint32_t)crop_w * aspect_h / aspect_w);
+    }
+
     uint16_t crop_x = hs + (hw - crop_w) / 2;
     uint16_t crop_y = vs + (vh - crop_h) / 2;
 
@@ -548,7 +559,14 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     /* OV3640 does not have the 0x3800..0x3815 windowing/output registers of the
      * OV3660 this driver was derived from: crop + zoom-out + ISP output size
      * have to be programmed through their own registers. */
-    ret = set_window(sensor, settings.max_width, settings.max_height, w, h);
+    /* 0x3012[6:4] selects the array readout mode: 000 QXGA, 001 XGA (2x2
+     * subsampled), 111 SXGA. Only the XGA mode shortens the readout, but it
+     * also changes the readout window and the Bayer phase, so it needs the
+     * full vendor XGA init sequence. Stay on the full QXGA array here. */
+    ret = write_reg(sensor->slv_addr, OV3640_FMT_CTRL, 0x00);
+    if (ret == 0) {
+        ret = set_window(sensor, settings.max_width, settings.max_height, w, h);
+    }
     if (ret) {
         goto fail;
     }
@@ -574,16 +592,25 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = set_pll(sensor, false, 30, 1, 3, false, 0, true, 10);
         }
     } else {
-        //tuned for 16MHz XCLK and 8MHz PCLK
-        if (framesize > FRAMESIZE_HVGA) {
-            //8MHz SYSCLK and 8MHz PCLK (4.44 FPS)
-            ret = set_pll(sensor, false, 4, 1, 0, false, 2, true, 2);
-        } else if (framesize >= FRAMESIZE_QVGA) {
-            //16MHz SYSCLK and 8MHz PCLK (10.25 FPS)
-            ret = set_pll(sensor, false, 8, 1, 0, false, 2, true, 4);
-        } else {
-            //32MHz SYSCLK and 8MHz PCLK (17.77 FPS)
-            ret = set_pll(sensor, false, 8, 1, 0, false, 0, true, 8);
+        /* OV3640 has none of the OV3660 PLL registers this driver inherited:
+         * 0x303a..0x303d are the AEC metering window (AVS/AHW) on this part, so
+         * the old set_pll() calls were silently corrupting auto exposure on
+         * every frame size change, while 0x3824 / 0x460c do not exist at all.
+         * The real clock lives in:
+         *   0x300e[5:0] Rx_PLL     -> PLLDiv = 64 - Rx_PLL
+         *   0x300f[7:6] FreqDiv, [5:4] Bit8Div, [3] bypass, [1:0] InDiv
+         *   0x3010[7:6] DvpDiv, [5] LaneDiv, [4] SensorDiv, [3:0] ScaleDiv
+         * The frame time is HTS (0x3028) x VTS (0x302a) / core clock and does
+         * not depend on the output size, so cropping cannot raise the frame
+         * rate. Measured with a 20MHz XCLK: frame rate ~= 0.414 x PLLDiv, i.e.
+         * PLLDiv 14 -> 5.8 fps and PLLDiv 7 -> 2.9 fps. Keep the vendor default
+         * (PLLDiv 14); larger values scale the DVP clock with it, which some
+         * hosts cannot sample reliably. */
+        ret = write_reg(sensor->slv_addr, OV3640_PLL_1, 0x32)
+            || write_reg(sensor->slv_addr, OV3640_PLL_2, 0x21)
+            || write_reg(sensor->slv_addr, OV3640_PLL_3, 0x20);
+        if (ret == 0) {
+            ESP_LOGD(TAG, "Clock: 0x300e=0x32 (PLLDiv=14) 0x300f=0x21 0x3010=0x20");
         }
     }
 
