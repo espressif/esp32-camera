@@ -783,6 +783,17 @@ camera_fb_t *cam_take(TickType_t timeout)
                 if (off >= 0) {
                     offset_e = dma_buffer->len - probe_len + off;
                 }
+                if (offset_e < 0) {
+                    /* Fallback for sensors that pad the frame past the EOI.  The OV3660 appends
+                     * ~2.2-2.9 kB of zeros after the end marker, so it lands outside the narrow
+                     * tail probe above and every frame would be discarded as NO-EOI.  Re-scan the
+                     * whole frame with the same backward search the non-PSRAM path uses; the last
+                     * marker before the zero padding is the real EOI.  Safe against the stale-frame
+                     * case the probe window guards: len = cnt * dma_half_buffer_size, so all of
+                     * [0, len) was written by THIS frame's DMA - stale bytes only live beyond len. */
+                    cam_drop_psram_cache(dma_buffer->buf, dma_buffer->len);
+                    offset_e = cam_verify_jpeg_eoi(dma_buffer->buf, dma_buffer->len, false);
+                }
             } else {
                 offset_e = cam_verify_jpeg_eoi(dma_buffer->buf, dma_buffer->len, false);
             }
