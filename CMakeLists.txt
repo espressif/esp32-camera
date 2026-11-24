@@ -21,7 +21,7 @@ set(include_dirs
   )
 
 # set driver sources only for supported platforms
-if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3")
+if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET STREQUAL "esp32s3" OR IDF_TARGET STREQUAL "esp32s31")
   list(APPEND srcs
     driver/esp_camera.c
     driver/esp_camera_af.c
@@ -76,6 +76,16 @@ if(IDF_TARGET STREQUAL "esp32" OR IDF_TARGET STREQUAL "esp32s2" OR IDF_TARGET ST
     list(APPEND srcs
       target/esp32s3/ll_cam.c
       )
+  endif()
+
+  if(IDF_TARGET STREQUAL "esp32s31")
+    list(APPEND srcs
+      target/esp32s31/ll_cam.c
+      )
+    # hal/cam_ll.h + hal/gdma_channel.h (esp_hal_cam/esp_hal_dma),
+    # esp_private/gdma.h AXI channel allocation (esp_driver_dma) and
+    # esp_clk_tree_* / PERIPH_RCC_* clock handling (esp_hw_support)
+    list(APPEND priv_requires esp_hal_cam esp_hal_dma esp_driver_dma esp_hw_support)
   endif()
 
   list(APPEND priv_requires freertos nvs_flash esp_mm)

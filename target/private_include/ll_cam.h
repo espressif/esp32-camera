@@ -27,6 +27,10 @@
 #include "esp32s2/rom/lldesc.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/rom/lldesc.h"
+#elif CONFIG_IDF_TARGET_ESP32S31
+/* ESP32-S31 has no rom/lldesc.h and its AXI GDMA uses the 8-byte aligned
+ * descriptor type (as in IDF's esp_cam_ctlr_dvp_dma.h). */
+#include "hal/dma_types.h"
 #endif
 #include "esp_log.h"
 #include "esp_camera.h"
@@ -73,7 +77,61 @@
         goto lab;                                                                   \
         }
 
+#if CONFIG_IDF_TARGET_ESP32S31
+/* AXI GDMA descriptor buffer: max 4095 bytes, kept 64-byte aligned so that
+ * consecutive node buffers stay aligned for PSRAM/DMA access. */
+#define LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE  (4032)
+#else
 #define LCD_CAM_DMA_NODE_BUFFER_MAX_SIZE  (4092)
+#endif
+
+/* DMA descriptor type: AHB/I2S targets use the ROM lldesc_t, the AXI GDMA
+ * on ESP32-S31 uses dma_descriptor_align8_t. Access it only through the
+ * ll_cam_dma_desc_* helpers below so cam_hal.c stays target agnostic. */
+#if CONFIG_IDF_TARGET_ESP32S31
+typedef dma_descriptor_align8_t cam_dma_desc_t;
+#else
+typedef lldesc_t cam_dma_desc_t;
+#endif
+
+static inline void ll_cam_dma_desc_init(cam_dma_desc_t *desc, uint16_t size, uint8_t *buf, cam_dma_desc_t *next)
+{
+#if CONFIG_IDF_TARGET_ESP32S31
+    desc->dw0.size = size;
+    desc->dw0.length = 0;
+    desc->dw0.err_eof = 0;
+    desc->dw0.suc_eof = 0;
+    desc->dw0.owner = 1;
+    desc->buffer = buf;
+    desc->next = next;
+#else
+    desc->size = size;
+    desc->length = 0;
+    desc->sosf = 0;
+    desc->eof = 0;
+    desc->owner = 1;
+    desc->buf = buf;
+    desc->empty = (uint32_t)next;
+#endif
+}
+
+static inline uint32_t ll_cam_dma_desc_get_length(const cam_dma_desc_t *desc)
+{
+#if CONFIG_IDF_TARGET_ESP32S31
+    return desc->dw0.length;
+#else
+    return desc->length;
+#endif
+}
+
+static inline uint32_t ll_cam_dma_desc_get_size(const cam_dma_desc_t *desc)
+{
+#if CONFIG_IDF_TARGET_ESP32S31
+    return desc->dw0.size;
+#else
+    return desc->size;
+#endif
+}
 
 typedef enum {
     CAM_IN_SUC_EOF_EVENT = 0,
@@ -89,7 +147,7 @@ typedef struct {
     camera_fb_t fb;
     uint8_t en;
     //for RGB/YUV modes
-    lldesc_t *dma;
+    cam_dma_desc_t *dma;
     size_t fb_offset;
 } cam_frame_t;
 
@@ -103,7 +161,7 @@ typedef struct {
     uint32_t frame_copy_cnt;
 
     //for JPEG mode
-    lldesc_t *dma;
+    cam_dma_desc_t *dma;
     uint8_t  *dma_buffer;
 
     cam_frame_t *frames;
@@ -156,7 +214,7 @@ uint8_t ll_cam_get_dma_align(cam_obj_t *cam);
 bool ll_cam_dma_sizes(cam_obj_t *cam);
 size_t ll_cam_memcpy(cam_obj_t *cam, uint8_t *out, const uint8_t *in, size_t len);
 esp_err_t ll_cam_set_sample_mode(cam_obj_t *cam, pixformat_t pix_format, uint32_t xclk_freq_hz, uint16_t sensor_pid);
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31
 void ll_cam_dma_print_state(cam_obj_t *cam);
 void ll_cam_dma_reset(cam_obj_t *cam);
 #endif
