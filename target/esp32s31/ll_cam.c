@@ -203,8 +203,13 @@ esp_err_t ll_cam_deinit(cam_obj_t *cam)
     PERIPH_RCC_ATOMIC() {
         cam_ll_enable_clk(0, false);
     }
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6,2,0)
+    esp_clk_tree_enable_src((soc_module_clk_t)CAM_CLK_SRC_DEFAULT, false);
+    esp_clk_tree_enable_src((soc_module_clk_t)CAM_CORE_CLK_SRC_DEFAULT, false);
+#else
     esp_clk_tree_release_src((soc_module_clk_t)CAM_CLK_SRC_DEFAULT);
     esp_clk_tree_release_src((soc_module_clk_t)CAM_CORE_CLK_SRC_DEFAULT);
+#endif
     return ESP_OK;
 }
 
@@ -290,7 +295,11 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     // LCD_CAM bus clock, reset and core clock (PLL120M / 2), following
     // esp_cam_ctlr_dvp_init() in ESP-IDF. On ESP32-S31 these are in
     // HP_SYS_CLKRST, not in SYSTEM/LCD_CAM registers.
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6,2,0)
+    ESP_ERROR_CHECK(esp_clk_tree_enable_src((soc_module_clk_t)CAM_CORE_CLK_SRC_DEFAULT, true));
+#else
     ESP_ERROR_CHECK(esp_clk_tree_acquire_src((soc_module_clk_t)CAM_CORE_CLK_SRC_DEFAULT, NULL));
+#endif
     PERIPH_RCC_ACQUIRE_ATOMIC(PERIPH_LCD_CAM_MODULE, ref_count) {
         if (ref_count == 0) {
             cam_ll_enable_bus_clock(0, true);
@@ -301,7 +310,11 @@ esp_err_t ll_cam_config(cam_obj_t *cam, const camera_config_t *config)
     }
 
     // Camera (XCLK) clock: PLL160M divided down to xclk_freq_hz
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6,2,0)
+    ESP_ERROR_CHECK(esp_clk_tree_enable_src((soc_module_clk_t)CAM_CLK_SRC_DEFAULT, true));
+#else
     ESP_ERROR_CHECK(esp_clk_tree_acquire_src((soc_module_clk_t)CAM_CLK_SRC_DEFAULT, NULL));
+#endif
     PERIPH_RCC_ATOMIC() {
         cam_ll_enable_clk(0, true);
         cam_ll_select_clk_src(0, CAM_CLK_SRC_DEFAULT);
