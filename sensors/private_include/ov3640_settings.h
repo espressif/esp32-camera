@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_attr.h"
+#include "sensor_private.h"
 #include "ov3640_regs.h"
 
 static const ratio_settings_t ratio_table[] = {
@@ -23,7 +24,7 @@ static const ratio_settings_t ratio_table[] = {
 #define REGLIST_TAIL 0x0000
 
 /* OV3640 QVGA preview init (from ArduCAM + Omnivision app notes) */
-static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_default_regs[][2] = {
     {SYSTEM_CTROL0, 0x82},  // software reset
     {REG_DLY, 10},
 
@@ -141,7 +142,7 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_jpeg[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_jpeg[][2] = {
     {FORMAT_CTRL, 0x00}, // YUV422
     {FORMAT_CTRL00, 0x30}, // YUYV
     {0x3002, 0x00},
@@ -150,24 +151,24 @@ static const DRAM_ATTR uint16_t sensor_fmt_jpeg[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_raw[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_raw[][2] = {
     {FORMAT_CTRL00, 0x00}, // RAW
     {REGLIST_TAIL, 0x00}
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_grayscale[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_grayscale[][2] = {
     {FORMAT_CTRL, 0x00}, // YUV422
     {FORMAT_CTRL00, 0x10}, // Y8
     {REGLIST_TAIL, 0x00}
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_yuv422[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_yuv422[][2] = {
     {FORMAT_CTRL, 0x00}, // YUV422
     {FORMAT_CTRL00, 0x30}, // YUYV
     {REGLIST_TAIL, 0x00}
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_rgb565[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_rgb565[][2] = {
     {FORMAT_CTRL, 0x01}, // RGB
     {FORMAT_CTRL00, 0x61}, // RGB565 (BGR)
     {REGLIST_TAIL, 0x00}

@@ -310,4 +310,12 @@ menu "Camera configuration"
         default n
         help
             If this option is enabled, camera ISR will execute from IRAM.
+
+    config CAMERA_SENSOR_SETTINGS_IN_DRAM
+        bool "Place sensor settings tables in internal RAM"
+        default n
+        help
+            If this option is enabled, the sensor settings tables are placed in internal RAM (DRAM_ATTR).
+            By default they are placed in flash, which saves several KB of internal RAM.
+            The tables are only read when the sensor is initialized or its settings are changed.
 endmenu
