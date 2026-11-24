@@ -100,9 +100,13 @@ static const char *CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
 static camera_state_t *s_state = NULL;
 static camera_config_t s_saved_config;
 
-#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31 // LCD_CAM module of ESP32-S3/S31 will generate xclk
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31
+// LCD_CAM generates XCLK in ll_cam_set_pin()/ll_cam_config(), so there is no
+// LEDC channel to start here. It still has to be stopped on deinit: leaving
+// the pin on CAM_CLK keeps the sensor streaming and collapses Wi-Fi.
+// https://github.com/espressif/esp32-camera/issues/869
 #define CAMERA_ENABLE_OUT_CLOCK(v)
-#define CAMERA_DISABLE_OUT_CLOCK()
+#define CAMERA_DISABLE_OUT_CLOCK() camera_disable_out_clock()
 #else
 #define CAMERA_ENABLE_OUT_CLOCK(v) camera_enable_out_clock((v))
 #define CAMERA_DISABLE_OUT_CLOCK() camera_disable_out_clock()
