@@ -23,6 +23,7 @@
 #include "esp_private/gdma.h"
 #include "ll_cam.h"
 #include "cam_hal.h"
+#include "xclk.h"
 #include "esp_rom_gpio.h"
 
 #if (ESP_IDF_VERSION_MAJOR >= 5)
@@ -46,6 +47,27 @@
 #endif
 
 static const char *TAG = "s3 ll_cam";
+
+/* Pin last routed to CAM_CLK. -1 when XCLK is not driven by LCD_CAM. */
+static int s_xclk_pin = -1;
+
+void camera_disable_out_clock(void)
+{
+    if (s_xclk_pin < 0) {
+        return;
+    }
+
+    /* 0: no clock. Stops XCLK at the source so the sensor stops streaming. */
+    LCD_CAM.cam_ctrl.cam_clk_sel = 0;
+    LCD_CAM.cam_ctrl.cam_update = 1;
+
+    /* Detach the pad from CAM_CLK and hold it low. A connected pin keeps
+     * toggling after deinit and the sensor keeps driving DVP (issue #869). */
+    gpio_matrix_out(s_xclk_pin, SIG_GPIO_OUT_IDX, false, false);
+    gpio_set_direction(s_xclk_pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(s_xclk_pin, 0);
+    s_xclk_pin = -1;
+}
 
 void ll_cam_dma_print_state(cam_obj_t *cam)
 {
@@ -200,6 +222,7 @@ esp_err_t ll_cam_deinit(cam_obj_t *cam)
     LCD_CAM.cam_ctrl1.cam_start = 0;
     LCD_CAM.cam_ctrl1.cam_reset = 1;
     LCD_CAM.cam_ctrl1.cam_reset = 0;
+    camera_disable_out_clock();
     return ESP_OK;
 }
 
@@ -407,11 +430,14 @@ esp_err_t ll_cam_set_pin(cam_obj_t *cam, const camera_config_t *config)
         gpio_set_pull_mode(data_pins[i], GPIO_FLOATING);
         gpio_matrix_in(data_pins[i], CAM_DATA_IN0_IDX + i, false);
     }
-    if (config->pin_xclk >= 0) { 
+    if (config->pin_xclk >= 0) {
+        s_xclk_pin = config->pin_xclk;
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[config->pin_xclk], PIN_FUNC_GPIO);
         gpio_set_direction(config->pin_xclk, GPIO_MODE_OUTPUT);
         gpio_set_pull_mode(config->pin_xclk, GPIO_FLOATING);
         gpio_matrix_out(config->pin_xclk, CAM_CLK_IDX, false, false);
+    } else {
+        s_xclk_pin = -1;
     }
 
     return ESP_OK;
