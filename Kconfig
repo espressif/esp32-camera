@@ -239,11 +239,11 @@ menu "Camera configuration"
 
     config CAMERA_PSRAM_DMA
         bool "Enable PSRAM DMA mode by default"
-        depends on IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        depends on IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31
         default n
         help
             Enable DMA transfers directly from PSRAM on supported targets
-            (ESP32-S2 and ESP32-S3) by default.
+            (ESP32-S2, ESP32-S3 and ESP32-S31) by default.
 
     choice CAMERA_JPEG_MODE_FRAME_SIZE_OPTION
         prompt "JPEG mode frame size option"
@@ -306,7 +306,7 @@ menu "Camera configuration"
 
     config LCD_CAM_ISR_IRAM_SAFE
         bool "Execute camera ISR from IRAM"
-        depends on (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
+        depends on (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31)
         default n
         help
             If this option is enabled, camera ISR will execute from IRAM.

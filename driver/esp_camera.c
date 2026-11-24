@@ -100,7 +100,7 @@ static const char *CAMERA_PIXFORMAT_NVS_KEY = "pixformat";
 static camera_state_t *s_state = NULL;
 static camera_config_t s_saved_config;
 
-#if CONFIG_IDF_TARGET_ESP32S3 // LCD_CAM module of ESP32-S3 will generate xclk
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31 // LCD_CAM module of ESP32-S3/S31 will generate xclk
 #define CAMERA_ENABLE_OUT_CLOCK(v)
 #define CAMERA_DISABLE_OUT_CLOCK()
 #else

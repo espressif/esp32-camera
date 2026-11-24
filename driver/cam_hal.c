@@ -38,6 +38,8 @@
 #include "esp32s2/rom/ets_sys.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/rom/ets_sys.h"
+#elif CONFIG_IDF_TARGET_ESP32S31
+#include "esp32s31/rom/ets_sys.h"
 #endif
 #endif // ESP_IDF_VERSION_MAJOR
 
@@ -393,7 +395,7 @@ static void cam_task(void *arg)
                                 frame_buffer_event->len = cnt * cam_obj->dma_half_buffer_size;
                             } else {
                                 frame_buffer_event->len = cam_obj->recv_size;
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31
                                 /* In this mode the DMA writes the frame straight into the frame
                                  * buffer and the driver never sees the individual transfers:
                                  * in_suc_eof is not enabled for this combination (see
@@ -411,8 +413,8 @@ static void cam_task(void *arg)
                                  * truncated one is not. */
                                 size_t written = 0, capacity = 0;
                                 for (uint32_t i = 0; i < cam_obj->dma_node_cnt; i++) {
-                                    written += cam_obj->frames[frame_pos].dma[i].length;
-                                    capacity += cam_obj->frames[frame_pos].dma[i].size;
+                                    written += ll_cam_dma_desc_get_length(&cam_obj->frames[frame_pos].dma[i]);
+                                    capacity += ll_cam_dma_desc_get_size(&cam_obj->frames[frame_pos].dma[i]);
                                 }
                                 if (written < capacity) {
                                     static uint16_t warn_psram_short_cnt = 0;
@@ -462,21 +464,15 @@ static void cam_task(void *arg)
     }
 }
 
-static lldesc_t * allocate_dma_descriptors(uint32_t count, uint16_t size, uint8_t * buffer)
+static cam_dma_desc_t * allocate_dma_descriptors(uint32_t count, uint16_t size, uint8_t * buffer)
 {
-    lldesc_t *dma = (lldesc_t *)heap_caps_malloc(count * sizeof(lldesc_t), MALLOC_CAP_DMA);
+    cam_dma_desc_t *dma = (cam_dma_desc_t *)heap_caps_aligned_alloc(alignof(cam_dma_desc_t), count * sizeof(cam_dma_desc_t), MALLOC_CAP_DMA);
     if (dma == NULL) {
         return dma;
     }
 
     for (int x = 0; x < count; x++) {
-        dma[x].size = size;
-        dma[x].length = 0;
-        dma[x].sosf = 0;
-        dma[x].eof = 0;
-        dma[x].owner = 1;
-        dma[x].buf = (buffer + size * x);
-        dma[x].empty = (uint32_t)&dma[(x + 1) % count];
+        ll_cam_dma_desc_init(&dma[x], size, buffer + size * x, &dma[(x + 1) % count]);
     }
     return dma;
 }
@@ -601,7 +597,7 @@ esp_err_t cam_config(const camera_config_t *config, framesize_t frame_size, uint
     CAM_CHECK_GOTO(ret == ESP_OK, "ll_cam_set_sample_mode failed", err);
     
     cam_obj->jpeg_mode = config->pixel_format == PIXFORMAT_JPEG;
-#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31
     cam_obj->psram_mode = g_psram_dma_mode;
 #else
     cam_obj->psram_mode = false;
@@ -719,7 +715,7 @@ camera_fb_t *cam_take(TickType_t timeout)
 {
     camera_fb_t *dma_buffer = NULL;
     const TickType_t start = xTaskGetTickCount();
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31
     uint16_t dma_reset_counter = 0;
     static const uint8_t MAX_GDMA_RESETS = 3;
 #else
@@ -745,7 +741,7 @@ camera_fb_t *cam_take(TickType_t timeout)
         if (!dma_buffer) {
             /* Work-around for ESP32-S3 GDMA freeze when Wi-Fi STA starts.
              * See esp32-camera commit 984999f (issue #620). */
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31
             if (dma_reset_counter < MAX_GDMA_RESETS) {
                 ll_cam_dma_reset(cam_obj);
                 dma_reset_counter++;
