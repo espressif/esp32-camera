@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_attr.h"
+#include "sensor_private.h"
 #include "nt99141_regs.h"
 
 static const ratio_settings_t ratio_table[] = {
@@ -15,7 +16,7 @@ static const ratio_settings_t ratio_table[] = {
 #define REG_DLY 0xffff
 #define REGLIST_TAIL 0x0000
 
-static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_default_regs[][2] = {
  //initial
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
@@ -131,32 +132,32 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_jpeg[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_jpeg[][2] = {
     {0x32F0, 0x70}, // YUV422
     {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_raw[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_raw[][2] = {
     {0x32F0, 0x50}, // RAW
     {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_grayscale[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_grayscale[][2] = {
     {0x32F1, 0x01},
     {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_yuv422[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_yuv422[][2] = {
     {0x32F0, 0x00}, // YUV422
     {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_fmt_rgb565[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_fmt_rgb565[][2] = {
     {0x32F0, 0x01}, // RGB
     {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint8_t sensor_saturation_levels[9][1] = {
+static const SENSOR_SETTINGS_ATTR uint8_t sensor_saturation_levels[9][1] = {
     {0x60},//-4
     {0x68},//-3
     {0x70},//-2
@@ -168,7 +169,7 @@ static const DRAM_ATTR uint8_t sensor_saturation_levels[9][1] = {
     {0xA0},//+4
 };
 
-static const DRAM_ATTR uint8_t sensor_special_effects[7][4] = {
+static const SENSOR_SETTINGS_ATTR uint8_t sensor_special_effects[7][4] = {
     {0x00, 0x80, 0x80, 0x01},//Normal
     {0x03, 0x80, 0x80, 0x01},//Negative
     {0x01, 0x80, 0x80, 0x01},//Grayscale
@@ -180,7 +181,7 @@ static const DRAM_ATTR uint8_t sensor_special_effects[7][4] = {
 };
 
 // AE LEVEL
-static const DRAM_ATTR uint16_t sensor_ae_level[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_ae_level[][2] = {
 
 // 1. [AE_Target : 0x24]
 // Set_Device_Format = FORMAT_16_8
@@ -264,7 +265,7 @@ static const DRAM_ATTR uint16_t sensor_ae_level[][2] = {
  {0x32BE, 0x3F },
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_HD[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_HD[][2] = {
 //[JPEG_1280x720_8.18_8.18_Fps]
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
@@ -328,7 +329,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_HD[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_VGA[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_VGA[][2] = {
 //[JPEG_640x480_10.14_10.14_Fps]
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
@@ -400,7 +401,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_VGA[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_QVGA[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_QVGA[][2] = {
 //[JPEG_320x240_10.14_10.14_Fps] 
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
@@ -472,7 +473,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_QVGA[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_VGA_xyskip[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_VGA_xyskip[][2] = {
 // [JPEG_640x360_20.00_25.01_Fps_XY_Skip]
 // Set_Device_Format = FORMAT_16_8 
 // SET_Device_Addr = 0x54 
@@ -539,7 +540,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_VGA_xyskip[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_VGA_xskip[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_VGA_xskip[][2] = {
 //[JPEG_640x480_Xskip_13.32_13.32_Fps]
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
@@ -611,7 +612,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_VGA_xskip[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_QVGA_xskip[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_QVGA_xskip[][2] = {
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
 //[JPEG_320x240_Xskip_13.32_13.32_Fps]
@@ -684,7 +685,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_QVGA_xskip[][2] = {
 };
 
 
-static const DRAM_ATTR uint16_t sensor_framesize_VGA_crop[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_VGA_crop[][2] = {
 //[JPEG_640x480_Crop_19.77_19.77_Fps]
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms
@@ -748,7 +749,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_VGA_crop[][2] = {
 {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_QVGA_crop[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_QVGA_crop[][2] = {
 //[JPEG_320x240_Crop_19.77_19.77_Fps]
 {0x3021, 0x00},
 {REG_DLY, 100}, // delay 100ms

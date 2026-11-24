@@ -1,10 +1,11 @@
 
 #include <stdint.h>
+#include "sensor_private.h"
 
 #define REG_DLY 0xffff
 #define REGLIST_TAIL 0xffff
 
-static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_default_regs[][2] = {
     {0x0022, 0x00}, //  RESET
     {0x0026, 0x77}, //  24MHz MCLK, 72MHz PCLK
     {0x002A, 0x44}, //  Modified by Wilson
@@ -528,7 +529,7 @@ static const DRAM_ATTR uint16_t sensor_default_regs[][2] = {
     {REGLIST_TAIL, 0x00}, // tail
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_HD[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_HD[][2] = {
     {0x0006, 0x00},
     {0x000D, 0x00},
     {0x000E, 0x00},
@@ -546,7 +547,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_HD[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_SVGA[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_SVGA[][2] = {
     {0x0006, 0x10},
     {0x000D, 0x00},
     {0x000E, 0x00},
@@ -564,7 +565,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_SVGA[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_VGA[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_VGA[][2] = {
     {0x0006, 0x10},
     {0x000D, 0x00},
     {0x000E, 0x00},
@@ -586,7 +587,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_VGA[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_CIF[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_CIF[][2] = {
     {0x0006, 0x00},
     {0x000D, 0x01},
     {0x000E, 0x11},
@@ -608,7 +609,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_CIF[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_QVGA[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_QVGA[][2] = {
     {0x0006, 0x00},
     {0x000D, 0x01},
     {0x000E, 0x11},
@@ -630,7 +631,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_QVGA[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_QCIF[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_QCIF[][2] = {
     {0x0006, 0x00},
     {0x000D, 0x01},
     {0x000E, 0x11},
@@ -652,7 +653,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_QCIF[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_240X240[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_240X240[][2] = {
     {0x0006, 0x00},
     {0x000D, 0x01},
     {0x000E, 0x11},
@@ -674,7 +675,7 @@ static const DRAM_ATTR uint16_t sensor_framesize_240X240[][2] = {
     {REGLIST_TAIL, 0x00},
 };
 
-static const DRAM_ATTR uint16_t sensor_framesize_QQVGA[][2] = {
+static const SENSOR_SETTINGS_ATTR uint16_t sensor_framesize_QQVGA[][2] = {
     {0x0006, 0x00},
     {0x000D, 0x01},
     {0x000E, 0x11},
